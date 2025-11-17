@@ -1,15 +1,16 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import path from 'path' // Import path
+import { fileURLToPath, URL } from 'url' // <-- Make sure this line is here
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
   
-  // Define the '@' alias to point to 'src'
+  // --- THIS IS THE FIX ---
+  // We are defining the '@' alias in the modern, ES-Module-safe way.
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      "@": fileURLToPath(new URL('./src', import.meta.url))
     },
   },
 

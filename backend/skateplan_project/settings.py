@@ -33,13 +33,13 @@ INSTALLED_APPS = [
     "storages",
     "django_cryptography",
     # Our Apps
-    "api.apps.ApiConfig",  # <-- THIS LINE IS THE FIX
+    "api.apps.ApiConfig",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
-    "corsheaders.middleware.CorsMiddleware",  # CORS
+    "corsheaders.middleware.CorsMiddleware",  # <-- This must be high up
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -146,14 +146,27 @@ AWS_S3_OBJECT_PARAMETERS = {
 }
 
 # --- CORS (Cross-Origin Resource Sharing) ---
-# This will allow our React frontend to talk to our Django backend.
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     os.environ.get("FRONTEND_URL_DEV"),
     os.environ.get("FRONTEND_URL_PROD"),
 ]
-# CORS_ALLOW_CREDENTIALS = True # Use this if you send cookies
+
+# --- THIS IS THE FIX ---
+# We need to explicitly allow the headers our frontend will send.
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "authorization",
+    "content-type",
+    "origin",
+    "x-csrftoken",
+    "x-requested-with",
+]
+
+# Allow credentials (like cookies, if we use them later)
+CORS_ALLOW_CREDENTIALS = True
+
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

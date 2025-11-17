@@ -2,7 +2,7 @@
 
 // Get the backend URL from the .env file
 // We will set this up in vite.config.js
-const API_URL = import.meta.env.VITE_API_URL || 'http://api.skateplan.bradnet.net/api';
+const API_URL = import.meta.env.VITE_API_URL || 'https://api.skateplan.bradnet.net/api';
 
 /**
  * A helper function for making API requests.

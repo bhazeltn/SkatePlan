@@ -1,0 +1,108 @@
+# This file defines our entire application stack
+# To run (DEV): docker compose up -d --build
+# To run (PROD): docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+
+
+services:
+  ##################
+  #  CORE SERVICES #
+  ##################
+
+  # 1. Django Backend (The "web" service)
+  web:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    
+    volumes:
+      - ./backend:/app      # <-- This is for the Python process
+      - .:/workspace        # <-- THIS IS THE FIX (For the VS Code editor)
+
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - db
+      - cache
+      - storage
+
+  # 2. React Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    # Command and target are overridden in dev/prod files
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules # Don't overwrite node_modules with local empty folder
+
+  #########################
+  #  INFRASTRUCTURE (DATA) #
+  #########################
+
+  # 3. PostgreSQL Database (The "db" service)
+  db:
+    image: postgres:15
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    env_file:
+      - ./backend/.env # Load credentials from .env
+
+  # 4. MinIO Object Storage (The "storage" service)
+  storage:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000" # S3 API port (for app)
+      - "9091:9091" # MinIO Console (for you)
+    volumes:
+      - minio_data:/data
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+    env_file:
+      - ./backend/.env # Load credentials from .env
+
+  #############################
+  #  INFRASTRUCTURE (WORKERS) #
+  #############################
+
+  # 5. Redis (Cache & Celery Broker)
+  cache:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+  # 6. Celery Worker (The "worker" service)
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: celery -A skateplan_project worker -l info
+    volumes:
+      - ./backend:/app
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - db
+      - cache
+
+# Define persistent volumes
+volumes:
+  # This maps to your new SSD directory: /srv/skateplan/postgres
+  postgres_data:
+    driver: local
+    driver_opts:
+      type: 'none'
+      o: 'bind'
+      device: '/srv/skateplan/postgres'
+  # This maps to your new SSD directory: /srv/skateplan/minio
+  minio_data:
+    driver: local
+    driver_opts:
+      type: 'none'
+      o: 'bind'
+      device: '/srv/skateplan/minio'

@@ -1,0 +1,33 @@
+// This file tells VS Code how to use our Docker containers.
+{
+  "name": "SkatePlan Dev Environment",
+  // Use our docker-compose files
+  "dockerComposeFile": [
+    "../docker-compose.yml",
+    "../docker-compose.override.yml"
+  ],
+  // The service to "open" in VS Code.
+  "service": "web",
+  // The folder inside the container to open.
+  "workspaceFolder": "/workspace", // <-- THIS IS THE FIX
+  // Forward ports for local access
+  "forwardPorts": [
+    8000, // Django API
+    3000  // React Frontend
+  ],
+  // Install VS Code extensions inside the container
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.black-formatter",
+        "ms-python.flake8",
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint"
+      ]
+    }
+  },
+  // "postCreateCommand" has been REMOVED to prevent the error
+  // Run as a non-root user
+  "remoteUser": "root"
+}

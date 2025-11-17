@@ -1,0 +1,23 @@
+# This file lists all Python dependencies for the project
+
+# Django Core
+django
+djangorestframework
+django-cors-headers
+django-cryptography # For encrypted fields
+django-redis # For Redis cache
+
+# Database (Postgres)
+psycopg2-binary
+
+# Asynchronous Tasks (Celery)
+celery
+redis
+
+# Object Storage (MinIO/S3)
+django-storages
+boto3
+
+# Utilities
+python-dotenv
+gunicorn

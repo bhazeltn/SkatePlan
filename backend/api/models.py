@@ -306,3 +306,280 @@ class PlanningEntityAccess(models.Model):
     class Meta:
         # Ensures a user can't have the same role on the same object twice
         unique_together = ("user", "content_type", "object_id", "access_level")
+
+
+# --- 4. HOLISTIC PLANNING MODELS ---
+# (Append this to the bottom of backend/api/models.py)
+
+
+class AthleteSeason(models.Model):
+    """
+    An "umbrella" holding all plans for one Skater (person) in one season.
+    This allows for holistic load management for multi-discipline athletes.
+    """
+
+    id = models.AutoField(primary_key=True)
+    skater = models.ForeignKey(
+        Skater, on_delete=models.CASCADE, related_name="athlete_seasons"
+    )
+    season = models.CharField(max_length=10)  # e.g., "2025-2026"
+
+    primary_coach = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="athlete_seasons_as_primary",
+    )
+
+    def __str__(self):
+        return f"{self.skater.full_name} ({self.season})"
+
+    class Meta:
+        unique_together = ("skater", "season")
+        ordering = ["skater__full_name", "-season"]
+
+
+class YearlyPlan(models.Model):
+    """
+    A high-level plan for a *single discipline* (a PlanningEntity).
+    """
+
+    id = models.AutoField(primary_key=True)
+
+    # --- Generic Foreign Key to a PlanningEntity ---
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+    planning_entity = GenericForeignKey("content_type", "object_id")
+
+    # This plan is part of one or more AthleteSeasons
+    # (e.g., a Pairs plan is part of two skaters' seasons)
+    athlete_seasons = models.ManyToManyField(AthleteSeason, related_name="yearly_plans")
+
+    coach_owner = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="yearly_plans",
+    )
+
+    peak_type = models.CharField(
+        max_length=100, blank=True, null=True
+    )  # e.g., "Single Peak", "Double Peak"
+    primary_season_goal = models.TextField(blank=True, null=True)
+
+    # We will link this to the Competition model later
+    # primary_peak_event = models.ForeignKey('Competition', ...)
+
+    def __str__(self):
+        return f"YTP for {self.planning_entity} ({self.athlete_seasons.first().season})"
+
+
+class Macrocycle(models.Model):
+    """
+    A phase within a YearlyPlan.
+    e.g., "Preparation", "Competition 1", "Peak"
+    """
+
+    id = models.AutoField(primary_key=True)
+    yearly_plan = models.ForeignKey(
+        YearlyPlan, on_delete=models.CASCADE, related_name="macrocycles"
+    )
+    phase_title = models.CharField(max_length=100)
+    phase_start = models.DateField()
+    phase_end = models.DateField()
+    phase_focus = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return self.phase_title
+
+    class Meta:
+        ordering = ["phase_start"]
+
+
+class WeeklyPlan(models.Model):
+    """
+    The holistic, unified plan for the *entire* athlete for one week.
+    Linked to the AthleteSeason, not a single YTP.
+    """
+
+    id = models.AutoField(primary_key=True)
+    athlete_season = models.ForeignKey(
+        AthleteSeason, on_delete=models.CASCADE, related_name="weekly_plans"
+    )
+    week_start = models.DateField(unique=True)
+    theme = models.CharField(max_length=255, blank=True, null=True)
+
+    # We use JSONField to store flexible weekly data
+    planned_off_ice_activities = models.JSONField(default=list, blank=True)
+    session_breakdown = models.JSONField(default=dict, blank=True)
+
+    def __str__(self):
+        return f"Week of {self.week_start} for {self.athlete_season.skater.full_name}"
+
+    class Meta:
+        ordering = ["-week_start"]
+
+
+# --- 5. PLANNING & LOGGING MODULES ---
+
+
+class Goal(models.Model):
+    """
+    A single, trackable SMART goal.
+    Can be linked to a single PlanningEntity.
+    """
+
+    class GoalStatus(models.TextChoices):
+        DRAFT = "DRAFT", "Draft"
+        PENDING_APPROVAL = "PENDING", "Pending Approval"
+        APPROVED = "APPROVED", "Approved"
+        NEEDS_REVISION = "REVISION", "Needs Revision"
+        IN_PROGRESS = "IN_PROGRESS", "In Progress"
+        COMPLETED = "COMPLETED", "Completed"
+        ARCHIVED = "ARCHIVED", "Archived"
+
+    id = models.AutoField(primary_key=True)
+    title = models.CharField(max_length=255)
+
+    # --- Generic Foreign Key to a PlanningEntity ---
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+    planning_entity = GenericForeignKey("content_type", "object_id")
+
+    # For team goals, we can optionally assign it to one skater
+    assignee_skater = models.ForeignKey(
+        Skater,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="assigned_goals",
+    )
+
+    goal_type = models.CharField(
+        max_length=50, blank=True, null=True
+    )  # e.g., "Technical", "Mental"
+    goal_timeframe = models.CharField(
+        max_length=50, blank=True, null=True
+    )  # e.g., "Weekly", "Macrocycle"
+    smart_description = models.TextField(blank=True, null=True)
+    progress_notes = models.TextField(blank=True, null=True)
+
+    current_status = models.CharField(
+        max_length=20, choices=GoalStatus.choices, default=GoalStatus.DRAFT
+    )
+    coach_review_notes = models.TextField(blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.title
+
+    class Meta:
+        ordering = ["-updated_at"]
+
+
+class SessionLog(models.Model):
+    """
+    A log entry for a single training session.
+    """
+
+    id = models.AutoField(primary_key=True)
+    session_date = models.DateTimeField(default=timezone.now)
+    author = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, related_name="authored_session_logs"
+    )
+
+    # Link to the *holistic* season for aggregation
+    athlete_season = models.ForeignKey(
+        AthleteSeason, on_delete=models.CASCADE, related_name="session_logs"
+    )
+
+    # --- Generic Foreign Key to a PlanningEntity ---
+    # So we know *which discipline* this log was for
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+    planning_entity = GenericForeignKey("content_type", "object_id")
+
+    # Wellbeing Check-in
+    energy_stamina = models.CharField(
+        max_length=50, blank=True, null=True
+    )  # e.g., "Low", "Good"
+    wellbeing_focus_check_in = models.JSONField(
+        default=list, blank=True
+    )  # e.g., ["Focus", "Stress"]
+    wellbeing_mental_focus_notes = models.TextField(blank=True, null=True)
+
+    # Coach/Skater Notes
+    coach_notes = models.TextField(blank=True, null=True)  # Rich Text
+    skater_notes = models.TextField(blank=True, null=True)  # Rich Text
+
+    # Flexible JSON for element focus
+    jump_focus = models.JSONField(default=dict, blank=True)
+    spin_focus = models.JSONField(default=dict, blank=True)
+    synchro_element_focus = models.JSONField(default=dict, blank=True)
+
+    def __str__(self):
+        return f"Log for {self.planning_entity} on {self.session_date.strftime('%Y-%m-%d')}"
+
+    class Meta:
+        ordering = ["-session_date"]
+
+
+class InjuryLog(models.Model):
+    """
+    Tracks a single injury for a Skater (person).
+    """
+
+    id = models.AutoField(primary_key=True)
+    skater = models.ForeignKey(
+        Skater, on_delete=models.CASCADE, related_name="injury_logs"
+    )
+
+    injury_type = models.CharField(max_length=100)  # e.g., "Sprain", "Strain"
+    body_area = models.JSONField(default=list, blank=True)  # e.g., ["Right", "Ankle"]
+    date_of_onset = models.DateField()
+    return_to_sport_date = models.DateField(null=True, blank=True)
+
+    severity = models.CharField(
+        max_length=50, blank=True, null=True
+    )  # e.g., "Mild", "Severe"
+    recovery_status = models.CharField(
+        max_length=100, blank=True, null=True
+    )  # e.g., "Off-ice", "Full-program"
+
+    # This field should be encrypted
+    recovery_notes = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.injury_type} ({self.skater.full_name})"
+
+    class Meta:
+        ordering = ["-date_of_onset"]
+
+
+class MeetingLog(models.Model):
+    """
+    A log for a non-practice meeting.
+    e.g., "Parent-Coach", "Goal Setting"
+    """
+
+    id = models.AutoField(primary_key=True)
+    meeting_date = models.DateTimeField(default=timezone.now)
+    meeting_type = models.JSONField(
+        default=list, blank=True
+    )  # e.g., ["Parent", "Coach"]
+
+    # A meeting can involve multiple skaters
+    skaters = models.ManyToManyField(Skater, related_name="meetings")
+
+    participants = models.TextField(blank=True, null=True)  # Text list of names
+    summary_notes = models.TextField(blank=True, null=True)  # Rich Text
+
+    def __str__(self):
+        return f"Meeting on {self.meeting_date.strftime('%Y-%m-%d')}"
+
+    class Meta:
+        ordering = ["-meeting_date"]

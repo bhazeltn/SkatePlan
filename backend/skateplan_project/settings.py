@@ -82,7 +82,6 @@ DATABASES = {
 }
 
 # --- Cache (for Celery & Performance) ---
-# Note: Requires `pip install django-redis`
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
@@ -152,9 +151,6 @@ CORS_ALLOWED_ORIGINS = [
     os.environ.get("FRONTEND_URL_DEV"),
     os.environ.get("FRONTEND_URL_PROD"),
 ]
-
-# --- THIS IS THE FIX ---
-# We need to explicitly allow the headers our frontend will send.
 CORS_ALLOW_HEADERS = [
     "accept",
     "authorization",
@@ -163,9 +159,14 @@ CORS_ALLOW_HEADERS = [
     "x-csrftoken",
     "x-requested-with",
 ]
-
-# Allow credentials (like cookies, if we use them later)
 CORS_ALLOW_CREDENTIALS = True
+
+# --- THIS IS THE FIX ---
+# We must tell Django's CSRF protection to trust our frontend's domain.
+CSRF_TRUSTED_ORIGINS = [
+    os.environ.get("FRONTEND_URL_DEV"),
+    os.environ.get("FRONTEND_URL_PROD"),
+]
 
 
 # Default primary key field type

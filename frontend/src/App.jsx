@@ -3,11 +3,17 @@ import { useAuth } from './AuthContext';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import AthleteSeasonDashboard from './pages/AthleteSeasonDashboard'; // <-- IMPORT NEW PAGE
 
 // A simple hash-based router
-const routes = {
+const publicRoutes = {
   '/': Login,
   '/register': Register,
+};
+
+const privateRoutes = {
+  '/': Home,
+  '/skater/:id': AthleteSeasonDashboard,
 };
 
 // Custom hook to get the current hash
@@ -25,6 +31,20 @@ const useHash = () => {
   return hash.substring(1) || '/'; // Get hash path (e.g., '#/register' -> '/register')
 };
 
+// Function to find the matching route
+const findRoute = (routes, path) => {
+  // Check for exact match
+  if (routes[path]) {
+    return routes[path];
+  }
+  // Check for dynamic match (e.g., /skater/:id)
+  const dynamicRoute = Object.keys(routes).find(
+    (key) => key.split('/')[1] === path.split('/')[1] && key.includes(':id')
+  );
+  return routes[dynamicRoute];
+};
+
+
 function App() {
   const { isAuthenticated, loading } = useAuth();
   const path = useHash();
@@ -38,13 +58,14 @@ function App() {
     );
   }
 
-  // If authenticated, always show the Home component
+  // If authenticated, show the private routes
   if (isAuthenticated) {
-    return <Home />;
+    const Component = findRoute(privateRoutes, path) || Home;
+    return <Component />;
   }
 
   // If not authenticated, show the public routes
-  const Component = routes[path] || Login; // Default to Login page
+  const Component = findRoute(publicRoutes, path) || Login; // Default to Login page
   return <Component />;
 }
 

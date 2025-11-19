@@ -4,10 +4,17 @@ from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
 from .serializers import UserSerializer, RegisterSerializer, LoginSerializer
 
-# --- ADDED THESE IMPORTS ---
 from .permissions import IsCoachUser
-from .models import Skater, SinglesEntity, Federation, PlanningEntityAccess
-from .models import SoloDanceEntity, Team, SynchroTeam  # Import all models
+from .models import (
+    Skater, 
+    SinglesEntity, 
+    Federation, 
+    PlanningEntityAccess, 
+    SoloDanceEntity, 
+    Team, 
+    SynchroTeam,
+    AthleteSeason
+)
 from .serializers import (
     SkaterSerializer,
     SinglesEntitySerializer,
@@ -16,9 +23,18 @@ from .serializers import (
 from django.utils import timezone
 from datetime import date
 
-
 User = get_user_model()
 
+class SkaterDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    API endpoint for viewing, updating, or deleting a specific skater.
+    Accessible only to coaches who have access to this skater.
+    """
+    # We will need to refine permissions later to ensure ONLY assigned coaches can see this.
+    # For now, IsCoachUser is a safe baseline for Phase 1.
+    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    serializer_class = SkaterSerializer
+    queryset = Skater.objects.all()
 
 class RegisterView(generics.CreateAPIView):
     """
@@ -73,18 +89,15 @@ class LoginView(generics.GenericAPIView):
         )
 
 
-class UserProfileView(generics.RetrieveUpdateAPIView):
+class UserProfileView(generics.RetrieveUpdateDestroyAPIView):
     """
-    API endpoint for getting and updating the logged-in user's profile.
+    API endpoint for getting, updating, AND deleting the logged-in user's profile.
     """
-
-    permission_classes = [permissions.IsAuthenticated]  # Must be logged in
+    permission_classes = [permissions.IsAuthenticated]
     serializer_class = UserSerializer
 
     def get_object(self):
-        # Returns the user associated with the token
         return self.request.user
-
 
 # This is a simple fuzzy name matching helper
 def is_name_match(name1, name2):
@@ -96,6 +109,109 @@ def is_name_match(name1, name2):
 
 
 class CreateSkaterView(generics.CreateAPIView):
+    """
+    API endpoint for a Coach to create a new Skater.
+    Creates: Skater (Person) -> PlanningEntity (Discipline) -> AthleteSeason (Time).
+    """
+    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    serializer_class = SkaterSerializer
+
+    def create(self, request, *args, **kwargs):
+        full_name = request.data.get("full_name")
+        dob_str = request.data.get("date_of_birth")
+        
+        # New Fields
+        discipline = request.data.get("discipline", "SINGLES") # Default to Singles
+        level = request.data.get("level", "Pre-Juvenile")
+        
+        # 1. Validate Basic Input
+        if not full_name or not dob_str:
+            return Response(
+                {"error": "Full name and date of birth are required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            dob = date.fromisoformat(dob_str)
+        except ValueError:
+             return Response({"error": "Invalid date format."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 2. GLOBAL Duplicate Check
+        # Queries the entire Skater table, not just the coach's roster.
+        potential_matches = Skater.objects.filter(date_of_birth=dob)
+        for skater in potential_matches:
+            if is_name_match(skater.full_name, full_name):
+                return Response(
+                    {
+                        "error": "A skater with this name and birthday already exists.",
+                        "skater_id": skater.id,
+                        "action": "request_access" 
+                    },
+                    status=status.HTTP_409_CONFLICT
+                )
+
+        # 3. Create Skater (Person)
+        skater = Skater.objects.create(
+            full_name=full_name,
+            date_of_birth=dob,
+            gender=request.data.get("gender"),
+            home_club=request.data.get("home_club")
+        )
+
+        # 4. Create Planning Entity (Discipline)
+        # We use a simple factory logic here.
+        entity = None
+        if discipline == "SINGLES":
+            entity = SinglesEntity.objects.create(skater=skater, current_level=level)
+        elif discipline == "SOLO_DANCE":
+            entity = SoloDanceEntity.objects.create(skater=skater, current_level=level)
+        elif discipline == "PAIRS":
+            # For Teams, we create a placeholder Team object
+            # (Real team building happens in the Roster manager later)
+            entity = Team.objects.create(
+                team_name=f"{skater.full_name} (Pairs)", 
+                discipline="PAIRS",
+                partner_a=skater,
+                current_level=level
+            )
+        elif discipline == "ICE_DANCE":
+            entity = Team.objects.create(
+                team_name=f"{skater.full_name} (Dance)", 
+                discipline="ICE_DANCE",
+                partner_a=skater,
+                current_level=level
+            )
+        elif discipline == "SYNCHRO":
+            # Synchro is complex; for now, we handle it like a team placeholder
+            entity = SynchroTeam.objects.create(
+                team_name=f"{skater.full_name}'s Team",
+                level=level
+            )
+        else:
+            # Fallback
+            entity = SinglesEntity.objects.create(skater=skater, current_level=level)
+
+        # 5. Create Permissions (The Coach owns this entity)
+        PlanningEntityAccess.objects.create(
+            user=request.user,
+            access_level=PlanningEntityAccess.AccessLevel.COACH,
+            planning_entity=entity
+        )
+
+        # 6. Auto-Create AthleteSeason (The "Active" Container)
+        # We calculate the current season string (e.g., "2025-2026")
+        today = date.today()
+        # If it's after July 1st, we are in the start of the next season year
+        start_year = today.year if today.month >= 7 else today.year - 1
+        season_str = f"{start_year}-{start_year + 1}"
+
+        AthleteSeason.objects.create(
+            skater=skater,
+            season=season_str,
+            primary_coach=request.user
+        )
+
+        return Response(SkaterSerializer(skater).data, status=status.HTTP_201_CREATED)
     """
     API endpoint for a Coach to create a new Skater and their first PlanningEntity.
     This view performs the "Create & De-duplicate" check.
@@ -171,8 +287,6 @@ class CreateSkaterView(generics.CreateAPIView):
         # Return the data for the *new Skater*
         return Response(SkaterSerializer(skater).data, status=status.HTTP_201_CREATED)
 
-
-# --- THIS IS THE CLASS THAT WAS IN THE WRONG FILE ---
 class RosterView(generics.ListAPIView):
     """
     API endpoint to list all Skaters a logged-in user has access to.

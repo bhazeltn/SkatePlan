@@ -70,6 +70,13 @@ export default function Home() {
         <h1 className="text-3xl font-bold">Coach Dashboard</h1>
         <div className="flex items-center gap-4">
           <AddSkaterModal onSkaterAdded={handleSkaterAdded} />
+          
+          {/* --- ADDED SETTINGS BUTTON HERE --- */}
+          <a href="#/settings">
+            <Button variant="secondary">Settings</Button>
+          </a>
+          {/* ---------------------------------- */}
+
           <Button variant="outline" onClick={logout}>
             Log Out
           </Button>

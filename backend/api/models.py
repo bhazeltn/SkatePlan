@@ -106,33 +106,86 @@ class Federation(models.Model):
     class Meta:
         ordering = ["name"]
 
-
 class SkatingElement(models.Model):
     """
     A global lookup table for all skating elements.
     e.g., "Triple Lutz", "Camel Spin"
     """
 
+    class ElementCategory(models.TextChoices):
+        SINGLES = "SINGLES", "Singles"
+        PAIRS = "PAIRS", "Pairs"
+        ICE_DANCE = "ICE_DANCE", "Ice Dance"
+        SYNCHRO = "SYNCHRO", "Synchro"
+
+    # Expanded list based on your initial_data.json
     class DisciplineType(models.TextChoices):
+        # Singles / Standard
         JUMP = "JUMP", "Jump"
         SPIN = "SPIN", "Spin"
-        LIFT = "LIFT", "Lift"
-        STEP = "STEP", "Step Sequence"
-        CHOREO = "CHOREO", "Choreographic Sequence"
+        SPIN_COMBINATION = "SPIN COMBINATION", "Spin Combination"
+        STEP = "STEP", "Step Sequence"  # Keep for legacy/manual
+        STEP_SEQUENCE = "STEP SEQUENCE", "Step Sequence" # Matches fixture
+        CHOREO_ELEMENT = "CHOREOGRAPHIC ELEMENT", "Choreographic Element"
+        
+        # Pairs
+        THROW_JUMP = "THROW JUMP", "Throw Jump"
+        TWIST_LIFT = "TWIST LIFT", "Twist Lift"
+        PAIR_SPIN = "PAIR SPIN", "Pair Spin"
+        PAIR_SPIN_COMBO = "PAIR SPIN COMBINATION", "Pair Spin Combination"
+        PAIR_LIFT = "PAIR LIFT", "Pair Lift"
+        DEATH_SPIRAL = "DEATH SPIRAL", "Death Spiral"
+        PAIR_ELEMENT = "PAIR ELEMENT", "Pair Element"
+
+        # Ice Dance
+        PATTERN_DANCE = "PATTERN DANCE", "Pattern Dance"
+        PATTERN_DANCE_ELEMENT = "PATTERN DANCE ELEMENT", "Pattern Dance Element"
+        DANCE_STEP = "DANCE STEP", "Dance Step"
+        DANCE_SPIN = "DANCE SPIN", "Dance Spin"
+        DANCE_LIFT = "DANCE LIFT", "Dance Lift"
+        DANCE_TWIZZLE = "DANCE TWIZZLE", "Dance Twizzle"
+        DANCE_STEP_TURN = "DANCE STEP/TURN", "Dance Step/Turn"
+        DANCE_EDGE = "DANCE EDGE ELEMENT", "Dance Edge Element"
+        CHOREOGRAPHIC = "CHOREOGRAPHIC", "Choreographic"
+
+        # Synchro
+        SYNCHRO_ARTISTIC = "SYNCHRO ARTISTIC", "Synchro Artistic"
+        SYNCHRO_CREATIVE = "SYNCHRO CREATIVE", "Synchro Creative"
+        SYNCHRO_LIFT = "SYNCHRO LIFT", "Synchro Lift"
+        SYNCHRO_INTERSECTION = "SYNCHRO INTERSECTION", "Synchro Intersection"
+        SYNCHRO_FORMATION = "SYNCHRO FORMATION", "Synchro Formation"
+        SYNCHRO_PIVOTING = "SYNCHRO PIVOTING", "Synchro Pivoting"
+        SYNCHRO_SPIN = "SYNCHRO SPIN", "Synchro Spin"
+        SYNCHRO_TWIZZLE = "SYNCHRO TWIZZLE", "Synchro Twizzle"
+        SYNCHRO_MIXED = "SYNCHRO", "Synchro Mixed/Element"
+
         OTHER = "OTHER", "Other"
 
     id = models.AutoField(primary_key=True)
     element_name = models.CharField(max_length=100)  # e.g., "Triple Lutz"
-    abbreviation = models.CharField(max_length=10, unique=True)  # e.g., "3Lz"
+    
+    # Increased max_length to 20 just to be safe (longest in fixture is ~8 chars)
+    abbreviation = models.CharField(max_length=20, unique=True) 
+    
+    # Increased max_length to 50 to handle "PATTERN DANCE ELEMENT" etc.
     discipline_type = models.CharField(
-        max_length=10, choices=DisciplineType.choices, default=DisciplineType.OTHER
+        max_length=50, 
+        choices=DisciplineType.choices, 
+        default=DisciplineType.OTHER
+    )
+    
+    # New field required by your seed data
+    element_category = models.CharField(
+        max_length=20,
+        choices=ElementCategory.choices,
+        default=ElementCategory.SINGLES
     )
 
     def __str__(self):
         return f"{self.element_name} ({self.abbreviation})"
 
     class Meta:
-        ordering = ["discipline_type", "element_name"]
+        ordering = ["element_category", "discipline_type", "element_name"]
 
 
 # --- 3. PLANNING ENTITY MODELS ---
@@ -145,7 +198,6 @@ class Skater(models.Model):
     The central profile for an individual athlete (the person).
     This model stores their personal information.
     """
-
     id = models.AutoField(primary_key=True)
     user_account = models.OneToOneField(
         User,
@@ -156,6 +208,10 @@ class Skater(models.Model):
     )
     full_name = models.CharField(max_length=255)
     date_of_birth = models.DateField()
+    
+    # --- NEW FIELD ---
+    is_active = models.BooleanField(default=True, help_text="If false, skater is archived.")
+    # -----------------
 
     class Gender(models.TextChoices):
         MALE = "MALE", "Male"

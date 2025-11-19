@@ -3,7 +3,8 @@ import { useAuth } from './AuthContext';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import AthleteSeasonDashboard from './pages/AthleteSeasonDashboard'; // <-- IMPORT NEW PAGE
+import AthleteSeasonDashboard from './pages/AthleteSeasonDashboard';
+import Settings from './pages/Settings';
 
 // A simple hash-based router
 const publicRoutes = {
@@ -14,6 +15,7 @@ const publicRoutes = {
 const privateRoutes = {
   '/': Home,
   '/skater/:id': AthleteSeasonDashboard,
+  '/settings': Settings,
 };
 
 // Custom hook to get the current hash

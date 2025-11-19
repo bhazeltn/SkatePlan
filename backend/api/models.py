@@ -106,6 +106,7 @@ class Federation(models.Model):
     class Meta:
         ordering = ["name"]
 
+
 class SkatingElement(models.Model):
     """
     A global lookup table for all skating elements.
@@ -125,9 +126,9 @@ class SkatingElement(models.Model):
         SPIN = "SPIN", "Spin"
         SPIN_COMBINATION = "SPIN COMBINATION", "Spin Combination"
         STEP = "STEP", "Step Sequence"  # Keep for legacy/manual
-        STEP_SEQUENCE = "STEP SEQUENCE", "Step Sequence" # Matches fixture
+        STEP_SEQUENCE = "STEP SEQUENCE", "Step Sequence"  # Matches fixture
         CHOREO_ELEMENT = "CHOREOGRAPHIC ELEMENT", "Choreographic Element"
-        
+
         # Pairs
         THROW_JUMP = "THROW JUMP", "Throw Jump"
         TWIST_LIFT = "TWIST LIFT", "Twist Lift"
@@ -163,22 +164,18 @@ class SkatingElement(models.Model):
 
     id = models.AutoField(primary_key=True)
     element_name = models.CharField(max_length=100)  # e.g., "Triple Lutz"
-    
+
     # Increased max_length to 20 just to be safe (longest in fixture is ~8 chars)
-    abbreviation = models.CharField(max_length=20, unique=True) 
-    
+    abbreviation = models.CharField(max_length=20, unique=True)
+
     # Increased max_length to 50 to handle "PATTERN DANCE ELEMENT" etc.
     discipline_type = models.CharField(
-        max_length=50, 
-        choices=DisciplineType.choices, 
-        default=DisciplineType.OTHER
+        max_length=50, choices=DisciplineType.choices, default=DisciplineType.OTHER
     )
-    
+
     # New field required by your seed data
     element_category = models.CharField(
-        max_length=20,
-        choices=ElementCategory.choices,
-        default=ElementCategory.SINGLES
+        max_length=20, choices=ElementCategory.choices, default=ElementCategory.SINGLES
     )
 
     def __str__(self):
@@ -198,6 +195,7 @@ class Skater(models.Model):
     The central profile for an individual athlete (the person).
     This model stores their personal information.
     """
+
     id = models.AutoField(primary_key=True)
     user_account = models.OneToOneField(
         User,
@@ -208,10 +206,12 @@ class Skater(models.Model):
     )
     full_name = models.CharField(max_length=255)
     date_of_birth = models.DateField()
-    
-    # --- NEW FIELD ---
-    is_active = models.BooleanField(default=True, help_text="If false, skater is archived.")
-    # -----------------
+    federation = models.ForeignKey(
+        Federation, on_delete=models.SET_NULL, null=True, blank=True
+    )
+    is_active = models.BooleanField(
+        default=True, help_text="If false, skater is archived."
+    )
 
     class Gender(models.TextChoices):
         MALE = "MALE", "Male"

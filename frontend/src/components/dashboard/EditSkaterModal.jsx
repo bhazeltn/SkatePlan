@@ -14,37 +14,58 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-export function AddSkaterModal({ onSkaterAdded }) {
+export function EditSkaterModal({ skater, onSkaterUpdated }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const { token } = useAuth();
 
-  // Form State
+  // State
   const [fullName, setFullName] = useState('');
   const [dob, setDob] = useState('');
   const [gender, setGender] = useState('');
   const [homeClub, setHomeClub] = useState('');
-  const [discipline, setDiscipline] = useState('SINGLES');
-  const [level, setLevel] = useState('Pre-Juvenile');
-  
-  // Federation State
-  const [federations, setFederations] = useState([]);
   const [federationId, setFederationId] = useState('');
+  
+  // Data for dropdowns
+  const [federations, setFederations] = useState([]);
 
-  // Fetch Federations on mount
+  // Initialize form when modal opens or skater changes
   useEffect(() => {
-    const fetchFeds = async () => {
-      if (!token) return;
-      try {
-        const data = await apiRequest('/federations/', 'GET', null, token);
-        setFederations(data || []);
-      } catch (e) {
-        console.error("Failed to load federations", e);
-      }
-    };
-    fetchFeds();
-  }, [token]);
+    if (skater) {
+      setFullName(skater.full_name || '');
+      setDob(skater.date_of_birth || '');
+      
+      // Map the display gender back to the code if needed, 
+      // OR rely on the backend sending the code in a separate field.
+      // Ideally, we should update the backend SkaterSerializer to send BOTH 
+      // label and code, but for now we can map commonly used ones or rely on simple matching.
+      // Since our GET serializer sends "Female" (Display), but PUT needs "FEMALE" (Code),
+      // we need to be careful. 
+      
+      // Quick mapping fix for the MVP:
+      const genderMap = { 'Male': 'MALE', 'Female': 'FEMALE', 'Non-Binary': 'NON_BINARY', 'Other': 'OTHER' };
+      setGender(genderMap[skater.gender] || '');
+
+      setHomeClub(skater.home_club || '');
+      setFederationId(skater.federation ? skater.federation.id : '');
+    }
+  }, [skater]);
+
+  // Fetch Federations
+  useEffect(() => {
+    if (open) {
+        const fetchFeds = async () => {
+            try {
+                const data = await apiRequest('/federations/', 'GET', null, token);
+                setFederations(data || []);
+            } catch (e) {
+                console.error(e);
+            }
+        };
+        fetchFeds();
+    }
+  }, [open, token]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -57,30 +78,14 @@ export function AddSkaterModal({ onSkaterAdded }) {
         date_of_birth: dob,
         gender: gender,
         home_club: homeClub,
-        discipline: discipline,
-        level: level,
-        federation_id: federationId // Send to backend
+        federation: federationId || null
       };
       
-      const newSkater = await apiRequest('/skaters/create/', 'POST', data, token);
-      onSkaterAdded(newSkater);
+      await apiRequest(`/skaters/${skater.id}/`, 'PATCH', data, token);
+      onSkaterUpdated(); // Trigger a refresh in the parent
       setOpen(false);
-      
-      // Reset Form
-      setFullName('');
-      setDob('');
-      setGender('');
-      setHomeClub('');
-      setDiscipline('SINGLES');
-      setLevel('Pre-Juvenile');
-      setFederationId('');
-
     } catch (err) {
-      if (err.message.includes('409')) {
-        setError('A skater with this name and birthday already exists.');
-      } else {
-        setError(err.message || 'Failed to create skater.');
-      }
+      setError(err.message || 'Failed to update profile.');
     } finally {
       setLoading(false);
     }
@@ -89,33 +94,30 @@ export function AddSkaterModal({ onSkaterAdded }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>Add New Athlete</Button>
+        <Button variant="outline" size="sm">Edit Profile</Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Add New Athlete</DialogTitle>
+          <DialogTitle>Edit Profile</DialogTitle>
           <DialogDescription>
-            Create a new athlete profile.
+            Update personal information for {skater.full_name}.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          
-          {/* Row 1: Name & DOB */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="fullName">Full Name</Label>
+              <Label htmlFor="edit-fullName">Full Name</Label>
               <Input
-                id="fullName"
-                placeholder="Ulrich Salchow"
+                id="edit-fullName"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="dob">Date of Birth</Label>
+              <Label htmlFor="edit-dob">Date of Birth</Label>
               <Input
-                id="dob"
+                id="edit-dob"
                 type="date"
                 value={dob}
                 onChange={(e) => setDob(e.target.value)}
@@ -124,12 +126,11 @@ export function AddSkaterModal({ onSkaterAdded }) {
             </div>
           </div>
 
-          {/* Row 2: Gender & Club */}
           <div className="grid grid-cols-2 gap-4">
              <div className="space-y-2">
-              <Label htmlFor="gender">Gender</Label>
+              <Label htmlFor="edit-gender">Gender</Label>
               <select
-                id="gender"
+                id="edit-gender"
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 value={gender}
                 onChange={(e) => setGender(e.target.value)}
@@ -142,21 +143,19 @@ export function AddSkaterModal({ onSkaterAdded }) {
               </select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="homeClub">Home Club/Rink</Label>
+              <Label htmlFor="edit-homeClub">Home Club/Rink</Label>
               <Input
-                id="homeClub"
-                placeholder="Your FSC"
+                id="edit-homeClub"
                 value={homeClub}
                 onChange={(e) => setHomeClub(e.target.value)}
               />
             </div>
           </div>
 
-          {/* Row 3: Federation */}
           <div className="space-y-2">
-              <Label htmlFor="federation">Federation</Label>
+              <Label htmlFor="edit-federation">Federation</Label>
               <select
-                id="federation"
+                id="edit-federation"
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 value={federationId}
                 onChange={(e) => setFederationId(e.target.value)}
@@ -169,40 +168,11 @@ export function AddSkaterModal({ onSkaterAdded }) {
                 ))}
               </select>
           </div>
-          
-          <div className="border-t my-2"></div>
-
-          {/* Row 4: Discipline & Level */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="discipline">Primary Discipline</Label>
-              <select
-                id="discipline"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                value={discipline}
-                onChange={(e) => setDiscipline(e.target.value)}
-              >
-                <option value="SINGLES">Singles</option>
-                <option value="SOLO_DANCE">Solo Dance</option>
-                <option value="PAIRS">Pairs</option>
-                <option value="ICE_DANCE">Ice Dance</option>
-                <option value="SYNCHRO">Synchro</option>
-              </select>
-            </div>
-            <div className="space-y-2">
-               <Label htmlFor="level">Current Level</Label>
-               <Input
-                 id="level"
-                 value={level}
-                 onChange={(e) => setLevel(e.target.value)}
-               />
-            </div>
-          </div>
 
           {error && <p className="text-sm text-red-600">{error}</p>}
           <DialogFooter>
             <Button type="submit" disabled={loading}>
-              {loading ? 'Saving...' : 'Save Athlete'}
+              {loading ? 'Saving...' : 'Save Changes'}
             </Button>
           </DialogFooter>
         </form>

@@ -5,8 +5,9 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import AthleteSeasonDashboard from './pages/AthleteSeasonDashboard';
 import Settings from './pages/Settings';
+import YearlyPlanEditor from './pages/YearlyPlanEditor';
 
-// A simple hash-based router
+// Route Definitions
 const publicRoutes = {
   '/': Login,
   '/register': Register,
@@ -14,11 +15,12 @@ const publicRoutes = {
 
 const privateRoutes = {
   '/': Home,
-  '/skater/:id': AthleteSeasonDashboard,
   '/settings': Settings,
+  '/skater/:id': AthleteSeasonDashboard,
+  '/plans/:id': YearlyPlanEditor,
 };
 
-// Custom hook to get the current hash
+// --- Custom Hook: Tracks the URL Hash ---
 const useHash = () => {
   const [hash, setHash] = useState(() => window.location.hash || '#/');
   
@@ -30,20 +32,40 @@ const useHash = () => {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
   
-  return hash.substring(1) || '/'; // Get hash path (e.g., '#/register' -> '/register')
+  // Remove the '#' and return the path (e.g. "/plans/1")
+  return hash.substring(1) || '/'; 
 };
 
-// Function to find the matching route
-const findRoute = (routes, path) => {
-  // Check for exact match
-  if (routes[path]) {
-    return routes[path];
+// --- Router Logic: Finds the matching component ---
+const findRoute = (routes, currentPath) => {
+  // 1. Remove trailing slashes for consistency (e.g. "/plans/1/" -> "/plans/1")
+  const normalizedPath = currentPath.replace(/\/$/, '') || '/';
+
+  // 2. Check for Exact Match
+  if (routes[normalizedPath]) {
+    return routes[normalizedPath];
   }
-  // Check for dynamic match (e.g., /skater/:id)
-  const dynamicRoute = Object.keys(routes).find(
-    (key) => key.split('/')[1] === path.split('/')[1] && key.includes(':id')
-  );
-  return routes[dynamicRoute];
+
+  // 3. Check for Dynamic Match (e.g. "/plans/:id")
+  const dynamicKey = Object.keys(routes).find((routeKey) => {
+    // Skip exact routes
+    if (!routeKey.includes(':')) return false;
+
+    // Convert routeKey (e.g. "/plans/:id") into a Regex
+    // This replaces ":id" with a capture group "([^/]+)" which matches any string segment
+    const regexPattern = '^' + routeKey.replace(/:[a-zA-Z0-9]+/, '([^/]+)') + '$';
+    const regex = new RegExp(regexPattern);
+    
+    return regex.test(normalizedPath);
+  });
+
+  if (dynamicKey) {
+    return routes[dynamicKey];
+  }
+
+  // 4. No match found
+  console.log(`[Router] No match for path: "${currentPath}" (Normalized: "${normalizedPath}")`);
+  return null;
 };
 
 
@@ -52,7 +74,6 @@ function App() {
   const path = useHash();
 
   if (loading) {
-    // Show a global loading spinner
     return (
       <div className="flex h-screen w-full items-center justify-center bg-gray-100">
         <h1 className="text-3xl font-bold">Loading...</h1>
@@ -60,15 +81,17 @@ function App() {
     );
   }
 
-  // If authenticated, show the private routes
+  // If authenticated, show private routes
   if (isAuthenticated) {
-    const Component = findRoute(privateRoutes, path) || Home;
-    return <Component />;
+    const Component = findRoute(privateRoutes, path);
+    // If no route matched, fallback to Home (Dashboard)
+    return Component ? <Component /> : <Home />;
   }
 
-  // If not authenticated, show the public routes
-  const Component = findRoute(publicRoutes, path) || Login; // Default to Login page
-  return <Component />;
+  // If not authenticated, show public routes
+  const Component = findRoute(publicRoutes, path);
+  // If no route matched, fallback to Login
+  return Component ? <Component /> : <Login />;
 }
 
 export default App;

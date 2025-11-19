@@ -379,6 +379,9 @@ class AthleteSeason(models.Model):
         Skater, on_delete=models.CASCADE, related_name="athlete_seasons"
     )
     season = models.CharField(max_length=10)  # e.g., "2025-2026"
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)  # To distinguish current vs past
 
     primary_coach = models.ForeignKey(
         User,

@@ -5,6 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CreateYearlyPlanModal } from '../CreateYearlyPlanModal';
 import { Calendar, Trophy, ArrowRight } from 'lucide-react';
+import { EditSeasonModal } from '../EditSeasonModal';
+
+// Helper to format dates (e.g., "Jul 2025")
+const formatDate = (d) => new Date(d).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
 
 export function YearlyPlansTab({ skater }) {
   const { token } = useAuth();
@@ -50,28 +54,53 @@ export function YearlyPlansTab({ skater }) {
           {plans.map((plan) => (
             <Card key={plan.id} className="hover:border-brand-blue transition-all cursor-pointer group">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-xl font-bold text-brand-blue">
-                    {plan.discipline_name}
-                </CardTitle>
-                {/* This button will eventually link to the Editor Page */}
-                <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity">
-                    <ArrowRight className="h-5 w-5" />
-                </Button>
+                <div>
+                    <CardTitle className="text-xl font-bold text-brand-blue">
+                        {plan.discipline_name}
+                    </CardTitle>
+                    
+                    {/* --- SEASON INFO --- */}
+                    {plan.season_info && (
+                        <div className="flex items-center mt-1">
+                            <p className="text-xs text-muted-foreground font-medium">
+                                {plan.season_info.season} 
+                                {plan.season_info.start_date && (
+                                    <span className="ml-1 font-normal text-gray-400">
+                                        ({formatDate(plan.season_info.start_date)} - {formatDate(plan.season_info.end_date)})
+                                    </span>
+                                )}
+                            </p>
+                            {/* Pass the season object from the plan to the modal */}
+                            <EditSeasonModal season={plan.season_info} onUpdated={fetchPlans} />
+                        </div>
+                    )}
+                </div>
+                
+                {/* Link to Editor (Placeholder for now) */}
+                <a href={`#/plans/${plan.id}`}>
+                    <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                        <ArrowRight className="h-5 w-5" />
+                    </Button>
+                </a>
               </CardHeader>
+              
               <CardContent>
                 <div className="space-y-3">
+                    {/* Primary Goal */}
                     <div className="flex items-center gap-2 text-sm">
                         <Trophy className="h-4 w-4 text-brand-orange" />
                         <span className="font-medium">Goal:</span>
                         <span className="text-gray-600">{plan.primary_season_goal}</span>
                     </div>
+                    
+                    {/* Peak Structure */}
                     <div className="flex items-center gap-2 text-sm">
                         <Calendar className="h-4 w-4 text-gray-500" />
                         <span className="font-medium">Structure:</span>
                         <span className="text-gray-600">{plan.peak_type}</span>
                     </div>
                     
-                    {/* Mini Timeline Visualization (Placeholder) */}
+                    {/* Mini Timeline Visualization */}
                     <div className="mt-4 pt-4 border-t">
                         <p className="text-xs text-muted-foreground mb-2">
                             {plan.macrocycles?.length || 0} Macrocycles defined

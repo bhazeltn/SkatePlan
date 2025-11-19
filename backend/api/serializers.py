@@ -11,6 +11,7 @@ from .models import (
     AthleteProfile,
     YearlyPlan,
     Macrocycle,
+    AthleteSeason,
 )
 
 User = get_user_model()
@@ -155,15 +156,16 @@ class SynchroTeamSerializer(serializers.ModelSerializer):
         fields = ("id", "team_name", "level", "federation")
 
 
-class GenericPlanningEntitySerializer(serializers.ModelSerializer):
+class GenericPlanningEntitySerializer(serializers.Serializer):
     """
-    Polymorphic serializer that injects the 'type' field.
+    Polymorphic serializer that returns the correct data structure
+    based on the entity type and INJECTS the 'type' field.
     """
 
     def to_representation(self, instance):
         data = None
 
-        # Delegate to specific serializers
+        # 1. Get the specific data based on the model type
         if isinstance(instance, SinglesEntity):
             data = SinglesEntitySerializer(instance, context=self.context).data
         elif isinstance(instance, SoloDanceEntity):
@@ -173,23 +175,30 @@ class GenericPlanningEntitySerializer(serializers.ModelSerializer):
         elif isinstance(instance, SynchroTeam):
             data = SynchroTeamSerializer(instance, context=self.context).data
 
-        # Fallback
+        # 2. Fallback if it didn't match any known type
         if data is None:
             data = {
                 "id": instance.id,
                 "name": str(instance),
             }
 
-        # --- CRITICAL FIX: Inject Type ---
-        # This tells the frontend which entity this is (e.g. "SinglesEntity")
-        data["type"] = instance.__class__.__name__
+        # 3. CRITICAL FIX: Convert to dict and Inject Type
+        # Converting to a plain dict ensures we can add keys without restriction
+        response_data = dict(data)
+        response_data["type"] = instance.__class__.__name__
 
-        return data
+        return response_data
 
 
 # ==========================================
 # 4. PLANNING SERIALIZERS
 # ==========================================
+
+
+class AthleteSeasonSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AthleteSeason
+        fields = ("id", "season", "start_date", "end_date", "is_active")
 
 
 class MacrocycleSerializer(serializers.ModelSerializer):
@@ -205,6 +214,8 @@ class YearlyPlanSerializer(serializers.ModelSerializer):
     # (because we set it manually in the View)
     planning_entity = serializers.SerializerMethodField()
 
+    season_info = serializers.SerializerMethodField()
+
     class Meta:
         model = YearlyPlan
         fields = (
@@ -214,7 +225,16 @@ class YearlyPlanSerializer(serializers.ModelSerializer):
             "peak_type",
             "primary_season_goal",
             "macrocycles",
+            "season_info",  # <-- Add this
         )
+
+    def get_season_info(self, obj):
+        # A plan can link to multiple seasons technically, but usually just one primary one.
+        # We grab the first one for display context.
+        season = obj.athlete_seasons.first()
+        if season:
+            return AthleteSeasonSerializer(season).data
+        return None
 
     def get_discipline_name(self, obj):
         if obj.planning_entity:

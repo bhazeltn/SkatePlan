@@ -31,6 +31,7 @@ from .serializers import (
     SynchroTeamSerializer,
     YearlyPlanSerializer,
     MacrocycleSerializer,
+    AthleteSeasonSerializer,
 )
 from django.utils import timezone
 from datetime import date
@@ -234,12 +235,19 @@ class CreateSkaterView(generics.CreateAPIView):
         # Auto-Create Season
         today = date.today()
         start_year = today.year if today.month >= 7 else today.year - 1
+
+        # Define standard season dates (July 1 - June 30) as defaults
+        season_start = date(start_year, 7, 1)
+        season_end = date(start_year + 1, 6, 30)
         season_str = f"{start_year}-{start_year + 1}"
 
         AthleteSeason.objects.create(
-            skater=skater, season=season_str, primary_coach=request.user
+            skater=skater,
+            season=season_str,
+            start_date=season_start,
+            end_date=season_end,
+            primary_coach=request.user,
         )
-
         return Response(SkaterSerializer(skater).data, status=status.HTTP_201_CREATED)
 
 
@@ -317,58 +325,82 @@ class SynchroTeamDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 
 class YearlyPlanListCreateView(generics.ListCreateAPIView):
-    """
-    List all YTPs for a specific AthleteSeason, or create a new one.
-    """
-
+    # ... permission/serializer/queryset ...
     permission_classes = [permissions.IsAuthenticated, IsCoachUser]
     serializer_class = YearlyPlanSerializer
 
     def get_queryset(self):
         skater_id = self.kwargs["skater_id"]
-        # For MVP, just return all plans for this skater
         return YearlyPlan.objects.filter(athlete_seasons__skater_id=skater_id)
 
     def perform_create(self, serializer):
         skater_id = self.kwargs["skater_id"]
         skater = Skater.objects.get(id=skater_id)
 
-        # Find the active season
-        active_season = AthleteSeason.objects.filter(skater=skater).last()
-        if not active_season:
-            raise ValidationError("No active season found for this skater.")
+        # --- NEW LOGIC: Determine which Season to use ---
+        season_id = self.request.data.get("season_id")
+        new_season_data = self.request.data.get(
+            "new_season_data"
+        )  # Expected dict: {name, start, end}
 
-        # --- NEW: Handle Generic Link ---
+        target_season = None
+
+        if season_id:
+            # Case A: Link to existing season
+            try:
+                target_season = AthleteSeason.objects.get(id=season_id, skater=skater)
+            except AthleteSeason.DoesNotExist:
+                raise ValidationError("Selected season does not exist.")
+
+        elif new_season_data:
+            # Case B: Create a NEW season on the fly
+            # Validate basics
+            if not new_season_data.get("season"):
+                raise ValidationError("New season must have a name.")
+
+            target_season = AthleteSeason.objects.create(
+                skater=skater,
+                season=new_season_data.get("season"),
+                start_date=new_season_data.get("start_date") or None,
+                end_date=new_season_data.get("end_date") or None,
+                primary_coach=self.request.user,
+            )
+
+        else:
+            # Case C: Fallback (Legacy) - Just grab the latest one
+            target_season = AthleteSeason.objects.filter(skater=skater).last()
+            if not target_season:
+                raise ValidationError("No active season found. Please create one.")
+
+        # ------------------------------------------------
+
+        # ... (Existing Entity Link Logic) ...
         entity_id = self.request.data.get("planning_entity_id")
         entity_type = self.request.data.get("planning_entity_type")
 
         if not entity_id or not entity_type:
             raise ValidationError("Missing planning entity information.")
 
-        # Map the string type to the actual Model Class
         model_map = {
             "SinglesEntity": SinglesEntity,
             "SoloDanceEntity": SoloDanceEntity,
             "Team": Team,
             "SynchroTeam": SynchroTeam,
         }
-
         model_class = model_map.get(entity_type)
         if not model_class:
             raise ValidationError(f"Invalid entity type: {entity_type}")
 
-        # Get the ContentType ID for that model
         content_type = ContentType.objects.get_for_model(model_class)
 
-        # Save the plan with the specific link
         plan = serializer.save(
             coach_owner=self.request.user,
             content_type=content_type,
             object_id=entity_id,
         )
-        # --------------------------------
 
-        plan.athlete_seasons.add(active_season)
+        # Link the plan to the determined season
+        plan.athlete_seasons.add(target_season)
 
 
 class YearlyPlanDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -395,3 +427,21 @@ class MacrocycleDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [permissions.IsAuthenticated, IsCoachUser]
     serializer_class = MacrocycleSerializer
     queryset = Macrocycle.objects.all()
+
+
+class AthleteSeasonDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    Manage a specific season (e.g. change dates, archive).
+    """
+
+    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    serializer_class = AthleteSeasonSerializer
+    queryset = AthleteSeason.objects.all()
+
+
+class AthleteSeasonList(generics.ListAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    serializer_class = AthleteSeasonSerializer
+
+    def get_queryset(self):
+        return AthleteSeason.objects.filter(skater_id=self.kwargs["skater_id"])

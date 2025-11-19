@@ -21,4 +21,6 @@ urlpatterns = [
     path("ytps/<int:pk>/", views.YearlyPlanDetailView.as_view()),
     path("ytps/<int:plan_id>/macrocycles/", views.MacrocycleListCreateView.as_view()),
     path("macrocycles/<int:pk>/", views.MacrocycleDetailView.as_view()),
+    path("seasons/<int:pk>/", views.AthleteSeasonDetailView.as_view()),
+    path("skaters/<int:skater_id>/seasons/", views.AthleteSeasonList.as_view()),
 ]

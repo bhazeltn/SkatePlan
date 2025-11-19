@@ -16,4 +16,9 @@ urlpatterns = [
     path("entities/solodance/<int:pk>/", views.SoloDanceEntityDetailView.as_view()),
     path("entities/teams/<int:pk>/", views.TeamDetailView.as_view()),
     path("entities/synchro/<int:pk>/", views.SynchroTeamDetailView.as_view()),
+    # Planning URLs
+    path("skaters/<int:skater_id>/ytps/", views.YearlyPlanListCreateView.as_view()),
+    path("ytps/<int:pk>/", views.YearlyPlanDetailView.as_view()),
+    path("ytps/<int:plan_id>/macrocycles/", views.MacrocycleListCreateView.as_view()),
+    path("macrocycles/<int:pk>/", views.MacrocycleDetailView.as_view()),
 ]

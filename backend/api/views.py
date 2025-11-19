@@ -1,4 +1,6 @@
 from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.models import ContentType
+from rest_framework.exceptions import ValidationError
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
@@ -15,6 +17,8 @@ from .models import (
     SynchroTeam,
     AthleteSeason,
     Federation,
+    YearlyPlan,
+    Macrocycle,
 )
 from .serializers import (
     SkaterSerializer,
@@ -25,6 +29,8 @@ from .serializers import (
     SoloDanceEntitySerializer,
     TeamSerializer,
     SynchroTeamSerializer,
+    YearlyPlanSerializer,
+    MacrocycleSerializer,
 )
 from django.utils import timezone
 from datetime import date
@@ -305,3 +311,87 @@ class SynchroTeamDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [permissions.IsAuthenticated, IsCoachUser]
     serializer_class = SynchroTeamSerializer
     queryset = SynchroTeam.objects.all()
+
+
+# --- PLANNING VIEWS ---
+
+
+class YearlyPlanListCreateView(generics.ListCreateAPIView):
+    """
+    List all YTPs for a specific AthleteSeason, or create a new one.
+    """
+
+    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    serializer_class = YearlyPlanSerializer
+
+    def get_queryset(self):
+        skater_id = self.kwargs["skater_id"]
+        # For MVP, just return all plans for this skater
+        return YearlyPlan.objects.filter(athlete_seasons__skater_id=skater_id)
+
+    def perform_create(self, serializer):
+        skater_id = self.kwargs["skater_id"]
+        skater = Skater.objects.get(id=skater_id)
+
+        # Find the active season
+        active_season = AthleteSeason.objects.filter(skater=skater).last()
+        if not active_season:
+            raise ValidationError("No active season found for this skater.")
+
+        # --- NEW: Handle Generic Link ---
+        entity_id = self.request.data.get("planning_entity_id")
+        entity_type = self.request.data.get("planning_entity_type")
+
+        if not entity_id or not entity_type:
+            raise ValidationError("Missing planning entity information.")
+
+        # Map the string type to the actual Model Class
+        model_map = {
+            "SinglesEntity": SinglesEntity,
+            "SoloDanceEntity": SoloDanceEntity,
+            "Team": Team,
+            "SynchroTeam": SynchroTeam,
+        }
+
+        model_class = model_map.get(entity_type)
+        if not model_class:
+            raise ValidationError(f"Invalid entity type: {entity_type}")
+
+        # Get the ContentType ID for that model
+        content_type = ContentType.objects.get_for_model(model_class)
+
+        # Save the plan with the specific link
+        plan = serializer.save(
+            coach_owner=self.request.user,
+            content_type=content_type,
+            object_id=entity_id,
+        )
+        # --------------------------------
+
+        plan.athlete_seasons.add(active_season)
+
+
+class YearlyPlanDetailView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    serializer_class = YearlyPlanSerializer
+    queryset = YearlyPlan.objects.all()
+
+
+class MacrocycleListCreateView(generics.ListCreateAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    serializer_class = MacrocycleSerializer
+
+    def get_queryset(self):
+        plan_id = self.kwargs["plan_id"]
+        return Macrocycle.objects.filter(yearly_plan_id=plan_id)
+
+    def perform_create(self, serializer):
+        plan_id = self.kwargs["plan_id"]
+        plan = YearlyPlan.objects.get(id=plan_id)
+        serializer.save(yearly_plan=plan)
+
+
+class MacrocycleDetailView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    serializer_class = MacrocycleSerializer
+    queryset = Macrocycle.objects.all()

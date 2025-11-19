@@ -639,3 +639,33 @@ class MeetingLog(models.Model):
 
     class Meta:
         ordering = ["-meeting_date"]
+
+
+class AthleteProfile(models.Model):
+    """
+    Stores private, sensitive PII/PHI for a skater.
+    One-to-One with Skater.
+    """
+
+    id = models.AutoField(primary_key=True)
+    skater = models.OneToOneField(
+        Skater, on_delete=models.CASCADE, related_name="profile"
+    )
+
+    # --- Contact Info (For Invites) ---
+    # We store these here until the User account is actually created/linked.
+    skater_email = models.EmailField(blank=True, null=True)
+    guardian_name = models.CharField(max_length=255, blank=True, null=True)
+    guardian_email = models.EmailField(blank=True, null=True)
+
+    # --- Emergency & Safety ---
+    emergency_contact_name = models.CharField(max_length=255, blank=True, null=True)
+    emergency_contact_phone = models.CharField(max_length=50, blank=True, null=True)
+
+    # In a real prod env, use django-cryptography for this field
+    relevant_medical_notes = models.TextField(
+        blank=True, null=True, help_text="Allergies, conditions, etc."
+    )
+
+    def __str__(self):
+        return f"Profile for {self.skater.full_name}"

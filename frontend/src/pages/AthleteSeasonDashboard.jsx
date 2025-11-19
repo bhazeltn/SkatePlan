@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { EditSkaterModal } from '@/components/dashboard/EditSkaterModal';
 import { EditDisciplineModal } from '@/components/dashboard/EditDisciplineModal';
+import { EditSafetyModal } from '@/components/dashboard/EditSafetyModal';
 
 export default function AthleteSeasonDashboard() {
   const { token } = useAuth();
@@ -172,7 +173,42 @@ export default function AthleteSeasonDashboard() {
 
                 </div>
               </section>
-
+              <section>
+                <div className="flex justify-between items-center mb-4 border-b pb-2">
+                    <h4 className="text-md font-semibold text-gray-900">Safety & Contact</h4>
+                    <EditSafetyModal skater={skater} onUpdated={fetchData} />
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="p-4 bg-red-50 border border-red-100 rounded-md">
+                        <h5 className="text-sm font-semibold text-red-800 mb-2">Medical Notes</h5>
+                        <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                            {skater.profile?.relevant_medical_notes || "No notes recorded."}
+                        </p>
+                    </div>
+                    
+                    <div className="space-y-3">
+                         <div>
+                            <label className="text-xs font-medium text-gray-500 uppercase">Emergency Contact</label>
+                            <p className="font-medium">
+                                {skater.profile?.emergency_contact_name || "--"} 
+                                <span className="text-gray-500 font-normal ml-2">
+                                    {skater.profile?.emergency_contact_phone}
+                                </span>
+                            </p>
+                         </div>
+                         <div>
+                            <label className="text-xs font-medium text-gray-500 uppercase">Guardian</label>
+                            <p className="font-medium">
+                                {skater.profile?.guardian_name || "--"}
+                                <span className="text-gray-500 font-normal ml-2">
+                                    {skater.profile?.guardian_email}
+                                </span>
+                            </p>
+                         </div>
+                    </div>
+                </div>
+              </section>
               {/* Disciplines */}
               <section>
                 <div className="flex justify-between items-center mb-4 border-b pb-2">

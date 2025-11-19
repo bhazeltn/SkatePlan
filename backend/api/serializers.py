@@ -1,7 +1,16 @@
 from django.contrib.auth import get_user_model, authenticate
 from rest_framework import serializers
-from .models import Skater, SinglesEntity, Federation, PlanningEntityAccess
-from .models import SoloDanceEntity, Team, SynchroTeam
+from .models import (
+    Skater,
+    SinglesEntity,
+    Federation,
+    PlanningEntityAccess,
+    SoloDanceEntity,
+    Team,
+    SynchroTeam,
+    AthleteProfile,
+)
+
 
 User = get_user_model()
 
@@ -63,6 +72,19 @@ class FederationSerializer(serializers.ModelSerializer):
         fields = ("id", "name", "code", "flag_emoji")
 
 
+class AthleteProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AthleteProfile
+        fields = (
+            "skater_email",
+            "guardian_name",
+            "guardian_email",
+            "emergency_contact_name",
+            "emergency_contact_phone",
+            "relevant_medical_notes",
+        )
+
+
 # --- 2. Base Skater Serializer (Breaks Recursion) ---
 
 
@@ -86,13 +108,12 @@ class SimpleSkaterSerializer(serializers.ModelSerializer):
 
 
 class SinglesEntitySerializer(serializers.ModelSerializer):
+    # (Make sure you kept the SimpleSkaterSerializer fix here!)
     skater = SimpleSkaterSerializer(read_only=True)
-    # Add a custom field for the display name
     name = serializers.SerializerMethodField()
 
     class Meta:
         model = SinglesEntity
-        # Add 'name' to fields
         fields = ("id", "name", "skater", "federation", "current_level")
 
     def get_name(self, obj):
@@ -100,26 +121,29 @@ class SinglesEntitySerializer(serializers.ModelSerializer):
 
 
 class SoloDanceEntitySerializer(serializers.ModelSerializer):
+    skater = SimpleSkaterSerializer(read_only=True)
+    name = serializers.SerializerMethodField()
+
     class Meta:
         model = SoloDanceEntity
-        fields = ("id", "skater", "federation", "current_level")
+        fields = ("id", "name", "skater", "federation", "current_level")
+
+    def get_name(self, obj):
+        return "Solo Dance"
 
 
 class TeamSerializer(serializers.ModelSerializer):
+    # For teams, we might want to show both partners, but for now just the basic info
+    federation = FederationSerializer(read_only=True)
+
     class Meta:
         model = Team
-        fields = (
-            "id",
-            "team_name",
-            "discipline",
-            "partner_a",
-            "partner_b",
-            "federation",
-            "current_level",
-        )
+        fields = ("id", "team_name", "discipline", "federation", "current_level")
 
 
 class SynchroTeamSerializer(serializers.ModelSerializer):
+    federation = FederationSerializer(read_only=True)
+
     class Meta:
         model = SynchroTeam
         fields = ("id", "team_name", "level", "federation")
@@ -132,15 +156,31 @@ class GenericPlanningEntitySerializer(serializers.ModelSerializer):
     """
 
     def to_representation(self, instance):
-        if isinstance(instance, SinglesEntity):
-            return SinglesEntitySerializer(instance, context=self.context).data
+        data = None
 
-        # Fallback for other types (we will build specific serializers for these later)
-        return {
-            "id": instance.id,
-            "name": str(instance),
-            "type": instance.__class__.__name__,
-        }
+        # Delegate to specific serializers
+        if isinstance(instance, SinglesEntity):
+            data = SinglesEntitySerializer(instance, context=self.context).data
+        elif isinstance(instance, SoloDanceEntity):
+            data = SoloDanceEntitySerializer(instance, context=self.context).data
+        elif isinstance(instance, Team):
+            data = TeamSerializer(instance, context=self.context).data
+        elif isinstance(instance, SynchroTeam):
+            data = SynchroTeamSerializer(instance, context=self.context).data
+
+        # Fallback for unknown types
+        if data is None:
+            data = {
+                "id": instance.id,
+                "name": str(instance),
+            }
+
+        # --- CRITICAL FIX ---
+        # Inject the 'type' field so the frontend knows which API endpoint to use.
+        data["type"] = instance.__class__.__name__
+        # --------------------
+
+        return data
 
 
 # --- 4. Full Profile Serializers (For Dashboards/Rosters) ---
@@ -149,12 +189,12 @@ class GenericPlanningEntitySerializer(serializers.ModelSerializer):
 class SkaterSerializer(serializers.ModelSerializer):
     planning_entities = serializers.SerializerMethodField()
     gender = serializers.CharField(source="get_gender_display", read_only=True)
-    # NEW: Include Federation
     federation = FederationSerializer(read_only=True)
+    # Add nested profile for reading
+    profile = AthleteProfileSerializer(read_only=True)
 
     class Meta:
         model = Skater
-        # Add 'federation' to fields
         fields = (
             "id",
             "full_name",
@@ -164,6 +204,7 @@ class SkaterSerializer(serializers.ModelSerializer):
             "planning_entities",
             "is_active",
             "federation",
+            "profile",
         )
 
     def get_planning_entities(self, obj):
@@ -193,18 +234,41 @@ class SkaterSerializer(serializers.ModelSerializer):
 
 
 class SkaterUpdateSerializer(serializers.ModelSerializer):
-    """
-    Serializer specifically for UPDATING a skater.
-    Accepts raw values (e.g. 'FEMALE', federation_id) instead of nested objects.
-    """
-
     federation = serializers.PrimaryKeyRelatedField(
         queryset=Federation.objects.all(), required=False, allow_null=True
     )
+    # Add nested profile serializer
+    profile = AthleteProfileSerializer(required=False)
 
     class Meta:
         model = Skater
-        fields = ("full_name", "date_of_birth", "gender", "home_club", "federation")
+        fields = (
+            "full_name",
+            "date_of_birth",
+            "gender",
+            "home_club",
+            "federation",
+            "is_active",
+            "profile",
+        )
+
+    # Override update to handle the nested 'profile' data
+    def update(self, instance, validated_data):
+        profile_data = validated_data.pop("profile", None)
+
+        # Update Skater fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        # Update or Create AthleteProfile
+        if profile_data:
+            # defaults ensures we update if exists, create if not
+            AthleteProfile.objects.update_or_create(
+                skater=instance, defaults=profile_data
+            )
+
+        return instance
 
 
 class RosterSkaterSerializer(serializers.ModelSerializer):

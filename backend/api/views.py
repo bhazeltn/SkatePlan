@@ -900,3 +900,13 @@ class CompetitionResultListCreateView(generics.ListCreateAPIView):
 
         content_type = ContentType.objects.get_for_model(entity)
         serializer.save(content_type=content_type, object_id=entity.id)
+
+
+class CompetitionResultDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    Manage a specific result (Update score, delete).
+    """
+
+    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    serializer_class = CompetitionResultSerializer
+    queryset = CompetitionResult.objects.all()

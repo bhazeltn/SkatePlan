@@ -37,4 +37,5 @@ urlpatterns = [
         "skaters/<int:skater_id>/results/",
         views.CompetitionResultListCreateView.as_view(),
     ),
+    path("results/<int:pk>/", views.CompetitionResultDetailView.as_view()),
 ]

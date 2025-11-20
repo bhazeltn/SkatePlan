@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/AuthContext';
 import { apiRequest } from '@/api';
 import { Button } from '@/components/ui/button';
@@ -33,9 +33,8 @@ export function LogResultModal({ skater, resultToEdit, onSaved, trigger }) {
   // Result / Plan State
   const [selectedEntityId, setSelectedEntityId] = useState(skater?.planning_entities?.[0]?.id || '');
   
-  // --- NEW: STATUS STATE ---
+  // Status State
   const [status, setStatus] = useState(resultToEdit?.status || 'COMPLETED'); 
-  // ------------------------
 
   const [level, setLevel] = useState(resultToEdit?.level || '');
   const [placement, setPlacement] = useState(resultToEdit?.placement || '');
@@ -43,7 +42,16 @@ export function LogResultModal({ skater, resultToEdit, onSaved, trigger }) {
   const [notes, setNotes] = useState(resultToEdit?.notes || '');
   const [segments, setSegments] = useState(resultToEdit?.segment_scores || []);
 
-  // Handlers (Search, Create) remain the same...
+  // --- AUTO-CALCULATE TOTAL SCORE ---
+  useEffect(() => {
+      if (segments.length > 0 && status === 'COMPLETED') {
+          const total = segments.reduce((sum, seg) => sum + (parseFloat(seg.score) || 0), 0);
+          setOverallScore(total > 0 ? total.toFixed(2) : '');
+      }
+  }, [segments, status]);
+
+  // --- HANDLERS ---
+
   const handleSearch = async () => {
       setLoading(true);
       setError(null);
@@ -74,16 +82,18 @@ export function LogResultModal({ skater, resultToEdit, onSaved, trigger }) {
       } finally { setLoading(false); }
   };
 
-  // --- SEGMENT LOGIC (Same as before) ---
-  useEffect(() => {
-      if (segments.length > 0 && status === 'COMPLETED') {
-          const total = segments.reduce((sum, seg) => sum + (parseFloat(seg.score) || 0), 0);
-          setOverallScore(total > 0 ? total.toFixed(2) : '');
-      }
-  }, [segments, status]);
-
+  // --- SEGMENT HANDLERS ---
   const addSegment = () => {
-      setSegments([...segments, { id: Date.now(), name: 'Short Program', score: '', tes: '', pcs: '', deductions: '', bonus: '', placement: '' }]);
+      setSegments([...segments, { 
+          id: Date.now(), 
+          name: 'Short Program', 
+          score: '', 
+          tes: '', 
+          pcs: '', 
+          deductions: '', 
+          bonus: '', 
+          placement: '' 
+      }]);
   };
   const removeSegment = (id) => setSegments(segments.filter(s => s.id !== id));
   const updateSegment = (id, field, value) => setSegments(segments.map(s => s.id === id ? { ...s, [field]: value } : s));
@@ -94,28 +104,30 @@ export function LogResultModal({ skater, resultToEdit, onSaved, trigger }) {
           const payload = {
               competition_id: selectedComp.id,
               planning_entity_id: selectedEntityId,
-              status, // Send Status
+              status, 
               level,
               notes,
-              // Only send results if Completed
               placement: status === 'COMPLETED' ? placement : null,
               total_score: status === 'COMPLETED' ? overallScore : null,
               segment_scores: status === 'COMPLETED' ? segments : []
           };
 
           if (resultToEdit) {
-              await apiRequest(`/results/${resultToEdit.id}/`, 'PATCH', payload, token); // Needs endpoint
+              await apiRequest(`/results/${resultToEdit.id}/`, 'PATCH', payload, token);
           } else {
               await apiRequest(`/skaters/${skater.id}/results/`, 'POST', payload, token);
           }
           
-          onSaved();
+          // THIS WAS THE ISSUE: Ensure we call onSaved(), NOT fetchResults()
+          if (onSaved) onSaved();
+          
           setOpen(false);
       } catch (e) { alert("Failed to save."); }
       finally { setLoading(false); }
   };
 
-  // Helpers (renderLocationSelectors) remain same...
+  // --- RENDER HELPERS ---
+
   const renderLocationSelectors = () => {
       const countries = Country.getAllCountries();
       const states = State.getStatesOfCountry(countryCode);
@@ -161,12 +173,11 @@ export function LogResultModal({ skater, resultToEdit, onSaved, trigger }) {
           <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                   <Label>Discipline</Label>
-                  <select className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm" value={selectedEntityId} onChange={(e) => setSelectedEntityId(e.target.value)}>
+                  <select className="flex h-9 w-full rounded-md border border-input bg-white px-3 py-1 text-sm" value={selectedEntityId} onChange={(e) => setSelectedEntityId(e.target.value)}>
                       {skater?.planning_entities?.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
                   </select>
               </div>
               
-              {/* --- STATUS SELECTOR --- */}
               <div className="space-y-2">
                   <Label>Status</Label>
                   <select className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm font-medium" value={status} onChange={(e) => setStatus(e.target.value)}>
@@ -175,16 +186,13 @@ export function LogResultModal({ skater, resultToEdit, onSaved, trigger }) {
                       <option value="COMPLETED">Completed</option>
                   </select>
               </div>
-              {/* ----------------------- */}
           </div>
 
-          {/* Level is always relevant */}
           <div className="space-y-2">
               <Label>Event Level / Category</Label>
               <Input value={level} onChange={(e) => setLevel(e.target.value)} placeholder="e.g. Junior Women" />
           </div>
 
-          {/* --- CONDITIONAL FIELDS: Only show scores if COMPLETED --- */}
           {status === 'COMPLETED' && (
               <>
                   <div className="grid grid-cols-2 gap-4">
@@ -194,7 +202,8 @@ export function LogResultModal({ skater, resultToEdit, onSaved, trigger }) {
                       </div>
                       <div className="space-y-2">
                           <Label>Total Score</Label>
-                          <Input type="number" step="0.01" value={overallScore} onChange={(e) => setOverallScore(e.target.value)} disabled={segments.length > 0} />
+                          <Input type="number" step="0.01" value={overallScore} onChange={(e) => setOverallScore(e.target.value)} disabled={segments.length > 0} className={segments.length > 0 ? "bg-slate-100 text-slate-500 cursor-not-allowed" : ""} />
+                          {segments.length > 0 && <p className="text-xs text-muted-foreground">Calculated automatically from segments.</p>}
                       </div>
                   </div>
 
@@ -209,21 +218,28 @@ export function LogResultModal({ skater, resultToEdit, onSaved, trigger }) {
                                   <Button type="button" variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6 text-gray-400 hover:text-red-500" onClick={() => removeSegment(seg.id)}><Trash2 className="h-3 w-3" /></Button>
                                   
                                   <div className="grid grid-cols-2 gap-2 mb-2 pr-6">
-                                      <select className="flex h-8 w-full rounded-md border border-input bg-white px-2 text-xs" value={seg.name} onChange={(e) => updateSegment(seg.id, 'name', e.target.value)}>
-                                          <option value="Short Program">Short Program</option>
-                                          <option value="Free Skate">Free Skate</option>
-                                          <option value="Pattern Dance">Pattern Dance</option>
-                                          <option value="Rhythm Dance">Rhythm Dance</option>
-                                          <option value="Free Dance">Free Dance</option>
-                                      </select>
-                                      <Input className="h-8 bg-white" type="number" value={seg.placement} onChange={(e) => updateSegment(seg.id, 'placement', e.target.value)} placeholder="#" />
+                                      <div className="col-span-2 sm:col-span-1">
+                                        <Label className="text-xs">Segment</Label>
+                                        <select className="flex h-8 w-full rounded-md border border-input bg-white px-2 text-xs" value={seg.name} onChange={(e) => updateSegment(seg.id, 'name', e.target.value)}>
+                                            <option value="Short Program">Short Program</option>
+                                            <option value="Free Skate">Free Skate</option>
+                                            <option value="Pattern Dance">Pattern Dance</option>
+                                            <option value="Rhythm Dance">Rhythm Dance</option>
+                                            <option value="Free Dance">Free Dance</option>
+                                            <option value="Artistic">Artistic</option>
+                                        </select>
+                                      </div>
+                                      <div>
+                                        <Label className="text-xs">Place</Label>
+                                        <Input className="h-8 bg-white" type="number" value={seg.placement} onChange={(e) => updateSegment(seg.id, 'placement', e.target.value)} placeholder="#" />
+                                      </div>
                                   </div>
                                   <div className="grid grid-cols-6 gap-2">
-                                      <div className="col-span-2"><Input className="h-8 bg-white font-bold" type="number" step="0.01" value={seg.score} onChange={(e) => updateSegment(seg.id, 'score', e.target.value)} placeholder="Total" /></div>
-                                      <div><Input className="h-8 bg-white" type="number" step="0.01" value={seg.tes} onChange={(e) => updateSegment(seg.id, 'tes', e.target.value)} placeholder="TES" /></div>
-                                      <div><Input className="h-8 bg-white" type="number" step="0.01" value={seg.pcs} onChange={(e) => updateSegment(seg.id, 'pcs', e.target.value)} placeholder="PCS" /></div>
-                                      <div><Input className="h-8 bg-white text-red-600" type="number" step="0.01" value={seg.deductions} onChange={(e) => updateSegment(seg.id, 'deductions', e.target.value)} placeholder="Ded" /></div>
-                                      <div><Input className="h-8 bg-white text-green-600" type="number" step="0.01" value={seg.bonus} onChange={(e) => updateSegment(seg.id, 'bonus', e.target.value)} placeholder="Bon" /></div>
+                                      <div className="col-span-2"><Label className="text-xs text-gray-500">Total</Label><Input className="h-8 bg-white font-bold" type="number" step="0.01" value={seg.score} onChange={(e) => updateSegment(seg.id, 'score', e.target.value)} /></div>
+                                      <div><Label className="text-xs text-gray-500">TES</Label><Input className="h-8 bg-white" type="number" step="0.01" value={seg.tes} onChange={(e) => updateSegment(seg.id, 'tes', e.target.value)} /></div>
+                                      <div><Label className="text-xs text-gray-500">PCS</Label><Input className="h-8 bg-white" type="number" step="0.01" value={seg.pcs} onChange={(e) => updateSegment(seg.id, 'pcs', e.target.value)} /></div>
+                                      <div><Label className="text-xs text-red-500">Ded</Label><Input className="h-8 bg-white text-red-600" type="number" step="0.01" value={seg.deductions} onChange={(e) => updateSegment(seg.id, 'deductions', e.target.value)} /></div>
+                                      <div><Label className="text-xs text-green-600">Bon</Label><Input className="h-8 bg-white text-green-600" type="number" step="0.01" value={seg.bonus} onChange={(e) => updateSegment(seg.id, 'bonus', e.target.value)} /></div>
                                   </div>
                               </div>
                           ))}

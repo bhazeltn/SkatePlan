@@ -8,6 +8,8 @@ import { ProfileTab } from '@/components/dashboard/tabs/ProfileTab';
 import { GoalsTab } from '@/components/dashboard/tabs/GoalsTab';
 import { WeeklyPlanTab } from '@/components/dashboard/tabs/WeeklyPlanTab';
 import { LogsTab } from '@/components/dashboard/tabs/LogsTab';
+import { HealthTab } from '@/components/dashboard/tabs/HealthTab';
+import { CompetitionsTab } from '@/components/dashboard/tabs/CompetitionsTab';
 
 export default function AthleteSeasonDashboard() {
   const { token } = useAuth();
@@ -77,7 +79,7 @@ export default function AthleteSeasonDashboard() {
 
       {/* Tabs Navigation */}
       <div className="flex space-x-2 border-b mb-6 overflow-x-auto">
-        {['weekly', 'yearly', 'goals', 'logs', 'health', 'profile'].map((tab) => (
+        {['weekly', 'yearly', , 'competitions', 'goals', 'logs', 'health', 'profile'].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -100,12 +102,15 @@ export default function AthleteSeasonDashboard() {
            <WeeklyPlanTab skater={skater} />
         )}
         {/* ------------------ */}
-
+        
         {/* --- YEARLY PLANS TAB --- */}
         {activeTab === 'yearly' && (
            <YearlyPlansTab skater={skater} />
         )}
-
+        {/* --- COMPETITIONS TAB --- */}
+        {activeTab === 'competitions' && (
+           <CompetitionsTab skater={skater} />
+        )}
         {/* --- GOALS TAB --- */}
         {activeTab === 'goals' && (
            <GoalsTab skater={skater} />
@@ -123,13 +128,12 @@ export default function AthleteSeasonDashboard() {
            <ProfileTab skater={skater} onUpdated={fetchData} />
         )}
         
-        {/* Placeholders for other tabs */}
-        {['health'].includes(activeTab) && (
-           <div className="text-center p-12 border-2 border-dashed rounded-lg bg-white">
-            <h3 className="text-lg font-medium">{activeTab.toUpperCase()}</h3>
-            <p className="text-muted-foreground">Tab content coming soon.</p>
-          </div>
+        {/* --- HEALTH TAB --- */}
+        {activeTab === 'health' && (
+           <HealthTab skater={skater} />
         )}
+        {/* ------------------ */}
+
       </div>
     </div>
   );

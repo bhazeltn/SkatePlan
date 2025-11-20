@@ -1,11 +1,13 @@
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.db.models import Q
 from rest_framework.exceptions import ValidationError
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
-
+from datetime import date, timedelta
 from .permissions import IsCoachUser
+
 from .models import (
     Skater,
     SinglesEntity,
@@ -21,6 +23,10 @@ from .models import (
     Goal,
     WeeklyPlan,
     SessionLog,
+    InjuryLog,
+    Competition,
+    CompetitionResult,
+    SkaterTest,
 )
 from .serializers import (
     SkaterSerializer,
@@ -40,9 +46,12 @@ from .serializers import (
     RegisterSerializer,
     LoginSerializer,
     SessionLogSerializer,
+    InjuryLogSerializer,
+    CompetitionSerializer,
+    CompetitionResultSerializer,
+    SkaterTestSerializer,
 )
 
-from datetime import date, timedelta
 
 User = get_user_model()
 
@@ -735,3 +744,159 @@ class SessionLogDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [permissions.IsAuthenticated, IsCoachUser]
     serializer_class = SessionLogSerializer
     queryset = SessionLog.objects.all()
+
+
+# --- HEALTH & INJURY VIEWS ---
+
+
+class InjuryLogListCreateView(generics.ListCreateAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    serializer_class = InjuryLogSerializer
+
+    def get_queryset(self):
+        skater_id = self.kwargs["skater_id"]
+        # Order by active first, then newest
+        return InjuryLog.objects.filter(skater_id=skater_id).order_by(
+            "return_to_sport_date", "-date_of_onset"
+        )
+
+    def perform_create(self, serializer):
+        skater_id = self.kwargs["skater_id"]
+        skater = Skater.objects.get(id=skater_id)
+
+        # Default status to Active if not provided
+        status = self.request.data.get("recovery_status", "Active")
+
+        serializer.save(skater=skater, recovery_status=status)
+
+
+class InjuryLogDetailView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    serializer_class = InjuryLogSerializer
+    queryset = InjuryLog.objects.all()
+
+
+class CompetitionListCreateView(generics.ListCreateAPIView):
+    """
+    GET: Search for competitions (query param ?search=Edmonton).
+    POST: Create a new competition (with Smart Duplicate Check).
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = CompetitionSerializer
+
+    def get_queryset(self):
+        queryset = Competition.objects.all().order_by("-start_date")
+        search = self.request.query_params.get("search")
+        if search:
+            # Search Title or City
+            queryset = queryset.filter(
+                Q(title__icontains=search) | Q(city__icontains=search)
+            )
+        return queryset
+
+    def create(self, request, *args, **kwargs):
+        city = request.data.get("city")
+        start_str = request.data.get("start_date")
+        end_str = request.data.get("end_date")
+        force_create = request.data.get("force_create", False)
+
+        # 1. DUPLICATE CHECK
+        # Check for Space-Time collisions (Same City + Overlapping Dates)
+        if not force_create and city and start_str and end_str:
+            try:
+                new_start = date.fromisoformat(start_str)
+                new_end = date.fromisoformat(end_str)
+
+                # Logic: Does an event exist in this city that overlaps these dates?
+                duplicates = Competition.objects.filter(
+                    city__iexact=city.strip(),
+                    start_date__lte=new_end,
+                    end_date__gte=new_start,
+                )
+
+                if duplicates.exists():
+                    serializer = self.get_serializer(duplicates, many=True)
+                    return Response(
+                        {
+                            "error": "Potential duplicate found",
+                            "message": f"We found existing events in {city} during these dates.",
+                            "candidates": serializer.data,
+                        },
+                        status=status.HTTP_409_CONFLICT,
+                    )
+
+            except ValueError:
+                pass
+
+        # 2. CREATE
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(created_by=self.request.user)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class CompetitionResultListCreateView(generics.ListCreateAPIView):
+    """
+    List results for a skater, or log a new one.
+    """
+
+    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    serializer_class = CompetitionResultSerializer
+
+    def get_queryset(self):
+        skater_id = self.kwargs["skater_id"]
+        skater = Skater.objects.get(id=skater_id)
+
+        # Find results linked to ANY of the skater's entities
+        # (Using the same logic pattern as GoalList)
+        singles = skater.singles_entities.all()
+        dance = skater.solodance_entities.all()
+        teams_a = skater.teams_as_partner_a.all()
+        teams_b = skater.teams_as_partner_b.all()
+
+        query = Q()
+        if singles.exists():
+            query |= Q(
+                content_type=ContentType.objects.get_for_model(SinglesEntity),
+                object_id__in=singles.values_list("id", flat=True),
+            )
+        if dance.exists():
+            query |= Q(
+                content_type=ContentType.objects.get_for_model(SoloDanceEntity),
+                object_id__in=dance.values_list("id", flat=True),
+            )
+        if teams_a.exists():
+            query |= Q(
+                content_type=ContentType.objects.get_for_model(Team),
+                object_id__in=teams_a.values_list("id", flat=True),
+            )
+        if teams_b.exists():
+            query |= Q(
+                content_type=ContentType.objects.get_for_model(Team),
+                object_id__in=teams_b.values_list("id", flat=True),
+            )
+
+        if not query:
+            return CompetitionResult.objects.none()
+
+        return CompetitionResult.objects.filter(query).order_by(
+            "-competition__start_date"
+        )
+
+    def perform_create(self, serializer):
+        skater_id = self.kwargs["skater_id"]
+        skater = Skater.objects.get(id=skater_id)
+
+        # Auto-link to primary discipline for MVP
+        entity = (
+            skater.singles_entities.first()
+            or skater.solodance_entities.first()
+            or skater.teams_as_partner_a.first()
+        )
+
+        if not entity:
+            raise ValidationError("No active discipline found.")
+
+        content_type = ContentType.objects.get_for_model(entity)
+        serializer.save(content_type=content_type, object_id=entity.id)

@@ -15,6 +15,10 @@ from .models import (
     Goal,
     WeeklyPlan,
     SessionLog,
+    InjuryLog,
+    Competition,
+    CompetitionResult,
+    SkaterTest,
 )
 
 User = get_user_model()
@@ -475,3 +479,54 @@ class Meta:
 
     def get_author_name(self, obj):
         return obj.author.full_name if obj.author else "Unknown"
+
+
+class InjuryLogSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = InjuryLog
+        fields = (
+            "id",
+            "injury_type",  # e.g. Sprain, Strain
+            "body_area",  # JSON List: ["Right", "Ankle"]
+            "date_of_onset",
+            "return_to_sport_date",
+            "severity",  # e.g. Mild, Severe
+            "recovery_status",  # e.g. Active, Recovered
+            "recovery_notes",
+        )
+
+
+# --- COMPETITION SERIALIZERS ---
+
+
+class CompetitionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Competition
+        fields = "__all__"
+
+
+class CompetitionResultSerializer(serializers.ModelSerializer):
+    competition = CompetitionSerializer(read_only=True)
+    # Allow writing the competition ID directly
+    competition_id = serializers.PrimaryKeyRelatedField(
+        queryset=Competition.objects.all(), source="competition", write_only=True
+    )
+
+    class Meta:
+        model = CompetitionResult
+        fields = (
+            "id",
+            "competition",
+            "competition_id",
+            "level",
+            "placement",
+            "total_score",
+            "segment_scores",
+            "notes",
+        )
+
+
+class SkaterTestSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SkaterTest
+        fields = "__all__"

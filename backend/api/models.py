@@ -3,8 +3,10 @@ from django.contrib.auth.models import (
     AbstractBaseUser,
     BaseUserManager,
     PermissionsMixin,
+    ContentType,
 )
 from django.utils import timezone
+from django.contrib.contenttypes.fields import GenericForeignKey
 
 # --- 1. USER AUTHENTICATION MODELS ---
 # We must define a custom User Manager to tell Django
@@ -674,3 +676,92 @@ class AthleteProfile(models.Model):
 
     def __str__(self):
         return f"Profile for {self.skater.full_name}"
+
+
+class Competition(models.Model):
+    """
+    A global, reusable event.
+    e.g. "2026 Skate Canada Challenge"
+    """
+
+    id = models.AutoField(primary_key=True)
+    title = models.CharField(max_length=255)
+
+    # Location Data
+    location_name = models.CharField(
+        max_length=255, blank=True, null=True, help_text="Arena or Venue Name"
+    )
+    city = models.CharField(max_length=100)
+    province_state = models.CharField(
+        max_length=100, help_text="Province or State Code (e.g. AB, CA)"
+    )
+    country = models.CharField(max_length=100, default="CA")  # ISO Code
+
+    # Time Box (Crucial for de-duplication)
+    start_date = models.DateField()
+    end_date = models.DateField()
+
+    created_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, related_name="created_competitions"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.title} ({self.city})"
+
+    class Meta:
+        ordering = ["-start_date"]
+
+
+class CompetitionResult(models.Model):
+    """
+    Records a result for a specific entity at a competition.
+    """
+
+    id = models.AutoField(primary_key=True)
+
+    competition = models.ForeignKey(
+        Competition, on_delete=models.CASCADE, related_name="results"
+    )
+
+    # Generic Link to Entity (Singles, Team, etc.)
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+    planning_entity = GenericForeignKey("content_type", "object_id")
+
+    level = models.CharField(max_length=100)  # e.g. "Junior Women"
+    placement = models.IntegerField(null=True, blank=True)
+    total_score = models.DecimalField(
+        max_digits=6, decimal_places=2, null=True, blank=True
+    )
+
+    # Detailed breakdown
+    segment_scores = models.JSONField(default=dict, blank=True)
+    notes = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"Result for {self.planning_entity} at {self.competition}"
+
+
+class SkaterTest(models.Model):
+    """
+    Tracks testing progress (e.g. "Gold Skills").
+    """
+
+    id = models.AutoField(primary_key=True)
+
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+    planning_entity = GenericForeignKey("content_type", "object_id")
+
+    test_name = models.CharField(max_length=255)
+    test_date = models.DateField(null=True, blank=True)
+    result = models.CharField(
+        max_length=50,
+        choices=[("Pass", "Pass"), ("Retry", "Retry"), ("Honors", "Pass with Honors")],
+    )
+
+    evaluator_notes = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.test_name} - {self.result}"

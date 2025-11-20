@@ -10,17 +10,19 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { Search, Plus, MapPin, Trash2 } from 'lucide-react';
 import { Country, State, City } from 'country-state-city';
 
-export function LogResultModal({ skater, onSaved, trigger }) {
+export function LogResultModal({ skater, resultToEdit, onSaved, trigger }) {
   const [open, setOpen] = useState(false);
   const { token } = useAuth();
-  const [step, setStep] = useState('SEARCH');
+  
+  // If editing an existing result/plan, start at LOG step
+  const [step, setStep] = useState(resultToEdit ? 'LOG' : 'SEARCH');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   // Search & Create State
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
-  const [selectedComp, setSelectedComp] = useState(null);
+  const [selectedComp, setSelectedComp] = useState(resultToEdit?.competition || null);
   const [newTitle, setNewTitle] = useState('');
   const [countryCode, setCountryCode] = useState('CA');
   const [stateCode, setStateCode] = useState('');
@@ -28,16 +30,20 @@ export function LogResultModal({ skater, onSaved, trigger }) {
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
 
-  // Result State
-  const [level, setLevel] = useState('');
-  const [overallPlacement, setOverallPlacement] = useState('');
-  const [overallScore, setOverallScore] = useState('');
-  const [notes, setNotes] = useState('');
+  // Result / Plan State
+  const [selectedEntityId, setSelectedEntityId] = useState(skater?.planning_entities?.[0]?.id || '');
   
-  // Segment State
-  const [segments, setSegments] = useState([]);
+  // --- NEW: STATUS STATE ---
+  const [status, setStatus] = useState(resultToEdit?.status || 'COMPLETED'); 
+  // ------------------------
 
-  // --- HANDLERS ---
+  const [level, setLevel] = useState(resultToEdit?.level || '');
+  const [placement, setPlacement] = useState(resultToEdit?.placement || '');
+  const [overallScore, setOverallScore] = useState(resultToEdit?.total_score || '');
+  const [notes, setNotes] = useState(resultToEdit?.notes || '');
+  const [segments, setSegments] = useState(resultToEdit?.segment_scores || []);
+
+  // Handlers (Search, Create) remain the same...
   const handleSearch = async () => {
       setLoading(true);
       setError(null);
@@ -63,60 +69,53 @@ export function LogResultModal({ skater, onSaved, trigger }) {
           setSelectedComp(data);
           setStep('LOG');
       } catch (e) {
-          if (e.message && e.message.includes('duplicate')) {
-              setError("A similar event already exists.");
-          } else {
-              setError("Failed to create event.");
-          }
+          if (e.message && e.message.includes('duplicate')) setError("Event exists.");
+          else setError("Failed to create.");
       } finally { setLoading(false); }
   };
 
-  // --- SEGMENT HANDLERS ---
+  // --- SEGMENT LOGIC (Same as before) ---
+  useEffect(() => {
+      if (segments.length > 0 && status === 'COMPLETED') {
+          const total = segments.reduce((sum, seg) => sum + (parseFloat(seg.score) || 0), 0);
+          setOverallScore(total > 0 ? total.toFixed(2) : '');
+      }
+  }, [segments, status]);
+
   const addSegment = () => {
-      setSegments([...segments, { 
-          id: Date.now(), 
-          name: 'Short Program', 
-          score: '', 
-          tes: '', 
-          pcs: '', 
-          deductions: '', // Separate field
-          bonus: '',      // Separate field
-          placement: '' 
-      }]);
+      setSegments([...segments, { id: Date.now(), name: 'Short Program', score: '', tes: '', pcs: '', deductions: '', bonus: '', placement: '' }]);
   };
+  const removeSegment = (id) => setSegments(segments.filter(s => s.id !== id));
+  const updateSegment = (id, field, value) => setSegments(segments.map(s => s.id === id ? { ...s, [field]: value } : s));
 
-  const removeSegment = (id) => {
-      setSegments(segments.filter(s => s.id !== id));
-  };
-
-  const updateSegment = (id, field, value) => {
-      setSegments(segments.map(s => s.id === id ? { ...s, [field]: value } : s));
-  };
-
-  const handleSaveResult = async () => {
+  const handleSave = async () => {
       setLoading(true);
       try {
-          await apiRequest(`/skaters/${skater.id}/results/`, 'POST', {
+          const payload = {
               competition_id: selectedComp.id,
+              planning_entity_id: selectedEntityId,
+              status, // Send Status
               level,
-              placement: overallPlacement,
-              total_score: overallScore,
               notes,
-              segment_scores: segments
-          }, token);
+              // Only send results if Completed
+              placement: status === 'COMPLETED' ? placement : null,
+              total_score: status === 'COMPLETED' ? overallScore : null,
+              segment_scores: status === 'COMPLETED' ? segments : []
+          };
+
+          if (resultToEdit) {
+              await apiRequest(`/results/${resultToEdit.id}/`, 'PATCH', payload, token); // Needs endpoint
+          } else {
+              await apiRequest(`/skaters/${skater.id}/results/`, 'POST', payload, token);
+          }
+          
           onSaved();
           setOpen(false);
-          // Reset
-          setStep('SEARCH');
-          setSearchTerm('');
-          setSelectedComp(null);
-          setSegments([]);
-          setLevel(''); setOverallPlacement(''); setOverallScore(''); setNotes('');
-      } catch (e) { alert("Failed to save result."); }
+      } catch (e) { alert("Failed to save."); }
       finally { setLoading(false); }
   };
 
-  // --- RENDER HELPERS ---
+  // Helpers (renderLocationSelectors) remain same...
   const renderLocationSelectors = () => {
       const countries = Country.getAllCountries();
       const states = State.getStatesOfCountry(countryCode);
@@ -158,100 +157,91 @@ export function LogResultModal({ skater, onSaved, trigger }) {
           <div className="bg-slate-100 p-3 rounded text-sm font-medium border">
               {selectedComp?.title} <span className="text-gray-500 font-normal">({selectedComp?.city})</span>
           </div>
-          
+
           <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                  <Label>Level</Label>
-                  <Input value={level} onChange={(e) => setLevel(e.target.value)} placeholder="Junior Women" />
-              </div>
-              <div className="space-y-2">
-                  <Label>Overall Placement</Label>
-                  <Input type="number" value={overallPlacement} onChange={(e) => setOverallPlacement(e.target.value)} placeholder="#" />
-              </div>
-          </div>
-          <div className="space-y-2">
-              <Label>Total Competition Score</Label>
-              <Input type="number" step="0.01" value={overallScore} onChange={(e) => setOverallScore(e.target.value)} placeholder="e.g. 150.25" />
-          </div>
-
-          {/* --- SEGMENTS EDITOR --- */}
-          <div className="border-t pt-4 mt-2">
-              <div className="flex justify-between items-center mb-3">
-                  <Label className="text-gray-900 font-bold">Segments & Protocols</Label>
-                  <Button type="button" size="sm" variant="outline" onClick={addSegment}>
-                      <Plus className="h-3 w-3 mr-1" /> Add Segment
-                  </Button>
+                  <Label>Discipline</Label>
+                  <select className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm" value={selectedEntityId} onChange={(e) => setSelectedEntityId(e.target.value)}>
+                      {skater?.planning_entities?.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+                  </select>
               </div>
               
-              <div className="space-y-3">
-                  {segments.map((seg, idx) => (
-                      <div key={seg.id} className="p-3 border rounded-md bg-slate-50 relative">
-                          <Button 
-                            type="button" variant="ghost" size="icon" 
-                            className="absolute top-1 right-1 h-6 w-6 text-gray-400 hover:text-red-500"
-                            onClick={() => removeSegment(seg.id)}
-                          >
-                              <Trash2 className="h-3 w-3" />
-                          </Button>
-                          
-                          <div className="grid grid-cols-2 gap-2 mb-2 pr-6">
-                              <div className="col-span-2 sm:col-span-1">
-                                <Label className="text-xs">Segment Name</Label>
-                                <select 
-                                    className="flex h-8 w-full rounded-md border border-input bg-white px-2 text-xs"
-                                    value={seg.name}
-                                    onChange={(e) => updateSegment(seg.id, 'name', e.target.value)}
-                                >
-                                    <option value="Short Program">Short Program</option>
-                                    <option value="Free Skate">Free Skate</option>
-                                    <option value="Pattern Dance">Pattern Dance</option>
-                                    <option value="Rhythm Dance">Rhythm Dance</option>
-                                    <option value="Free Dance">Free Dance</option>
-                                    <option value="Artistic">Artistic</option>
-                                </select>
-                              </div>
-                              <div>
-                                <Label className="text-xs">Segment Place</Label>
-                                <Input className="h-8 bg-white" type="number" value={seg.placement} onChange={(e) => updateSegment(seg.id, 'placement', e.target.value)} placeholder="#" />
-                              </div>
-                          </div>
-
-                          {/* UPDATED GRID FOR SPLIT DEDUCTIONS/BONUS */}
-                          <div className="grid grid-cols-6 gap-2">
-                              <div className="col-span-2">
-                                  <Label className="text-xs text-gray-500">Total</Label>
-                                  <Input className="h-8 bg-white font-bold" type="number" step="0.01" value={seg.score} onChange={(e) => updateSegment(seg.id, 'score', e.target.value)} />
-                              </div>
-                              <div>
-                                  <Label className="text-xs text-gray-500">TES</Label>
-                                  <Input className="h-8 bg-white" type="number" step="0.01" value={seg.tes} onChange={(e) => updateSegment(seg.id, 'tes', e.target.value)} />
-                              </div>
-                              <div>
-                                  <Label className="text-xs text-gray-500">PCS</Label>
-                                  <Input className="h-8 bg-white" type="number" step="0.01" value={seg.pcs} onChange={(e) => updateSegment(seg.id, 'pcs', e.target.value)} />
-                              </div>
-                              <div>
-                                  <Label className="text-xs text-red-500">Ded</Label>
-                                  <Input className="h-8 bg-white text-red-600" type="number" step="0.01" value={seg.deductions} onChange={(e) => updateSegment(seg.id, 'deductions', e.target.value)} />
-                              </div>
-                              <div>
-                                  <Label className="text-xs text-green-600">Bon</Label>
-                                  <Input className="h-8 bg-white text-green-600" type="number" step="0.01" value={seg.bonus} onChange={(e) => updateSegment(seg.id, 'bonus', e.target.value)} />
-                              </div>
-                          </div>
-                      </div>
-                  ))}
+              {/* --- STATUS SELECTOR --- */}
+              <div className="space-y-2">
+                  <Label>Status</Label>
+                  <select className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm font-medium" value={status} onChange={(e) => setStatus(e.target.value)}>
+                      <option value="PLANNED">Planned</option>
+                      <option value="REGISTERED">Registered</option>
+                      <option value="COMPLETED">Completed</option>
+                  </select>
               </div>
+              {/* ----------------------- */}
           </div>
+
+          {/* Level is always relevant */}
+          <div className="space-y-2">
+              <Label>Event Level / Category</Label>
+              <Input value={level} onChange={(e) => setLevel(e.target.value)} placeholder="e.g. Junior Women" />
+          </div>
+
+          {/* --- CONDITIONAL FIELDS: Only show scores if COMPLETED --- */}
+          {status === 'COMPLETED' && (
+              <>
+                  <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                          <Label>Placement</Label>
+                          <Input type="number" value={placement} onChange={(e) => setPlacement(e.target.value)} placeholder="#" />
+                      </div>
+                      <div className="space-y-2">
+                          <Label>Total Score</Label>
+                          <Input type="number" step="0.01" value={overallScore} onChange={(e) => setOverallScore(e.target.value)} disabled={segments.length > 0} />
+                      </div>
+                  </div>
+
+                  <div className="border-t pt-4 mt-2">
+                      <div className="flex justify-between items-center mb-3">
+                          <Label className="text-gray-900 font-bold">Segments & Protocols</Label>
+                          <Button type="button" size="sm" variant="outline" onClick={addSegment}><Plus className="h-3 w-3 mr-1" /> Add Segment</Button>
+                      </div>
+                      <div className="space-y-3">
+                          {segments.map((seg) => (
+                              <div key={seg.id} className="p-3 border rounded-md bg-slate-50 relative">
+                                  <Button type="button" variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6 text-gray-400 hover:text-red-500" onClick={() => removeSegment(seg.id)}><Trash2 className="h-3 w-3" /></Button>
+                                  
+                                  <div className="grid grid-cols-2 gap-2 mb-2 pr-6">
+                                      <select className="flex h-8 w-full rounded-md border border-input bg-white px-2 text-xs" value={seg.name} onChange={(e) => updateSegment(seg.id, 'name', e.target.value)}>
+                                          <option value="Short Program">Short Program</option>
+                                          <option value="Free Skate">Free Skate</option>
+                                          <option value="Pattern Dance">Pattern Dance</option>
+                                          <option value="Rhythm Dance">Rhythm Dance</option>
+                                          <option value="Free Dance">Free Dance</option>
+                                      </select>
+                                      <Input className="h-8 bg-white" type="number" value={seg.placement} onChange={(e) => updateSegment(seg.id, 'placement', e.target.value)} placeholder="#" />
+                                  </div>
+                                  <div className="grid grid-cols-6 gap-2">
+                                      <div className="col-span-2"><Input className="h-8 bg-white font-bold" type="number" step="0.01" value={seg.score} onChange={(e) => updateSegment(seg.id, 'score', e.target.value)} placeholder="Total" /></div>
+                                      <div><Input className="h-8 bg-white" type="number" step="0.01" value={seg.tes} onChange={(e) => updateSegment(seg.id, 'tes', e.target.value)} placeholder="TES" /></div>
+                                      <div><Input className="h-8 bg-white" type="number" step="0.01" value={seg.pcs} onChange={(e) => updateSegment(seg.id, 'pcs', e.target.value)} placeholder="PCS" /></div>
+                                      <div><Input className="h-8 bg-white text-red-600" type="number" step="0.01" value={seg.deductions} onChange={(e) => updateSegment(seg.id, 'deductions', e.target.value)} placeholder="Ded" /></div>
+                                      <div><Input className="h-8 bg-white text-green-600" type="number" step="0.01" value={seg.bonus} onChange={(e) => updateSegment(seg.id, 'bonus', e.target.value)} placeholder="Bon" /></div>
+                                  </div>
+                              </div>
+                          ))}
+                      </div>
+                  </div>
+              </>
+          )}
 
           <div className="space-y-2 mt-4">
               <Label>Notes</Label>
-              <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Personal best? Technical issues?" />
+              <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Planning notes or results comments..." />
           </div>
 
           <div className="flex justify-between pt-2">
-              <Button variant="ghost" onClick={() => { setStep('SEARCH'); setSelectedComp(null); setSegments([]); }}>Back</Button>
-              <Button onClick={handleSaveResult} disabled={loading}>Save Result</Button>
+              {!resultToEdit && <Button variant="ghost" onClick={() => { setStep('SEARCH'); setSelectedComp(null); }}>Back</Button>}
+              <Button onClick={handleSave} disabled={loading} className={!resultToEdit ? "" : "w-full"}>
+                  {status === 'COMPLETED' ? 'Save Result' : 'Save Plan'}
+              </Button>
           </div>
       </div>
   );
@@ -259,64 +249,38 @@ export function LogResultModal({ skater, onSaved, trigger }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {trigger || <Button>Log Result</Button>}
+        {trigger || <Button>Manage Events</Button>}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
             <DialogTitle>
-                {step === 'SEARCH' ? 'Find Competition' : step === 'CREATE' ? 'New Event' : 'Log Result'}
+                {step === 'SEARCH' ? 'Find Competition' : step === 'CREATE' ? 'New Event' : (status === 'COMPLETED' ? 'Log Result' : 'Plan Event')}
             </DialogTitle>
         </DialogHeader>
-        
         {step === 'SEARCH' && (
             <div className="space-y-4">
-                <div className="flex gap-2">
-                    <Input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Search (e.g. Sectionals)..." />
-                    <Button onClick={handleSearch} disabled={loading}><Search className="h-4 w-4" /></Button>
-                </div>
+                <div className="flex gap-2"><Input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Search..." /><Button onClick={handleSearch} disabled={loading}><Search className="h-4 w-4" /></Button></div>
                 <div className="max-h-[200px] overflow-y-auto space-y-2 border rounded p-2">
-                    {searchResults.length === 0 && <p className="text-sm text-muted-foreground text-center py-2">No events found.</p>}
                     {searchResults.map(comp => (
                         <div key={comp.id} className="flex justify-between p-2 hover:bg-slate-50 rounded items-center border-b last:border-0">
-                            <div className="text-sm">
-                                <div className="font-bold">{comp.title}</div>
-                                <div className="text-xs text-gray-500 flex items-center gap-1">
-                                    <MapPin className="h-3 w-3" /> {comp.city}, {comp.province_state}
-                                </div>
-                            </div>
+                            <div className="text-sm"><div className="font-bold">{comp.title}</div><div className="text-xs text-gray-500">{comp.city}, {comp.province_state}</div></div>
                             <Button size="sm" variant="outline" onClick={() => { setSelectedComp(comp); setStep('LOG'); }}>Select</Button>
                         </div>
                     ))}
                 </div>
-                <div className="pt-2">
-                    <Button variant="secondary" className="w-full" onClick={() => setStep('CREATE')}>
-                        <Plus className="h-4 w-4 mr-2" /> Create New Competition
-                    </Button>
-                </div>
+                <div className="pt-2"><Button variant="secondary" className="w-full" onClick={() => setStep('CREATE')}><Plus className="h-4 w-4 mr-2" /> Create New Competition</Button></div>
             </div>
         )}
-
         {step === 'CREATE' && (
             <div className="space-y-4">
-                {error && <div className="p-2 bg-red-50 text-red-600 text-sm rounded border border-red-200">{error}</div>}
-                <div className="space-y-2">
-                    <Label>Event Name</Label>
-                    <Input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="2026 Sectionals" />
-                </div>
+                {error && <div className="p-2 bg-red-50 text-red-600 text-sm rounded">{error}</div>}
+                <div className="space-y-2"><Label>Name</Label><Input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} /></div>
                 {renderLocationSelectors()}
-                <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-1"><Label>Start Date</Label><DatePicker date={start} setDate={setStart} /></div>
-                    <div className="space-y-1"><Label>End Date</Label><DatePicker date={end} setDate={setEnd} /></div>
-                </div>
-                <div className="flex justify-between pt-2">
-                    <Button variant="ghost" onClick={() => { setStep('SEARCH'); setError(null); }}>Back</Button>
-                    <Button onClick={handleCreate} disabled={loading}>Create & Continue</Button>
-                </div>
+                <div className="grid grid-cols-2 gap-2"><div><Label>Start</Label><DatePicker date={start} setDate={setStart} /></div><div><Label>End</Label><DatePicker date={end} setDate={setEnd} /></div></div>
+                <div className="flex justify-between pt-2"><Button variant="ghost" onClick={() => setStep('SEARCH')}>Back</Button><Button onClick={handleCreate} disabled={loading}>Create</Button></div>
             </div>
         )}
-
         {step === 'LOG' && renderLogStep()}
-
       </DialogContent>
     </Dialog>
   );

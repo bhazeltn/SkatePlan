@@ -85,6 +85,7 @@ export function CompetitionsTab({ skater }) {
                                 </div>
 
                                 {/* --- DETAILED BREAKDOWN TABLE --- */}
+                                {/* Only renders if segment_scores exists and has items */}
                                 {res.segment_scores && Array.isArray(res.segment_scores) && res.segment_scores.length > 0 && (
                                     <div className="mt-3 border rounded-md overflow-hidden">
                                         <table className="w-full text-sm text-left">
@@ -94,8 +95,6 @@ export function CompetitionsTab({ skater }) {
                                                     <th className="px-3 py-2 text-right font-semibold">Score</th>
                                                     <th className="px-3 py-2 text-right font-semibold text-gray-400">TES</th>
                                                     <th className="px-3 py-2 text-right font-semibold text-gray-400">PCS</th>
-                                                    <th className="px-3 py-2 text-right font-semibold text-red-400">Ded</th>
-                                                    <th className="px-3 py-2 text-right font-semibold text-green-500">Bon</th>
                                                     <th className="px-3 py-2 text-right font-semibold">Place</th>
                                                 </tr>
                                             </thead>
@@ -106,8 +105,6 @@ export function CompetitionsTab({ skater }) {
                                                         <td className="px-3 py-2 text-right font-bold text-brand-blue">{seg.score}</td>
                                                         <td className="px-3 py-2 text-right text-gray-500">{seg.tes || '-'}</td>
                                                         <td className="px-3 py-2 text-right text-gray-500">{seg.pcs || '-'}</td>
-                                                        <td className="px-3 py-2 text-right text-red-500">{seg.deductions ? `-${seg.deductions}` : '-'}</td>
-                                                        <td className="px-3 py-2 text-right text-green-600">{seg.bonus ? `+${seg.bonus}` : '-'}</td>
                                                         <td className="px-3 py-2 text-right font-medium text-gray-900">#{seg.placement || '-'}</td>
                                                     </tr>
                                                 ))}

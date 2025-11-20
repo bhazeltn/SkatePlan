@@ -716,31 +716,52 @@ class Competition(models.Model):
 class CompetitionResult(models.Model):
     """
     Records a result for a specific entity at a competition.
+    Acts as both a "Calendar Entry" (when status=PLANNED) and a "Result Record" (when status=COMPLETED).
     """
 
     id = models.AutoField(primary_key=True)
 
+    # Link to the Global Competition Event
     competition = models.ForeignKey(
         Competition, on_delete=models.CASCADE, related_name="results"
     )
 
-    # Generic Link to Entity (Singles, Team, etc.)
+    # Generic Link to the Planning Entity (Singles, Dance, Team, etc.)
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
     object_id = models.PositiveIntegerField()
     planning_entity = GenericForeignKey("content_type", "object_id")
 
-    level = models.CharField(max_length=100)  # e.g. "Junior Women"
+    # Lifecycle Status
+    class Status(models.TextChoices):
+        PLANNED = "PLANNED", "Planned"  # Intent to compete
+        REGISTERED = "REGISTERED", "Registered"  # Confirmed registration
+        COMPLETED = "COMPLETED", "Completed"  # Event finished, results logged
+
+    status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.COMPLETED
+    )
+
+    # Event Details
+    level = models.CharField(max_length=100)  # e.g. "Junior Women", "STAR 5"
+
+    # Results (Nullable because Planned events won't have them yet)
     placement = models.IntegerField(null=True, blank=True)
     total_score = models.DecimalField(
         max_digits=6, decimal_places=2, null=True, blank=True
     )
 
-    # Detailed breakdown
+    # Detailed breakdown of segments (Short, Free, etc.)
+    # Structure: [{ "name": "Short", "score": 50.0, "tes": 30.0, "pcs": 20.0, "deductions": 0.0, "bonus": 0.0, "placement": 5 }]
     segment_scores = models.JSONField(default=dict, blank=True)
+
     notes = models.TextField(blank=True, null=True)
 
     def __str__(self):
-        return f"Result for {self.planning_entity} at {self.competition}"
+        return f"{self.status} - {self.planning_entity} at {self.competition}"
+
+    class Meta:
+        # Order by competition date descending (newest first)
+        ordering = ["-competition__start_date"]
 
 
 class SkaterTest(models.Model):

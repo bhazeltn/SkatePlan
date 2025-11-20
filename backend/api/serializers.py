@@ -518,6 +518,7 @@ class CompetitionResultSerializer(serializers.ModelSerializer):
             "id",
             "competition",
             "competition_id",
+            "status",
             "level",
             "placement",
             "total_score",

@@ -12,6 +12,9 @@ from .models import (
     YearlyPlan,
     Macrocycle,
     AthleteSeason,
+    Goal,
+    WeeklyPlan,
+    SessionLog,
 )
 
 User = get_user_model()
@@ -213,8 +216,8 @@ class YearlyPlanSerializer(serializers.ModelSerializer):
     # Mark planning_entity as read_only so validation doesn't fail on creation
     # (because we set it manually in the View)
     planning_entity = serializers.SerializerMethodField()
-
     season_info = serializers.SerializerMethodField()
+    skater_id = serializers.SerializerMethodField()
 
     class Meta:
         model = YearlyPlan
@@ -222,11 +225,19 @@ class YearlyPlanSerializer(serializers.ModelSerializer):
             "id",
             "planning_entity",
             "discipline_name",
+            "skater_id",
             "peak_type",
             "primary_season_goal",
             "macrocycles",
             "season_info",  # <-- Add this
         )
+
+    def get_skater_id(self, obj):
+        # Grab the skater ID from the linked season(s)
+        season = obj.athlete_seasons.first()
+        if season:
+            return season.skater.id
+        return None
 
     def get_season_info(self, obj):
         # A plan can link to multiple seasons technically, but usually just one primary one.
@@ -353,3 +364,114 @@ class RosterSkaterSerializer(serializers.ModelSerializer):
                 GenericPlanningEntitySerializer(entity, context=self.context).data
             )
         return entities
+
+
+class GoalSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Goal
+        fields = (
+            "id",
+            "title",
+            "goal_type",
+            "goal_timeframe",
+            "start_date",
+            "target_date",
+            "smart_description",
+            "current_status",
+            "progress_notes",
+            "created_at",
+        )
+
+
+class WeeklyPlanSerializer(serializers.ModelSerializer):
+    # New: Return the phases active during this week
+    active_macrocycles = serializers.SerializerMethodField()
+
+    class Meta:
+        model = WeeklyPlan
+        fields = (
+            "id",
+            "week_start",
+            "theme",
+            "planned_off_ice_activities",
+            "session_breakdown",
+            "active_macrocycles",  # <--- Add this
+        )
+
+    def get_active_macrocycles(self, obj):
+        """
+        Finds any macrocycle that overlaps with this week.
+        Logic: Macrocycle must belong to one of the Season's YTPs
+               AND contain the week_start date.
+        """
+        week_date = obj.week_start
+        season = obj.athlete_season
+
+        # 1. Find all plans linked to this season
+        plans = season.yearly_plans.all()
+
+        # 2. Filter macrocycles within those plans that cover this date
+        active_cycles = Macrocycle.objects.filter(
+            yearly_plan__in=plans, phase_start__lte=week_date, phase_end__gte=week_date
+        )
+
+        # Return simple list of {title, focus, discipline}
+        results = []
+        for cycle in active_cycles:
+            # Get discipline name safely
+            discipline = "Unknown"
+            entity = cycle.yearly_plan.planning_entity
+            if entity:
+                if hasattr(entity, "team_name"):
+                    discipline = entity.team_name
+                elif hasattr(entity, "skater"):
+                    discipline = "Singles" if "Singles" in str(entity) else "Solo Dance"
+
+            results.append(
+                {
+                    "discipline": discipline,
+                    "phase_title": cycle.phase_title,
+                    "phase_focus": cycle.phase_focus,
+                }
+            )
+
+        return results
+
+
+class SessionLogSerializer(serializers.ModelSerializer):
+    # We return the discipline name so the UI can show "Singles" vs "Pairs" tag
+    discipline_name = serializers.SerializerMethodField()
+    author_name = serializers.SerializerMethodField()
+
+
+class Meta:
+    model = SessionLog
+    fields = (
+        "id",
+        "session_date",
+        "discipline_name",
+        "author_name",
+        "session_rating",
+        "energy_stamina",
+        "sentiment_emoji",
+        "wellbeing_focus_check_in",
+        "wellbeing_mental_focus_notes",
+        "coach_notes",
+        "skater_notes",
+        "jump_focus",
+        "spin_focus",
+        "synchro_element_focus",
+    )
+
+    def get_discipline_name(self, obj):
+        if obj.planning_entity:
+            if hasattr(obj.planning_entity, "team_name"):
+                return obj.planning_entity.team_name
+            if hasattr(obj.planning_entity, "skater"):
+                return (
+                    "Singles" if "Singles" in str(obj.planning_entity) else "Solo Dance"
+                )
+        return "General"
+
+    def get_author_name(self, obj):
+        return obj.author.full_name if obj.author else "Unknown"

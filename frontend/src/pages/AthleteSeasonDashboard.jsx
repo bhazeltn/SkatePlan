@@ -4,17 +4,28 @@ import { apiRequest } from '@/api';
 import { Button } from '@/components/ui/button';
 // Import Tabs
 import { YearlyPlansTab } from '@/components/dashboard/tabs/YearlyPlansTab';
-import { ProfileTab } from '@/components/dashboard/tabs/ProfileTab'; // <--- NEW IMPORT
+import { ProfileTab } from '@/components/dashboard/tabs/ProfileTab';
+import { GoalsTab } from '@/components/dashboard/tabs/GoalsTab';
+import { WeeklyPlanTab } from '@/components/dashboard/tabs/WeeklyPlanTab';
+import { LogsTab } from '@/components/dashboard/tabs/LogsTab';
 
 export default function AthleteSeasonDashboard() {
   const { token } = useAuth();
+  
+  // 1. Smarter ID extraction (handles "1?tab=yearly")
+  const rawId = window.location.hash.split('/')[2] || '';
+  const skaterId = rawId.split('?')[0]; // "1"
+
+  // 2. Initialize tab from URL query param
+  const [activeTab, setActiveTab] = useState(() => {
+    const query = rawId.split('?')[1];
+    const params = new URLSearchParams(query);
+    return params.get('tab') || 'weekly';
+  });
+
   const [skater, setSkater] = useState(null);
-  const [activeTab, setActiveTab] = useState('weekly');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  // Get ID from hash URL (e.g. #/skater/1)
-  const skaterId = window.location.hash.split('/')[2];
 
   // --- FETCH DATA ---
   const fetchData = async () => {
@@ -84,17 +95,28 @@ export default function AthleteSeasonDashboard() {
       {/* Tab Content Area */}
       <div className="min-h-[400px]">
         
+        {/* --- WEEKLY TAB --- */}
         {activeTab === 'weekly' && (
-          <div className="text-center p-12 border-2 border-dashed rounded-lg bg-white">
-            <h3 className="text-lg font-medium">Weekly Plan</h3>
-            <p className="text-muted-foreground">Coming soon...</p>
-          </div>
+           <WeeklyPlanTab skater={skater} />
         )}
+        {/* ------------------ */}
 
         {/* --- YEARLY PLANS TAB --- */}
         {activeTab === 'yearly' && (
            <YearlyPlansTab skater={skater} />
         )}
+
+        {/* --- GOALS TAB --- */}
+        {activeTab === 'goals' && (
+           <GoalsTab skater={skater} />
+        )}
+        {/* ----------------- */}
+
+        {/* --- LOGS TAB --- */}
+        {activeTab === 'logs' && (
+           <LogsTab skater={skater} />
+        )}
+        {/* ---------------- */}
 
         {/* --- PROFILE TAB --- */}
         {activeTab === 'profile' && (
@@ -102,7 +124,7 @@ export default function AthleteSeasonDashboard() {
         )}
         
         {/* Placeholders for other tabs */}
-        {['goals', 'logs', 'health'].includes(activeTab) && (
+        {['health'].includes(activeTab) && (
            <div className="text-center p-12 border-2 border-dashed rounded-lg bg-white">
             <h3 className="text-lg font-medium">{activeTab.toUpperCase()}</h3>
             <p className="text-muted-foreground">Tab content coming soon.</p>

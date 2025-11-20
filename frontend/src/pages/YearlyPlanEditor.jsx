@@ -5,18 +5,23 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea'; 
 import { MacrocycleModal } from '@/components/planning/MacrocycleModal';
-import { ArrowLeft, Calendar, Trash2 } from 'lucide-react';
+// Make sure Pencil is imported!
+import { ArrowLeft, Calendar, CheckCircle2, Circle, Trash2, Pencil } from 'lucide-react';
+import { GoalModal } from '@/components/planning/GoalModal';
+
+// Helper for date format
+const formatDate = (d) => new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 
 export default function YearlyPlanEditor() {
   const { token } = useAuth();
   const [plan, setPlan] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [goals, setGoals] = useState([]);
   
-  // Get ID from hash (e.g., #/plans/15)
   const planId = window.location.hash.split('/')[2];
 
-  // --- DATA FETCHING ---
   const fetchPlan = async () => {
     try {
       const data = await apiRequest(`/ytps/${planId}/`, 'GET', null, token);
@@ -28,11 +33,19 @@ export default function YearlyPlanEditor() {
     }
   };
 
+  const fetchGoals = async () => {
+      try {
+          const data = await apiRequest(`/ytps/${planId}/goals/`, 'GET', null, token);
+          setGoals(data || []);
+      } catch (e) { console.error(e); }
+  };
+
   useEffect(() => {
-    fetchPlan();
+      fetchPlan();
+      fetchGoals(); 
   }, [planId, token]);
 
-  // --- HANDLERS ---
+  // ... (Keep existing handlers: handleUpdateDetails, handleDeleteMacrocycle, getNextDay) ...
   const handleUpdateDetails = async () => {
     try {
       await apiRequest(`/ytps/${planId}/`, 'PATCH', {
@@ -49,17 +62,33 @@ export default function YearlyPlanEditor() {
     if(!confirm("Delete this phase?")) return;
     try {
         await apiRequest(`/macrocycles/${id}/`, 'DELETE', null, token);
-        fetchPlan(); // Refresh list
+        fetchPlan(); 
     } catch(err) {
         alert("Failed to delete.");
     }
   }
 
+  // --- HELPER: Calculate "Next Day" ---
+  const getNextDay = (dateStr) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    date.setDate(date.getDate() + 1); 
+    return date.toISOString().split('T')[0];
+  };
+
   if (loading) return <div className="p-8">Loading plan...</div>;
   if (!plan) return <div className="p-8">Plan not found.</div>;
 
-  // Sort macrocycles by date
   const sortedCycles = plan.macrocycles?.sort((a, b) => new Date(a.phase_start) - new Date(b.phase_start)) || [];
+
+  let defaultStart = '';
+  if (sortedCycles.length > 0) {
+      const lastPhase = sortedCycles[sortedCycles.length - 1];
+      defaultStart = getNextDay(lastPhase.phase_end);
+  } else {
+      defaultStart = plan.season_info?.start_date || '';
+  }
+  const defaultEnd = plan.season_info?.end_date || '';
 
   return (
     <div className="p-8 min-h-screen bg-gray-50">
@@ -67,11 +96,13 @@ export default function YearlyPlanEditor() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
-            <a href={`#/skater/${plan.planning_entity?.skater?.id || ''}`}>
+            {/* Link back to the athlete dashboard with TAB selection */}
+            <a href={`#/skater/${plan.skater_id || ''}?tab=yearly`}>
                 <Button variant="outline" size="icon">
                     <ArrowLeft className="h-4 w-4" />
                 </Button>
             </a>
+            {/* ------------------------------------------------------------- */}
             <div>
                 <h1 className="text-3xl font-bold text-gray-900">{plan.discipline_name} Plan</h1>
                 <p className="text-muted-foreground">Yearly Training Plan Editor</p>
@@ -82,7 +113,7 @@ export default function YearlyPlanEditor() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        {/* LEFT COLUMN: Plan Settings */}
+        {/* LEFT COLUMN: Plan Settings & Goals */}
         <div className="lg:col-span-1 space-y-6">
             <Card>
                 <CardHeader>
@@ -104,12 +135,71 @@ export default function YearlyPlanEditor() {
                     </div>
                     <div className="space-y-2">
                         <Label>Primary Season Goal</Label>
-                        <textarea 
-                            className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        <Textarea 
+                            className="flex min-h-[100px]"
                             value={plan.primary_season_goal || ''}
                             onChange={(e) => setPlan({...plan, primary_season_goal: e.target.value})}
                         />
                     </div>
+                </CardContent>
+            </Card>
+            
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-lg">Season Goals</CardTitle>
+                    <GoalModal planId={planId} onSaved={fetchGoals} />
+                </CardHeader>
+                <CardContent>
+                    {goals.length === 0 ? (
+                        <p className="text-sm text-muted-foreground text-center py-4">No goals set.</p>
+                    ) : (
+                        <div className="space-y-3">
+                            {/* --- UPDATED GOAL RENDERING --- */}
+                            {goals.map(goal => (
+                                <div key={goal.id} className="flex items-start gap-3 p-3 border rounded-md hover:bg-slate-50 group bg-white">
+                                    {/* Status Icon */}
+                                    {goal.current_status === 'COMPLETED' ? (
+                                        <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5" />
+                                    ) : (
+                                        <Circle className="h-5 w-5 text-gray-300 mt-0.5" />
+                                    )}
+
+                                    <div className="flex-1">
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <p className="font-medium text-sm">{goal.title}</p>
+                                                
+                                                {/* Badges & Dates */}
+                                                <div className="flex flex-wrap gap-2 text-xs text-muted-foreground mt-1 items-center">
+                                                    <span className="px-1.5 py-0.5 bg-slate-100 rounded">{goal.goal_type}</span>
+                                                    
+                                                    {goal.target_date && (
+                                                        <div className="flex items-center gap-1 ml-1 text-gray-500">
+                                                            <Calendar className="h-3 w-3" />
+                                                            <span>Due: {formatDate(goal.target_date)}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            
+                                            {/* Edit Trigger */}
+                                            <GoalModal 
+                                                planId={planId} 
+                                                goal={goal} 
+                                                onSaved={fetchGoals}
+                                                trigger={
+                                                    <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 group-hover:opacity-100">
+                                                        <Pencil className="h-3 w-3" />
+                                                    </Button>
+                                                }
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                            {/* -------------------------------- */}
+                        </div>
+                    )}
                 </CardContent>
             </Card>
         </div>
@@ -119,9 +209,15 @@ export default function YearlyPlanEditor() {
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle>Season Timeline</CardTitle>
-                    <MacrocycleModal planId={plan.id} onSaved={fetchPlan} />
+                    <MacrocycleModal 
+                        planId={plan.id} 
+                        onSaved={fetchPlan} 
+                        defaultStartDate={defaultStart}
+                        defaultEndDate={defaultEnd}
+                    />
                 </CardHeader>
                 <CardContent>
+                    {/* ... (Keep Existing Timeline Rendering) ... */}
                     {sortedCycles.length === 0 ? (
                         <div className="text-center p-8 border-2 border-dashed rounded-lg text-muted-foreground">
                             No phases defined yet. Click "Add Phase" to build your timeline.

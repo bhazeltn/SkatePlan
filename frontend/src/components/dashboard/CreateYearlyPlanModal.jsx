@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { DatePicker } from '@/components/ui/date-picker';
 
 export function CreateYearlyPlanModal({ skater, onPlanCreated }) {
   const [open, setOpen] = useState(false);
@@ -150,12 +151,12 @@ export function CreateYearlyPlanModal({ skater, onPlanCreated }) {
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                        <Label className="text-xs text-muted-foreground">Start Date</Label>
-                        <Input type="date" value={newStartDate} onChange={(e) => setNewStartDate(e.target.value)} />
+                        <Label className="text-xs text-muted-foreground mb-1 block">Start Date</Label>
+                        <DatePicker date={newStartDate} setDate={setNewStartDate} />
                     </div>
                     <div>
-                        <Label className="text-xs text-muted-foreground">End Date</Label>
-                        <Input type="date" value={newEndDate} onChange={(e) => setNewEndDate(e.target.value)} />
+                        <Label className="text-xs text-muted-foreground mb-1 block">End Date</Label>
+                        <DatePicker date={newEndDate} setDate={setNewEndDate} />
                     </div>
                   </div>
                </div>

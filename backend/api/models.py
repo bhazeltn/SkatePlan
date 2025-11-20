@@ -522,6 +522,8 @@ class Goal(models.Model):
     goal_timeframe = models.CharField(
         max_length=50, blank=True, null=True
     )  # e.g., "Weekly", "Macrocycle"
+    start_date = models.DateField(null=True, blank=True)
+    target_date = models.DateField(null=True, blank=True)
     smart_description = models.TextField(blank=True, null=True)
     progress_notes = models.TextField(blank=True, null=True)
 
@@ -563,13 +565,13 @@ class SessionLog(models.Model):
     planning_entity = GenericForeignKey("content_type", "object_id")
 
     # Wellbeing Check-in
-    energy_stamina = models.CharField(
-        max_length=50, blank=True, null=True
-    )  # e.g., "Low", "Good"
+    energy_stamina = models.IntegerField(default=3, help_text="1-5 Rating")
+    session_rating = models.IntegerField(default=3, help_text="1-5 Star Rating")
     wellbeing_focus_check_in = models.JSONField(
         default=list, blank=True
     )  # e.g., ["Focus", "Stress"]
     wellbeing_mental_focus_notes = models.TextField(blank=True, null=True)
+    sentiment_emoji = models.CharField(max_length=10, blank=True, null=True)
 
     # Coach/Skater Notes
     coach_notes = models.TextField(blank=True, null=True)  # Rich Text

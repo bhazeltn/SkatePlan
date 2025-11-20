@@ -4,8 +4,8 @@ import { apiRequest } from '@/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CreateYearlyPlanModal } from '../CreateYearlyPlanModal';
-import { Calendar, Trophy, ArrowRight } from 'lucide-react';
 import { EditSeasonModal } from '../EditSeasonModal';
+import { Calendar, Trophy, ArrowRight } from 'lucide-react';
 
 // Helper to format dates (e.g., "Jul 2025")
 const formatDate = (d) => new Date(d).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
@@ -52,7 +52,12 @@ export function YearlyPlansTab({ skater }) {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {plans.map((plan) => (
-            <Card key={plan.id} className="hover:border-brand-blue transition-all cursor-pointer group">
+            <Card 
+                key={plan.id} 
+                className="hover:border-brand-blue transition-all cursor-pointer group relative"
+                // --- 1. MAKE CARD CLICKABLE ---
+                onClick={() => window.location.hash = `#/plans/${plan.id}`}
+            >
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <div>
                     <CardTitle className="text-xl font-bold text-brand-blue">
@@ -70,18 +75,20 @@ export function YearlyPlansTab({ skater }) {
                                     </span>
                                 )}
                             </p>
-                            {/* Pass the season object from the plan to the modal */}
-                            <EditSeasonModal season={plan.season_info} onUpdated={fetchPlans} />
+                            
+                            {/* --- 2. PREVENT CLICK BUBBLING ON EDIT --- */}
+                            <div onClick={(e) => e.stopPropagation()}>
+                                <EditSeasonModal season={plan.season_info} onUpdated={fetchPlans} />
+                            </div>
+                            {/* ----------------------------------------- */}
                         </div>
                     )}
                 </div>
                 
-                {/* Link to Editor (Placeholder for now) */}
-                <a href={`#/plans/${plan.id}`}>
-                    <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity">
-                        <ArrowRight className="h-5 w-5" />
-                    </Button>
-                </a>
+                {/* Arrow Visual (No link needed now) */}
+                <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                    <ArrowRight className="h-5 w-5" />
+                </Button>
               </CardHeader>
               
               <CardContent>
@@ -106,7 +113,6 @@ export function YearlyPlansTab({ skater }) {
                             {plan.macrocycles?.length || 0} Macrocycles defined
                         </p>
                         <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden flex">
-                            {/* This visually represents the phases */}
                             {plan.macrocycles && plan.macrocycles.length > 0 ? (
                                 plan.macrocycles.map((cycle, i) => (
                                     <div 

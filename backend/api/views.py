@@ -4,7 +4,6 @@ from rest_framework.exceptions import ValidationError
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
-from .serializers import UserSerializer, RegisterSerializer, LoginSerializer
 
 from .permissions import IsCoachUser
 from .models import (
@@ -19,6 +18,9 @@ from .models import (
     Federation,
     YearlyPlan,
     Macrocycle,
+    Goal,
+    WeeklyPlan,
+    SessionLog,
 )
 from .serializers import (
     SkaterSerializer,
@@ -32,9 +34,15 @@ from .serializers import (
     YearlyPlanSerializer,
     MacrocycleSerializer,
     AthleteSeasonSerializer,
+    GoalSerializer,
+    WeeklyPlanSerializer,
+    UserSerializer,
+    RegisterSerializer,
+    LoginSerializer,
+    SessionLogSerializer,
 )
-from django.utils import timezone
-from datetime import date
+
+from datetime import date, timedelta
 
 User = get_user_model()
 
@@ -445,3 +453,285 @@ class AthleteSeasonList(generics.ListAPIView):
 
     def get_queryset(self):
         return AthleteSeason.objects.filter(skater_id=self.kwargs["skater_id"])
+
+
+class GoalListCreateByPlanView(generics.ListCreateAPIView):
+    """
+    List or Create Goals associated with the Planning Entity of a specific YTP.
+    """
+
+    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    serializer_class = GoalSerializer
+
+    def get_plan(self):
+        return YearlyPlan.objects.get(id=self.kwargs["plan_id"])
+
+    def get_queryset(self):
+        plan = self.get_plan()
+        # Filter goals that link to the SAME entity (content_type + object_id) as the plan
+        return Goal.objects.filter(
+            content_type=plan.content_type, object_id=plan.object_id
+        ).order_by("-created_at")
+
+    def perform_create(self, serializer):
+        plan = self.get_plan()
+        # Auto-link the new goal to the plan's entity
+        serializer.save(
+            content_type=plan.content_type,
+            object_id=plan.object_id,
+            current_status=Goal.GoalStatus.APPROVED,  # Coach created goals are auto-approved
+        )
+
+
+class GoalListBySkaterView(generics.ListCreateAPIView):  # Changed from ListAPIView
+    """
+    List ALL goals for a skater, or Create a new one linked to their primary discipline.
+    """
+
+    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    serializer_class = GoalSerializer
+
+    def get_queryset(self):
+        skater_id = self.kwargs["skater_id"]
+        skater = Skater.objects.get(id=skater_id)
+
+        # 1. Get all entity IDs for this skater
+        singles = skater.singles_entities.all()
+        dance = skater.solodance_entities.all()
+        teams_a = skater.teams_as_partner_a.all()
+        teams_b = skater.teams_as_partner_b.all()
+
+        from django.db.models import Q
+
+        query = Q()
+
+        # Singles
+        if singles.exists():
+            ct = ContentType.objects.get_for_model(SinglesEntity)
+            query |= Q(
+                content_type=ct, object_id__in=singles.values_list("id", flat=True)
+            )
+
+        # Solo Dance
+        if dance.exists():
+            ct = ContentType.objects.get_for_model(SoloDanceEntity)
+            query |= Q(
+                content_type=ct, object_id__in=dance.values_list("id", flat=True)
+            )
+
+        # Teams (Partner A)
+        if teams_a.exists():
+            ct = ContentType.objects.get_for_model(Team)
+            query |= Q(
+                content_type=ct, object_id__in=teams_a.values_list("id", flat=True)
+            )
+
+        # Teams (Partner B)
+        if teams_b.exists():
+            ct = ContentType.objects.get_for_model(Team)
+            query |= Q(
+                content_type=ct, object_id__in=teams_b.values_list("id", flat=True)
+            )
+
+        if not query:
+            return Goal.objects.none()
+
+        return Goal.objects.filter(query).order_by("-created_at")
+
+    def perform_create(self, serializer):
+        """
+        Auto-link the goal to the skater's primary discipline.
+        Priority: Singles -> Solo Dance -> Pairs/Dance Team.
+        """
+        skater_id = self.kwargs["skater_id"]
+        skater = Skater.objects.get(id=skater_id)
+
+        # Find a valid entity to attach to
+        entity = skater.singles_entities.first()
+        if not entity:
+            entity = skater.solodance_entities.first()
+        if not entity:
+            entity = skater.teams_as_partner_a.first()
+        if not entity:
+            entity = skater.teams_as_partner_b.first()
+
+        if not entity:
+            raise ValidationError(
+                "Cannot create goal: No active discipline found for this skater."
+            )
+
+        content_type = ContentType.objects.get_for_model(entity)
+
+        serializer.save(
+            content_type=content_type,
+            object_id=entity.id,
+            current_status=Goal.GoalStatus.APPROVED,
+        )
+
+
+class GoalDetailView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    serializer_class = GoalSerializer
+    queryset = Goal.objects.all()
+
+
+class WeeklyPlanListView(generics.ListAPIView):
+    """
+    Lists all weeks for a specific Season.
+    Dynamically repairs the schedule:
+    1. Generates missing weeks for the current date range.
+    2. Filters out 'zombie' weeks (outside the current range).
+    """
+
+    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    serializer_class = WeeklyPlanSerializer
+
+    def get_queryset(self):
+        season_id = self.kwargs["season_id"]
+        # We will apply date filtering in the 'list' method
+        return WeeklyPlan.objects.filter(athlete_season_id=season_id).order_by(
+            "week_start"
+        )
+
+    def list(self, request, *args, **kwargs):
+        season_id = self.kwargs["season_id"]
+        try:
+            season = AthleteSeason.objects.get(id=season_id)
+        except AthleteSeason.DoesNotExist:
+            return Response(
+                {"error": "Season not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        # 1. REPAIR SCHEDULE: Ensure weeks exist for the CURRENT range
+        if season.start_date and season.end_date:
+            current_date = season.start_date
+            weeks_to_create = []
+
+            # Get existing week start dates to avoid duplicates
+            existing_dates = set(
+                WeeklyPlan.objects.filter(athlete_season=season).values_list(
+                    "week_start", flat=True
+                )
+            )
+
+            # Loop through the official timeline
+            while current_date <= season.end_date:
+                if current_date not in existing_dates:
+                    weeks_to_create.append(
+                        WeeklyPlan(
+                            athlete_season=season, week_start=current_date, theme=""
+                        )
+                    )
+                current_date += timedelta(days=7)
+
+            if weeks_to_create:
+                WeeklyPlan.objects.bulk_create(weeks_to_create)
+
+        # 2. STRICT FILTER: Only return weeks inside the valid range
+        # This hides the "Zombie Weeks" from before the new start date
+        queryset = self.get_queryset().filter(
+            week_start__gte=season.start_date, week_start__lte=season.end_date
+        )
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+        season_id = self.kwargs["season_id"]
+        # Ensure season exists and we have access
+        try:
+            season = AthleteSeason.objects.get(id=season_id)
+        except AthleteSeason.DoesNotExist:
+            return Response(
+                {"error": "Season not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Check if weeks exist
+        qs = self.get_queryset()
+
+        # If no weeks found, and we have valid dates, GENERATE THEM
+        if not qs.exists() and season.start_date and season.end_date:
+            weeks_to_create = []
+            current_date = season.start_date
+
+            # Loop week by week until we hit the end date
+            while current_date <= season.end_date:
+                weeks_to_create.append(
+                    WeeklyPlan(athlete_season=season, week_start=current_date, theme="")
+                )
+                current_date += timedelta(days=7)
+
+            # Bulk create for performance
+            WeeklyPlan.objects.bulk_create(weeks_to_create)
+
+            # Refresh queryset
+            qs = self.get_queryset()
+
+        return super().list(request, *args, **kwargs)
+
+
+class WeeklyPlanDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    Update a specific week (e.g. set the Theme).
+    """
+
+    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    serializer_class = WeeklyPlanSerializer
+    queryset = WeeklyPlan.objects.all()
+
+
+class SessionLogListCreateView(generics.ListCreateAPIView):
+    """
+    List all logs for a skater, or create a new one.
+    """
+
+    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    serializer_class = SessionLogSerializer
+
+    def get_queryset(self):
+        skater_id = self.kwargs["skater_id"]
+        # Return logs for this skater, ordered by newest first
+        return SessionLog.objects.filter(athlete_season__skater_id=skater_id).order_by(
+            "-session_date"
+        )
+
+    def perform_create(self, serializer):
+        skater_id = self.kwargs["skater_id"]
+        skater = Skater.objects.get(id=skater_id)
+
+        # 1. Find Active Season
+        # (In a real app, we might let them select the season, but auto-detect is best for MVP)
+        active_season = AthleteSeason.objects.filter(skater=skater).last()
+        if not active_season:
+            raise ValidationError("No active season found. Cannot create log.")
+
+        # 2. Find Planning Entity (Discipline)
+        entity_id = self.request.data.get("planning_entity_id")
+        entity_type = self.request.data.get("planning_entity_type")
+
+        if not entity_id or not entity_type:
+            raise ValidationError("Missing planning entity information.")
+
+        model_map = {
+            "SinglesEntity": SinglesEntity,
+            "SoloDanceEntity": SoloDanceEntity,
+            "Team": Team,
+            "SynchroTeam": SynchroTeam,
+        }
+        model_class = model_map.get(entity_type)
+        if not model_class:
+            raise ValidationError(f"Invalid entity type: {entity_type}")
+
+        content_type = ContentType.objects.get_for_model(model_class)
+
+        # 3. Save
+        serializer.save(
+            author=self.request.user,
+            athlete_season=active_season,
+            content_type=content_type,
+            object_id=entity_id,
+        )
+
+
+class SessionLogDetailView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    serializer_class = SessionLogSerializer
+    queryset = SessionLog.objects.all()

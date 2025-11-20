@@ -23,4 +23,11 @@ urlpatterns = [
     path("macrocycles/<int:pk>/", views.MacrocycleDetailView.as_view()),
     path("seasons/<int:pk>/", views.AthleteSeasonDetailView.as_view()),
     path("skaters/<int:skater_id>/seasons/", views.AthleteSeasonList.as_view()),
+    path("ytps/<int:plan_id>/goals/", views.GoalListCreateByPlanView.as_view()),
+    path("goals/<int:pk>/", views.GoalDetailView.as_view()),
+    path("skaters/<int:skater_id>/goals/", views.GoalListBySkaterView.as_view()),
+    path("seasons/<int:season_id>/weeks/", views.WeeklyPlanListView.as_view()),
+    path("weeks/<int:pk>/", views.WeeklyPlanDetailView.as_view()),
+    path("skaters/<int:skater_id>/logs/", views.SessionLogListCreateView.as_view()),
+    path("logs/<int:pk>/", views.SessionLogDetailView.as_view()),
 ]

@@ -15,7 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea'; 
 
-export function MacrocycleModal({ planId, macrocycle, onSaved, trigger }) {
+export function MacrocycleModal({ planId, macrocycle, onSaved, trigger, defaultStartDate, defaultEndDate }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const { token } = useAuth();
@@ -25,15 +25,24 @@ export function MacrocycleModal({ planId, macrocycle, onSaved, trigger }) {
   const [endDate, setEndDate] = useState('');
   const [focus, setFocus] = useState('');
 
-  // Populate form on edit
+  // Populate form logic
   useEffect(() => {
     if (open) {
-        setTitle(macrocycle?.phase_title || '');
-        setStartDate(macrocycle?.phase_start || '');
-        setEndDate(macrocycle?.phase_end || '');
-        setFocus(macrocycle?.phase_focus || '');
+      if (macrocycle) {
+        // EDIT MODE: Load existing data
+        setTitle(macrocycle.phase_title || '');
+        setStartDate(macrocycle.phase_start || '');
+        setEndDate(macrocycle.phase_end || '');
+        setFocus(macrocycle.phase_focus || '');
+      } else {
+        // CREATE MODE: Load Smart Defaults
+        setTitle('');
+        setStartDate(defaultStartDate || '');
+        setEndDate(defaultEndDate || '');
+        setFocus('');
+      }
     }
-  }, [open, macrocycle]);
+  }, [open, macrocycle, defaultStartDate, defaultEndDate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -56,7 +65,8 @@ export function MacrocycleModal({ planId, macrocycle, onSaved, trigger }) {
       
       onSaved();
       setOpen(false);
-      // Only reset if creating
+      
+      // Only reset if creating (optional, since useEffect handles reset on open)
       if (!macrocycle) {
           setTitle(''); setStartDate(''); setEndDate(''); setFocus('');
       }
@@ -95,7 +105,6 @@ export function MacrocycleModal({ planId, macrocycle, onSaved, trigger }) {
           <div className="space-y-2">
             <Label>Primary Focus</Label>
             <Textarea 
-                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 value={focus} 
                 onChange={(e) => setFocus(e.target.value)}
                 placeholder="e.g. Volume, Skills Acquisition..."

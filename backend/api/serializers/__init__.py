@@ -1,5 +1,5 @@
 from .users import UserSerializer, RegisterSerializer, LoginSerializer
-from .core import FederationSerializer
+from .core import FederationSerializer, SkatingElementSerializer
 from .skaters import (
     SimpleSkaterSerializer,
     SinglesEntitySerializer,

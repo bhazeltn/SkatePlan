@@ -5,21 +5,26 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, Music, User, Archive } from 'lucide-react'; // Add Archive icon
+import { Plus, Music, User, Archive } from 'lucide-react';
+import { ProgramElementRow } from './ProgramElementRow'; // Ensure this is created
 
 export function ProgramModal({ skater, programToEdit, onSaved, trigger }) {
   const [open, setOpen] = useState(false);
   const { token } = useAuth();
   const [loading, setLoading] = useState(false);
 
-  // State
+  // Metadata State
   const [selectedEntityId, setSelectedEntityId] = useState('');
   const [title, setTitle] = useState('');
   const [season, setSeason] = useState('');
   const [category, setCategory] = useState('Free Skate');
   const [music, setMusic] = useState('');
   const [choreo, setChoreo] = useState('');
-  const [isActive, setIsActive] = useState(true); // New State
+  const [isActive, setIsActive] = useState(true);
+
+  // Content State (List of Elements)
+  // Structure: [{ type: 'JUMP', components: [{name: '', id: null}], level: '', notes: '' }]
+  const [elements, setElements] = useState([]);
 
   useEffect(() => {
     if (open) {
@@ -31,7 +36,10 @@ export function ProgramModal({ skater, programToEdit, onSaved, trigger }) {
             setCategory(programToEdit.program_category);
             setMusic(programToEdit.music_title || '');
             setChoreo(programToEdit.choreographer || '');
-            setIsActive(programToEdit.is_active); // Load status
+            setIsActive(programToEdit.is_active);
+            
+            // Load Elements (Ensure it's an array)
+            setElements(programToEdit.planned_elements || []);
         } else {
             // Create Mode
             if (skater?.planning_entities?.length > 0) {
@@ -43,15 +51,37 @@ export function ProgramModal({ skater, programToEdit, onSaved, trigger }) {
             setMusic('');
             setChoreo('');
             setIsActive(true);
+            setElements([]);
         }
     }
   }, [open, programToEdit, skater]);
 
+  // --- ELEMENT HANDLERS ---
+  const addElementRow = () => {
+      setElements([...elements, { 
+          type: 'JUMP', 
+          components: [{ name: '', id: null }], 
+          level: '', 
+          notes: '' 
+      }]);
+  };
+
+  const updateElementRow = (index, newData) => {
+      const updated = [...elements];
+      updated[index] = newData;
+      setElements(updated);
+  };
+
+  const removeElementRow = (index) => {
+      setElements(elements.filter((_, i) => i !== index));
+  };
+
+  // --- MAIN HANDLERS ---
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
-    // Find entity logic (same as before)
+    // Find entity type (SinglesEntity, etc.)
     const entity = skater.planning_entities.find(e => String(e.id) === String(selectedEntityId));
     const entityType = entity ? entity.type : null;
 
@@ -64,7 +94,8 @@ export function ProgramModal({ skater, programToEdit, onSaved, trigger }) {
         choreographer: choreo,
         planning_entity_id: selectedEntityId,
         planning_entity_type: entityType,
-        is_active: isActive
+        is_active: isActive,
+        planned_elements: elements // Send the JSON content
       };
 
       if (programToEdit) {
@@ -82,7 +113,6 @@ export function ProgramModal({ skater, programToEdit, onSaved, trigger }) {
     }
   };
 
-  // Toggle Archive Status
   const handleArchive = async () => {
       if (!confirm(`Are you sure you want to ${isActive ? 'archive' : 'activate'} this program?`)) return;
       setLoading(true);
@@ -99,13 +129,12 @@ export function ProgramModal({ skater, programToEdit, onSaved, trigger }) {
       <DialogTrigger asChild>
         {trigger || <Button variant="outline" size="sm"><Plus className="h-4 w-4 mr-2" /> Add Program</Button>}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
         <DialogHeader>
             <DialogTitle>{programToEdit ? 'Edit Program' : 'Add Program'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
             
-            {/* ... (Keep existing Fields: Discipline, Season, Title, Category, Music, Choreo) ... */}
             {/* Row 1: Discipline & Season */}
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -151,20 +180,51 @@ export function ProgramModal({ skater, programToEdit, onSaved, trigger }) {
             </div>
 
             {/* Row 3: Metadata */}
-            <div className="space-y-2">
-                <Label>Music Title</Label>
-                <div className="relative">
-                    <Music className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input className="pl-8" value={music} onChange={(e) => setMusic(e.target.value)} placeholder="e.g. Duel of the Fates" />
+            <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <Label>Music Title</Label>
+                    <div className="relative">
+                        <Music className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input className="pl-8" value={music} onChange={(e) => setMusic(e.target.value)} placeholder="e.g. Duel of the Fates" />
+                    </div>
+                </div>
+                <div className="space-y-2">
+                    <Label>Choreographer</Label>
+                    <div className="relative">
+                        <User className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input className="pl-8" value={choreo} onChange={(e) => setChoreo(e.target.value)} placeholder="e.g. Lori Nichol" />
+                    </div>
                 </div>
             </div>
-            <div className="space-y-2">
-                <Label>Choreographer</Label>
-                <div className="relative">
-                    <User className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input className="pl-8" value={choreo} onChange={(e) => setChoreo(e.target.value)} placeholder="e.g. Lori Nichol" />
+
+            {/* --- PROGRAM CONTENT EDITOR --- */}
+            <div className="border-t pt-4 mt-2">
+                <div className="flex justify-between items-center mb-2">
+                    <Label className="text-gray-900 font-bold">Program Layout</Label>
+                    <Button type="button" size="sm" variant="outline" onClick={addElementRow}>
+                        <Plus className="h-3 w-3 mr-1" /> Add Element
+                    </Button>
+                </div>
+                
+                {/* ADD pb-40 HERE to make room for the dropdowns */}
+                <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1 pb-40">
+                    {elements.length === 0 && (
+                        <div className="text-center p-4 border-2 border-dashed rounded text-xs text-muted-foreground">
+                            No elements added. Click "Add Element" to build your layout.
+                        </div>
+                    )}
+                    {elements.map((el, i) => (
+                        <ProgramElementRow 
+                            key={i} 
+                            index={i} 
+                            element={el} 
+                            onChange={updateElementRow} 
+                            onRemove={removeElementRow} 
+                        />
+                    ))}
                 </div>
             </div>
+            {/* ------------------------------ */}
 
             {/* Footer Actions */}
             <div className="pt-4 flex justify-between items-center border-t">

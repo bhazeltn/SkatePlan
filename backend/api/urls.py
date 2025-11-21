@@ -44,4 +44,5 @@ urlpatterns = [
     path("programs/<int:pk>/", views.ProgramDetailView.as_view()),
     path("skaters/<int:skater_id>/stats/", views.SkaterStatsView.as_view()),
     path("dashboard/stats/", views.CoachDashboardStatsView.as_view()),
+    path("elements/", views.SkatingElementList.as_view()),
 ]

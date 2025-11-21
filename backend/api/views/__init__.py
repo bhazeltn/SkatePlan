@@ -1,5 +1,5 @@
 from .auth import RegisterView, LoginView, UserProfileView
-from .core import FederationList
+from .core import FederationList, SkatingElementList
 from .skaters import (
     CreateSkaterView,
     SkaterDetailView,

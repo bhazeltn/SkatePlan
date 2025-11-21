@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/AuthContext';
 import { apiRequest } from '@/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { LogSessionModal } from '@/components/dashboard/LogSessionModal';
-import { Calendar, User, Activity, Star } from 'lucide-react';
+import { Calendar, User, Activity, Star, Zap } from 'lucide-react'; // <--- Fixed Import
 
 export function LogsTab({ skater }) {
   const { token } = useAuth();
@@ -52,7 +53,7 @@ export function LogsTab({ skater }) {
                      <CardContent className="p-4">
                         <div className="flex flex-col md:flex-row justify-between gap-4">
                             
-                            {/* Meta Info (Stars & Date) */}
+                            {/* Meta Info */}
                             <div className="min-w-[200px] space-y-2">
                                 <div className="flex items-center gap-2 font-semibold text-gray-900">
                                     <Calendar className="h-4 w-4 text-brand-blue" />
@@ -75,8 +76,6 @@ export function LogsTab({ skater }) {
 
                             {/* Wellbeing Panel */}
                             <div className="min-w-[180px] p-2 bg-slate-50 rounded border text-sm flex flex-col gap-2">
-                                
-                                {/* Energy Row */}
                                 <div className="flex items-center justify-between">
                                     <span className="text-xs font-semibold text-gray-500 uppercase">Energy</span>
                                     <div className="flex gap-0.5">
@@ -88,8 +87,6 @@ export function LogsTab({ skater }) {
                                         ))}
                                     </div>
                                 </div>
-
-                                {/* Mood Row */}
                                 <div className="flex items-center gap-2 border-t border-slate-200 pt-2 mt-1">
                                     <span className="text-xl">{log.sentiment_emoji || "🙂"}</span>
                                     <span className="text-xs text-gray-600 italic leading-tight">

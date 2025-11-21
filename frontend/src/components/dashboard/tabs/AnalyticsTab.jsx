@@ -4,6 +4,11 @@ import { apiRequest } from '@/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatSnapshot, SingleStatSnapshot } from '@/components/dashboard/StatSnapshot';
 import { Trophy, Activity, Award, Zap, Palette, TrendingUp } from 'lucide-react';
+// --- CHART IMPORTS ---
+import { 
+    LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
+    ComposedChart, Bar, Legend 
+} from 'recharts';
 
 export function AnalyticsTab({ skater }) {
   const { token } = useAuth();
@@ -60,7 +65,7 @@ export function AnalyticsTab({ skater }) {
                     bg="bg-blue-50"
                 />
                 
-                {/* Placeholder */}
+                {/* Goal Completion (Placeholder) */}
                 <SingleStatSnapshot 
                     label="Goals Achieved"
                     value="--"
@@ -72,26 +77,96 @@ export function AnalyticsTab({ skater }) {
             </div>
         </div>
 
-        {/* 2. SEGMENT BREAKDOWNS */}
+        {/* 2. CHARTS ROW */}
+        {data.history && data.history.length > 1 && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                {/* A. TOTAL SCORE TREND */}
+                <Card>
+                    <CardHeader><CardTitle>Score Progression</CardTitle></CardHeader>
+                    <CardContent className="h-[300px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={data.history}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                <XAxis 
+                                    dataKey="date" 
+                                    tickFormatter={(str) => new Date(str).toLocaleDateString(undefined, {month:'short', day:'numeric'})} 
+                                    fontSize={12}
+                                />
+                                <YAxis domain={['auto', 'auto']} fontSize={12} />
+                                <Tooltip 
+                                    labelFormatter={(label) => new Date(label).toLocaleDateString()}
+                                    formatter={(value) => [value, "Score"]}
+                                />
+                                <Line 
+                                    type="monotone" 
+                                    dataKey="total_score" 
+                                    stroke="#F59E0B" 
+                                    strokeWidth={3} 
+                                    dot={{ r: 4, fill: "#F59E0B" }} 
+                                    activeDot={{ r: 6 }} 
+                                />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </CardContent>
+                </Card>
+
+                {/* B. TECHNICAL EFFICIENCY (BV vs TES) */}
+                <Card>
+                    <CardHeader><CardTitle>Technical Efficiency</CardTitle></CardHeader>
+                    <CardContent className="h-[300px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <ComposedChart data={data.history}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                <XAxis 
+                                    dataKey="date" 
+                                    tickFormatter={(str) => new Date(str).toLocaleDateString(undefined, {month:'short'})} 
+                                    fontSize={12}
+                                />
+                                <YAxis fontSize={12} />
+                                <Tooltip 
+                                    labelFormatter={(label) => new Date(label).toLocaleDateString()}
+                                />
+                                <Legend wrapperStyle={{ fontSize: '12px' }} />
+                                
+                                {/* Planned BV (Target) */}
+                                <Bar dataKey="planned_bv" name="Planned BV" fill="#E2E8F0" barSize={20} />
+                                
+                                {/* Actual TES (Result) */}
+                                <Line type="monotone" dataKey="tes" name="Actual TES" stroke="#3B82F6" strokeWidth={3} />
+                            </ComposedChart>
+                        </ResponsiveContainer>
+                    </CardContent>
+                </Card>
+            </div>
+        )}
+
+        {/* 3. SEGMENT BREAKDOWNS (Full Rows) */}
         {data.segments && Object.keys(data.segments).length > 0 && (
             <div>
                 <h3 className="text-lg font-semibold mb-4 text-gray-900">Segment Analysis</h3>
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                
+                {/* CHANGED: Vertical Stack instead of Grid */}
+                <div className="space-y-8">
                     {Object.entries(data.segments).map(([segName, stats]) => (
-                        <div key={segName} className="space-y-3">
-                            <h4 className="font-medium text-sm text-gray-500 uppercase tracking-wider border-b pb-1">{segName}</h4>
-                            <div className="grid grid-cols-3 gap-3">
+                        <div key={segName} className="space-y-4">
+                            <div className="flex items-center gap-2 border-b pb-2">
+                                <Award className="h-5 w-5 text-brand-blue" />
+                                <h4 className="font-bold text-gray-800 uppercase tracking-wider">{segName}</h4>
+                            </div>
+                            
+                            {/* 3 Cards Across */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 <StatSnapshot 
-                                    label="Total" 
-                                    // Use Optional Chaining (?.) to prevent crashes
+                                    label="Total Segment Score" 
                                     pb={stats?.total?.pb} 
                                     sb={stats?.total?.sb} 
-                                    icon={Award}
+                                    icon={Trophy}
                                     color="text-purple-500"
                                     bg="bg-purple-50"
                                 />
                                 <StatSnapshot 
-                                    label="TES (Tech)" 
+                                    label="Technical (TES)" 
                                     pb={stats?.tes?.pb} 
                                     sb={stats?.tes?.sb} 
                                     icon={Zap}
@@ -99,7 +174,7 @@ export function AnalyticsTab({ skater }) {
                                     bg="bg-blue-50"
                                 />
                                 <StatSnapshot 
-                                    label="PCS (Comp)" 
+                                    label="Components (PCS)" 
                                     pb={stats?.pcs?.pb} 
                                     sb={stats?.pcs?.sb} 
                                     icon={Palette}

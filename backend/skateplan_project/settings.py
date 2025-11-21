@@ -185,3 +185,19 @@ REST_FRAMEWORK = {
 # --- Custom User Model ---
 # Tell Django to use our new User model instead of its built-in one.
 AUTH_USER_MODEL = "api.User"
+
+if os.getenv("USE_S3", "True") == "True":
+    DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+
+    # MinIO Connection Details (Matches your docker-compose service 'minio')
+    AWS_ACCESS_KEY_ID = os.getenv("MINIO_ROOT_USER", "minioadmin")
+    AWS_SECRET_ACCESS_KEY = os.getenv("MINIO_ROOT_PASSWORD", "minioadmin")
+    AWS_STORAGE_BUCKET_NAME = "skateplan-media"
+    AWS_S3_ENDPOINT_URL = "http://minio:9000"  # Internal Docker URL
+    AWS_S3_USE_SSL = False  # Local dev uses HTTP
+
+    # Public URL generation (Browser needs localhost, not 'minio')
+    # You might need to adjust this port if you changed your docker-compose ports
+    AWS_S3_CUSTOM_DOMAIN = "localhost:9000/skateplan-media"
+
+    AWS_QUERYSTRING_AUTH = False  # Generate clean public URLs

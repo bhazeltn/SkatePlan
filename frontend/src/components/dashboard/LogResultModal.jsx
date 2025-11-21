@@ -7,14 +7,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { DatePicker } from '@/components/ui/date-picker';
-import { Search, Plus, MapPin, Trash2 } from 'lucide-react';
+import { Search, Plus, MapPin, Trash2, ChevronDown, ChevronUp, FileText, Video } from 'lucide-react';
 import { Country, State, City } from 'country-state-city';
+import { ProtocolEditor } from './ProtocolEditor';
 
 export function LogResultModal({ skater, resultToEdit, onSaved, trigger }) {
+  // ... (Existing State) ...
   const [open, setOpen] = useState(false);
   const { token } = useAuth();
-  
-  // If editing an existing result, start at LOG step immediately
   const [step, setStep] = useState(resultToEdit ? 'LOG' : 'SEARCH');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -22,10 +22,7 @@ export function LogResultModal({ skater, resultToEdit, onSaved, trigger }) {
   // Search & Create State
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
-  
-  // Initialize Selected Comp from edit prop
   const [selectedComp, setSelectedComp] = useState(resultToEdit?.competition || null);
-  
   const [newTitle, setNewTitle] = useState('');
   const [countryCode, setCountryCode] = useState('CA');
   const [stateCode, setStateCode] = useState('');
@@ -33,50 +30,53 @@ export function LogResultModal({ skater, resultToEdit, onSaved, trigger }) {
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
 
-  // Result / Plan State
-  // If editing, use the entity from the result (requires backend to send entity ID, or we default)
-  // For now, default to first entity or user selection
-  const [selectedEntityId, setSelectedEntityId] = useState(
-      resultToEdit?.object_id || skater?.planning_entities?.[0]?.id || ''
-  );
-  
-  // Status State
+  const [selectedEntityId, setSelectedEntityId] = useState(resultToEdit?.object_id || skater?.planning_entities?.[0]?.id || '');
   const [status, setStatus] = useState(resultToEdit?.status || 'COMPLETED'); 
-
   const [level, setLevel] = useState(resultToEdit?.level || '');
   const [placement, setPlacement] = useState(resultToEdit?.placement || '');
   const [overallScore, setOverallScore] = useState(resultToEdit?.total_score || '');
   const [notes, setNotes] = useState(resultToEdit?.notes || '');
   const [segments, setSegments] = useState(resultToEdit?.segment_scores || []);
+  const [expandedSegment, setExpandedSegment] = useState(null);
 
-  // Reset form when modal opens or resultToEdit changes
+  // --- NEW FILE STATE ---
+  const [detailSheet, setDetailSheet] = useState(null);
+  const [videoUrl, setVideoUrl] = useState('');
+
   useEffect(() => {
       if (open) {
           if (resultToEdit) {
+              // ... (Existing Load Logic) ...
               setStep('LOG');
               setSelectedComp(resultToEdit.competition);
+              if (resultToEdit.object_id) setSelectedEntityId(resultToEdit.object_id);
               setStatus(resultToEdit.status);
               setLevel(resultToEdit.level || '');
               setPlacement(resultToEdit.placement || '');
               setOverallScore(resultToEdit.total_score || '');
               setNotes(resultToEdit.notes || '');
               setSegments(resultToEdit.segment_scores || []);
-              // Ideally set selectedEntityId here if backend provides it
+              // Load URL (File inputs cannot be pre-filled)
+              setVideoUrl(resultToEdit.video_url || '');
+              setDetailSheet(null);
           } else {
+              // ... (Existing Reset Logic) ...
               setStep('SEARCH');
-              // Reset all fields for new entry
               setSelectedComp(null);
+              if (skater?.planning_entities?.length > 0) setSelectedEntityId(skater.planning_entities[0].id);
               setStatus('COMPLETED');
               setLevel('');
               setPlacement('');
               setOverallScore('');
               setNotes('');
               setSegments([]);
+              setVideoUrl('');
+              setDetailSheet(null);
           }
       }
-  }, [open, resultToEdit]);
+  }, [open, resultToEdit, skater]);
 
-  // --- AUTO-CALCULATE TOTAL SCORE ---
+  // ... (Auto Calc Effect) ...
   useEffect(() => {
       if (segments.length > 0 && status === 'COMPLETED') {
           const total = segments.reduce((sum, seg) => sum + (parseFloat(seg.score) || 0), 0);
@@ -84,187 +84,105 @@ export function LogResultModal({ skater, resultToEdit, onSaved, trigger }) {
       }
   }, [segments, status]);
 
-  // --- HANDLERS ---
-
+  // ... (Search/Create/Segment Handlers same as before) ...
   const handleSearch = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-          const data = await apiRequest(`/competitions/?search=${searchTerm}`, 'GET', null, token);
-          setSearchResults(data || []);
-      } catch(e) { console.error(e); } 
-      finally { setLoading(false); }
+      setLoading(true); setError(null);
+      try { const data = await apiRequest(`/competitions/?search=${searchTerm}`, 'GET', null, token); setSearchResults(data || []); } catch(e) { console.error(e); } finally { setLoading(false); }
   };
-
   const handleCreate = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-          const data = await apiRequest('/competitions/', 'POST', {
-              title: newTitle,
-              country: countryCode,
-              province_state: stateCode,
-              city: cityName,
-              start_date: start,
-              end_date: end
-          }, token);
-          setSelectedComp(data);
-          setStep('LOG');
-      } catch (e) {
-          if (e.message && e.message.includes('duplicate')) setError("Event exists.");
-          else setError("Failed to create.");
-      } finally { setLoading(false); }
+      setLoading(true); setError(null);
+      try { const data = await apiRequest('/competitions/', 'POST', { title: newTitle, country: countryCode, province_state: stateCode, city: cityName, start_date: start, end_date: end }, token); setSelectedComp(data); setStep('LOG'); } catch (e) { setError("Failed/Duplicate"); } finally { setLoading(false); }
   };
-
-  // --- SEGMENT HANDLERS ---
-  const addSegment = () => {
-      setSegments([...segments, { 
-          id: Date.now(), 
-          name: 'Short Program', 
-          score: '', 
-          tes: '', 
-          pcs: '', 
-          deductions: '', 
-          bonus: '', 
-          placement: '' 
-      }]);
-  };
+  const addSegment = () => { setSegments([...segments, { id: Date.now(), name: 'Short Program', score: '', tes: '', pcs: '', deductions: '', bonus: '', placement: '', protocol: [] }]); };
   const removeSegment = (id) => setSegments(segments.filter(s => s.id !== id));
   const updateSegment = (id, field, value) => setSegments(segments.map(s => s.id === id ? { ...s, [field]: value } : s));
+  const toggleProtocol = (id) => setExpandedSegment(expandedSegment === id ? null : id);
+  const updateProtocol = (id, newProto) => { const updated = segments.map(s => s.id === id ? { ...s, protocol: newProto } : s); setSegments(updated); };
+
+  // --- SAVE HANDLER (FormData) ---
+  const saveResult = async () => {
+      const formData = new FormData();
+      formData.append('competition_id', selectedComp.id);
+      formData.append('planning_entity_id', selectedEntityId);
+      formData.append('status', status);
+      formData.append('level', level);
+      formData.append('notes', notes);
+      formData.append('video_url', videoUrl);
+      if (detailSheet) formData.append('detail_sheet', detailSheet);
+
+      if (status === 'COMPLETED') {
+          formData.append('placement', placement);
+          formData.append('total_score', overallScore);
+          formData.append('segment_scores', JSON.stringify(segments));
+      }
+
+      if (resultToEdit) {
+          await apiRequest(`/results/${resultToEdit.id}/`, 'PATCH', formData, token);
+      } else {
+          await apiRequest(`/skaters/${skater.id}/results/`, 'POST', formData, token);
+      }
+      
+      if (onSaved) onSaved();
+  };
 
   const handleSave = async () => {
       setLoading(true);
-      try {
-          const payload = {
-              competition_id: selectedComp.id,
-              planning_entity_id: selectedEntityId,
-              status, 
-              level,
-              notes,
-              placement: status === 'COMPLETED' ? placement : null,
-              total_score: status === 'COMPLETED' ? overallScore : null,
-              segment_scores: status === 'COMPLETED' ? segments : []
-          };
-
-          if (resultToEdit) {
-              await apiRequest(`/results/${resultToEdit.id}/`, 'PATCH', payload, token);
-          } else {
-              await apiRequest(`/skaters/${skater.id}/results/`, 'POST', payload, token);
-          }
-          
-          if (onSaved) onSaved();
-          setOpen(false);
-      } catch (e) { alert("Failed to save."); }
-      finally { setLoading(false); }
+      try { await saveResult(); setOpen(false); } catch (e) { alert("Failed to save."); } finally { setLoading(false); }
   };
 
-  // --- RENDER HELPERS ---
+  const handleSaveAndAdd = async () => {
+      setLoading(true);
+      try {
+          await saveResult();
+          setLevel(''); setPlacement(''); setOverallScore(''); setNotes(''); setSegments([]); setDetailSheet(null); setVideoUrl('');
+          alert("Result saved! Ready for next.");
+      } catch (e) { alert("Failed to save."); } finally { setLoading(false); }
+  };
 
+  // ... (renderLocationSelectors same as before) ...
   const renderLocationSelectors = () => {
-      const countries = Country.getAllCountries();
-      const states = State.getStatesOfCountry(countryCode);
-      const cities = City.getCitiesOfState(countryCode, stateCode);
+      const countries = Country.getAllCountries(); const states = State.getStatesOfCountry(countryCode); const cities = City.getCitiesOfState(countryCode, stateCode);
       return (
           <div className="space-y-3 p-3 bg-slate-50 rounded border">
              <div className="grid grid-cols-2 gap-2">
-                  <div>
-                      <Label className="text-xs">Country</Label>
-                      <select className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm" value={countryCode} onChange={(e) => { setCountryCode(e.target.value); setStateCode(''); setCityName(''); }}>
-                          {countries.map(c => <option key={c.isoCode} value={c.isoCode}>{c.name}</option>)}
-                      </select>
-                  </div>
-                  <div>
-                      <Label className="text-xs">Prov/State</Label>
-                      <select className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm" value={stateCode} onChange={(e) => { setStateCode(e.target.value); setCityName(''); }} disabled={!countryCode}>
-                          <option value="">Select...</option>
-                          {states.map(s => <option key={s.isoCode} value={s.isoCode}>{s.name}</option>)}
-                      </select>
-                  </div>
+                  <div><Label className="text-xs">Country</Label><select className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm" value={countryCode} onChange={(e) => { setCountryCode(e.target.value); setStateCode(''); setCityName(''); }}>{countries.map(c => <option key={c.isoCode} value={c.isoCode}>{c.name}</option>)}</select></div>
+                  <div><Label className="text-xs">Prov/State</Label><select className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm" value={stateCode} onChange={(e) => { setStateCode(e.target.value); setCityName(''); }} disabled={!countryCode}><option value="">Select...</option>{states.map(s => <option key={s.isoCode} value={s.isoCode}>{s.name}</option>)}</select></div>
               </div>
-              <div>
-                  <Label className="text-xs">City</Label>
-                  {cities.length > 0 ? (
-                      <select className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm" value={cityName} onChange={(e) => setCityName(e.target.value)} disabled={!stateCode}>
-                          <option value="">Select City...</option>
-                          {cities.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
-                      </select>
-                  ) : (
-                      <Input value={cityName} onChange={(e) => setCityName(e.target.value)} placeholder="Enter City Name" />
-                  )}
-              </div>
+              <div><Label className="text-xs">City</Label>{cities.length > 0 ? (<select className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm" value={cityName} onChange={(e) => setCityName(e.target.value)} disabled={!stateCode}><option value="">Select City...</option>{cities.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}</select>) : (<Input value={cityName} onChange={(e) => setCityName(e.target.value)} placeholder="Enter City Name" />)}</div>
           </div>
       );
   };
 
+  // --- RENDER LOG STEP ---
   const renderLogStep = () => (
       <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
-          <div className="bg-slate-100 p-3 rounded text-sm font-medium border">
-              {selectedComp?.title} <span className="text-gray-500 font-normal">({selectedComp?.city})</span>
-          </div>
+          {/* ... Info Box ... */}
+          <div className="bg-slate-100 p-3 rounded text-sm font-medium border">{selectedComp?.title} <span className="text-gray-500 font-normal">({selectedComp?.city})</span></div>
 
+          {/* ... Disc/Status Grid ... */}
           <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                  <Label>Discipline</Label>
-                  <select className="flex h-9 w-full rounded-md border border-input bg-white px-3 py-1 text-sm" value={selectedEntityId} onChange={(e) => setSelectedEntityId(e.target.value)}>
-                      {skater?.planning_entities?.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
-                  </select>
-              </div>
-              
-              <div className="space-y-2">
-                  <Label>Status</Label>
-                  <select className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm font-medium" value={status} onChange={(e) => setStatus(e.target.value)}>
-                      <option value="PLANNED">Planned</option>
-                      <option value="REGISTERED">Registered</option>
-                      <option value="COMPLETED">Completed</option>
-                  </select>
-              </div>
+              <div className="space-y-2"><Label>Discipline</Label><select className="flex h-9 w-full rounded-md border border-input bg-white px-3 py-1 text-sm" value={selectedEntityId} onChange={(e) => setSelectedEntityId(e.target.value)}>{skater?.planning_entities?.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}</select></div>
+              <div className="space-y-2"><Label>Status</Label><select className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm font-medium" value={status} onChange={(e) => setStatus(e.target.value)}><option value="PLANNED">Planned</option><option value="REGISTERED">Registered</option><option value="COMPLETED">Completed</option></select></div>
           </div>
 
-          <div className="space-y-2">
-              <Label>Event Level / Category</Label>
-              <Input value={level} onChange={(e) => setLevel(e.target.value)} placeholder="e.g. Junior Women" />
-          </div>
+          <div className="space-y-2"><Label>Event Level</Label><Input value={level} onChange={(e) => setLevel(e.target.value)} placeholder="e.g. Junior Women" /></div>
 
           {status === 'COMPLETED' && (
               <>
                   <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                          <Label>Placement</Label>
-                          <Input type="number" value={placement} onChange={(e) => setPlacement(e.target.value)} placeholder="#" />
-                      </div>
-                      <div className="space-y-2">
-                          <Label>Total Score</Label>
-                          <Input type="number" step="0.01" value={overallScore} onChange={(e) => setOverallScore(e.target.value)} disabled={segments.length > 0} className={segments.length > 0 ? "bg-slate-100 text-slate-500 cursor-not-allowed" : ""} />
-                          {segments.length > 0 && <p className="text-xs text-muted-foreground">Calculated automatically from segments.</p>}
-                      </div>
+                      <div className="space-y-2"><Label>Placement</Label><Input type="number" value={placement} onChange={(e) => setPlacement(e.target.value)} placeholder="#" /></div>
+                      <div className="space-y-2"><Label>Total Score</Label><Input type="number" step="0.01" value={overallScore} onChange={(e) => setOverallScore(e.target.value)} disabled={segments.length > 0} className={segments.length > 0 ? "bg-slate-100 text-slate-500 cursor-not-allowed" : ""} /></div>
                   </div>
 
                   <div className="border-t pt-4 mt-2">
-                      <div className="flex justify-between items-center mb-3">
-                          <Label className="text-gray-900 font-bold">Segments & Protocols</Label>
-                          <Button type="button" size="sm" variant="outline" onClick={addSegment}><Plus className="h-3 w-3 mr-1" /> Add Segment</Button>
-                      </div>
+                      <div className="flex justify-between items-center mb-3"><Label className="text-gray-900 font-bold">Segments</Label><Button type="button" size="sm" variant="outline" onClick={addSegment}><Plus className="h-3 w-3 mr-1" /> Add Segment</Button></div>
                       <div className="space-y-3">
                           {segments.map((seg) => (
                               <div key={seg.id} className="p-3 border rounded-md bg-slate-50 relative">
                                   <Button type="button" variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6 text-gray-400 hover:text-red-500" onClick={() => removeSegment(seg.id)}><Trash2 className="h-3 w-3" /></Button>
-                                  
                                   <div className="grid grid-cols-2 gap-2 mb-2 pr-6">
-                                      <div className="col-span-2 sm:col-span-1">
-                                        <Label className="text-xs">Segment</Label>
-                                        <select className="flex h-8 w-full rounded-md border border-input bg-white px-2 text-xs" value={seg.name} onChange={(e) => updateSegment(seg.id, 'name', e.target.value)}>
-                                            <option value="Short Program">Short Program</option>
-                                            <option value="Free Skate">Free Skate</option>
-                                            <option value="Pattern Dance">Pattern Dance</option>
-                                            <option value="Rhythm Dance">Rhythm Dance</option>
-                                            <option value="Free Dance">Free Dance</option>
-                                            <option value="Artistic">Artistic</option>
-                                        </select>
-                                      </div>
-                                      <div>
-                                        <Label className="text-xs">Place</Label>
-                                        <Input className="h-8 bg-white" type="number" value={seg.placement} onChange={(e) => updateSegment(seg.id, 'placement', e.target.value)} placeholder="#" />
-                                      </div>
+                                      <div className="col-span-2 sm:col-span-1"><Label className="text-xs">Segment</Label><select className="flex h-8 w-full rounded-md border border-input bg-white px-2 text-xs" value={seg.name} onChange={(e) => updateSegment(seg.id, 'name', e.target.value)}><option value="Short Program">Short Program</option><option value="Free Skate">Free Skate</option><option value="Pattern Dance">Pattern Dance</option><option value="Rhythm Dance">Rhythm Dance</option><option value="Free Dance">Free Dance</option></select></div>
+                                      <div><Label className="text-xs">Place</Label><Input className="h-8 bg-white" type="number" value={seg.placement} onChange={(e) => updateSegment(seg.id, 'placement', e.target.value)} placeholder="#" /></div>
                                   </div>
                                   <div className="grid grid-cols-6 gap-2">
                                       <div className="col-span-2"><Label className="text-xs text-gray-500">Total</Label><Input className="h-8 bg-white font-bold" type="number" step="0.01" value={seg.score} onChange={(e) => updateSegment(seg.id, 'score', e.target.value)} /></div>
@@ -273,6 +191,12 @@ export function LogResultModal({ skater, resultToEdit, onSaved, trigger }) {
                                       <div><Label className="text-xs text-red-500">Ded</Label><Input className="h-8 bg-white text-red-600" type="number" step="0.01" value={seg.deductions} onChange={(e) => updateSegment(seg.id, 'deductions', e.target.value)} /></div>
                                       <div><Label className="text-xs text-green-600">Bon</Label><Input className="h-8 bg-white text-green-600" type="number" step="0.01" value={seg.bonus} onChange={(e) => updateSegment(seg.id, 'bonus', e.target.value)} /></div>
                                   </div>
+                                  <div className="mt-2 pt-2 border-t border-slate-200">
+                                      <Button type="button" variant="ghost" size="sm" className="w-full h-6 text-xs flex justify-between text-slate-500" onClick={() => toggleProtocol(seg.id)}>
+                                          <span>Detailed Protocol</span>{expandedSegment === seg.id ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                                      </Button>
+                                      {expandedSegment === seg.id && (<div className="mt-2"><ProtocolEditor elements={seg.protocol || []} onChange={(newProto) => updateProtocol(seg.id, newProto)} /></div>)}
+                                  </div>
                               </div>
                           ))}
                       </div>
@@ -280,42 +204,36 @@ export function LogResultModal({ skater, resultToEdit, onSaved, trigger }) {
               </>
           )}
 
-          <div className="space-y-2 mt-4">
-              <Label>Notes</Label>
-              <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Planning notes or results comments..." />
+          {/* --- NEW FILE INPUTS --- */}
+          <div className="grid grid-cols-2 gap-4 pt-2 border-t">
+              <div className="space-y-2">
+                  <Label>Protocol / Detail Sheet</Label>
+                  <Input type="file" className="text-xs h-9" onChange={(e) => setDetailSheet(e.target.files[0])} />
+              </div>
+              <div className="space-y-2">
+                  <Label>Video URL</Label>
+                  <div className="relative"><Video className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" /><Input className="pl-8" value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} placeholder="https://..." /></div>
+              </div>
           </div>
+          {/* ----------------------- */}
 
+          <div className="space-y-2"><Label>Notes</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Personal best? Technical issues?" /></div>
           <div className="flex justify-between pt-2">
               {!resultToEdit && <Button variant="ghost" onClick={() => { setStep('SEARCH'); setSelectedComp(null); }}>Back</Button>}
-              <Button onClick={handleSave} disabled={loading} className={!resultToEdit ? "" : "w-full"}>
-                  {status === 'COMPLETED' ? 'Save Result' : 'Save Plan'}
-              </Button>
+              <Button onClick={handleSave} disabled={loading} className={!resultToEdit ? "" : "w-full"}>{status === 'COMPLETED' ? 'Save Result' : 'Save Plan'}</Button>
           </div>
       </div>
   );
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger || <Button>Manage Events</Button>}
-      </DialogTrigger>
+      <DialogTrigger asChild>{trigger || <Button>Manage Events</Button>}</DialogTrigger>
       <DialogContent className="sm:max-w-[600px]">
-        <DialogHeader>
-            <DialogTitle>
-                {step === 'SEARCH' ? 'Find Competition' : step === 'CREATE' ? 'New Event' : (status === 'COMPLETED' ? 'Log Result' : 'Plan Event')}
-            </DialogTitle>
-        </DialogHeader>
+        <DialogHeader><DialogTitle>{step === 'SEARCH' ? 'Find Competition' : step === 'CREATE' ? 'New Event' : (status === 'COMPLETED' ? 'Log Result' : 'Plan Event')}</DialogTitle></DialogHeader>
         {step === 'SEARCH' && (
             <div className="space-y-4">
                 <div className="flex gap-2"><Input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Search..." /><Button onClick={handleSearch} disabled={loading}><Search className="h-4 w-4" /></Button></div>
-                <div className="max-h-[200px] overflow-y-auto space-y-2 border rounded p-2">
-                    {searchResults.map(comp => (
-                        <div key={comp.id} className="flex justify-between p-2 hover:bg-slate-50 rounded items-center border-b last:border-0">
-                            <div className="text-sm"><div className="font-bold">{comp.title}</div><div className="text-xs text-gray-500">{comp.city}, {comp.province_state}</div></div>
-                            <Button size="sm" variant="outline" onClick={() => { setSelectedComp(comp); setStep('LOG'); }}>Select</Button>
-                        </div>
-                    ))}
-                </div>
+                <div className="max-h-[200px] overflow-y-auto space-y-2 border rounded p-2">{searchResults.map(comp => (<div key={comp.id} className="flex justify-between p-2 hover:bg-slate-50 rounded items-center border-b last:border-0"><div className="text-sm"><div className="font-bold">{comp.title}</div><div className="text-xs text-gray-500">{comp.city}, {comp.province_state}</div></div><Button size="sm" variant="outline" onClick={() => { setSelectedComp(comp); setStep('LOG'); }}>Select</Button></div>))}</div>
                 <div className="pt-2"><Button variant="secondary" className="w-full" onClick={() => setStep('CREATE')}><Plus className="h-4 w-4 mr-2" /> Create New Competition</Button></div>
             </div>
         )}

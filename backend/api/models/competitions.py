@@ -61,9 +61,34 @@ class CompetitionResult(models.Model):
     total_score = models.DecimalField(
         max_digits=6, decimal_places=2, null=True, blank=True
     )
-
+    planned_base_value = models.DecimalField(
+        max_digits=6, decimal_places=2, null=True, blank=True
+    )
     segment_scores = models.JSONField(default=dict, blank=True)
     notes = models.TextField(blank=True, null=True)
+
+    detailed_protocol = models.JSONField(default=list, blank=True)
+    # Stores the element-by-element performance
+    # Structure: [
+    #   {
+    #     "name": "3Lz",
+    #     "base_value": 5.90,
+    #     "goe": 2,
+    #     "score": 7.08,
+    #     "calls": ["q", "!"],
+    #     "notes": "Clean landing"
+    #   }, ...
+    # ]
+
+    # The official detail sheet / protocol from the event
+    detail_sheet = models.FileField(
+        upload_to="competitions/protocols/", blank=True, null=True
+    )
+
+    # Optional: Link to the full event video playlist
+    video_url = models.URLField(
+        blank=True, null=True, help_text="Link to full event video"
+    )
 
     def __str__(self):
         return f"Result for {self.planning_entity} at {self.competition}"
@@ -103,6 +128,12 @@ class SkaterTest(models.Model):
 
     evaluator_notes = models.TextField(blank=True, null=True)
 
+    # The scanned paper sheet from the evaluator
+    test_sheet = models.FileField(upload_to="tests/sheets/", blank=True, null=True)
+
+    # Video of the test attempt
+    video_url = models.URLField(blank=True, null=True)
+
     def __str__(self):
         return f"{self.test_name} ({self.status})"
 
@@ -136,9 +167,22 @@ class Program(models.Model):
     music_title = models.CharField(max_length=255, blank=True, null=True)
     choreographer = models.CharField(max_length=255, blank=True, null=True)
     planned_elements = models.JSONField(default=list, blank=True)
+    est_base_value = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
     is_active = models.BooleanField(default=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
+
+    # The cut music file (.mp3, .wav)
+    music_file = models.FileField(upload_to="programs/music/", blank=True, null=True)
+
+    # Design assets
+    costume_design = models.FileField(
+        upload_to="programs/design/", blank=True, null=True, help_text="Sketch or PDF"
+    )
+    costume_photo = models.ImageField(
+        upload_to="programs/photos/", blank=True, null=True, help_text="Final look"
+    )
+    hair_photo = models.ImageField(upload_to="programs/photos/", blank=True, null=True)
 
     def __str__(self):
         return f"{self.title} ({self.season})"

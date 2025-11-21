@@ -221,9 +221,9 @@ class CoachDashboardStatsView(APIView):
 class SkaterStatsView(APIView):
     """
     Returns calculated statistics for a skater:
-    - Personal Best (PB) & Season Best (SB)
-    - Context: Competition Name AND Date
-    - Full Segment Breakdown (Total, TES, PCS)
+    - PB/SB Snapshots
+    - Time-Series History (for Charts)
+    - Segment Breakdowns
     """
 
     permission_classes = [permissions.IsAuthenticated, IsCoachUser]
@@ -242,25 +242,56 @@ class SkaterStatsView(APIView):
         for e in skater.teams_as_partner_b.all():
             entity_ids.append(e.id)
 
-        all_results = CompetitionResult.objects.filter(
-            object_id__in=entity_ids, status=CompetitionResult.Status.COMPLETED
-        ).select_related("competition")
+        all_results = (
+            CompetitionResult.objects.filter(
+                object_id__in=entity_ids, status=CompetitionResult.Status.COMPLETED
+            )
+            .select_related("competition")
+            .order_by("competition__start_date")
+        )
 
-        # 2. Define Active Season
+        # 2. Active Season Context
         active_season = AthleteSeason.objects.filter(
             skater=skater, is_active=True
         ).last()
         season_start = active_season.start_date if active_season else None
         season_end = active_season.end_date if active_season else None
 
-        # 3. Helper
+        # 3. Stats Containers
         def make_stat():
             return {"score": 0.0, "comp": "N/A", "date": None}
 
         stats = {"total": {"pb": make_stat(), "sb": make_stat()}, "segments": {}}
 
-        # 4. Iterate and Calculate
+        # --- NEW: HISTORY LIST FOR CHARTS ---
+        history = []
+
         for res in all_results:
+            # A. Calculations
+            total_tes = 0.0
+            if res.segment_scores and isinstance(res.segment_scores, list):
+                for seg in res.segment_scores:
+                    total_tes += float(seg.get("tes") or 0)
+
+            # Use the snapshot BV we just added to the model
+            planned_bv = float(res.planned_base_value or 0)
+            total_score = float(res.total_score or 0)
+
+            # B. Add to History (Chronological)
+            history.append(
+                {
+                    "date": res.competition.start_date,
+                    "name": res.competition.title,
+                    "total_score": total_score,
+                    "tes": total_tes,
+                    "planned_bv": planned_bv,
+                    # Rough PCS calculation (Total - TES - Deductions if we had them separate)
+                    # For charting purposes, Total - TES is close enough to PCS+Ded
+                    "pcs_approx": total_score - total_tes,
+                }
+            )
+
+            # C. PB/SB Logic (Existing)
             is_current_season = False
             if season_start and season_end:
                 if season_start <= res.competition.start_date <= season_end:
@@ -269,27 +300,22 @@ class SkaterStatsView(APIView):
             comp_name = res.competition.title
             comp_date = res.competition.start_date
 
-            # A. Overall Total Score
-            if res.total_score:
-                score = float(res.total_score)
-                if score > stats["total"]["pb"]["score"]:
-                    stats["total"]["pb"] = {
-                        "score": score,
-                        "comp": comp_name,
-                        "date": comp_date,
-                    }
-                if is_current_season and score > stats["total"]["sb"]["score"]:
-                    stats["total"]["sb"] = {
-                        "score": score,
-                        "comp": comp_name,
-                        "date": comp_date,
-                    }
+            if total_score > stats["total"]["pb"]["score"]:
+                stats["total"]["pb"] = {
+                    "score": total_score,
+                    "comp": comp_name,
+                    "date": comp_date,
+                }
+            if is_current_season and total_score > stats["total"]["sb"]["score"]:
+                stats["total"]["sb"] = {
+                    "score": total_score,
+                    "comp": comp_name,
+                    "date": comp_date,
+                }
 
-            # B. Segment Breakdown
             if res.segment_scores and isinstance(res.segment_scores, list):
                 for seg in res.segment_scores:
                     name = seg.get("name", "Unknown Segment")
-
                     if name not in stats["segments"]:
                         stats["segments"][name] = {
                             "total": {"pb": make_stat(), "sb": make_stat()},
@@ -302,7 +328,6 @@ class SkaterStatsView(APIView):
                     s_tes = float(seg.get("tes") or 0)
                     s_pcs = float(seg.get("pcs") or 0)
 
-                    # 1. Total
                     if s_score > bucket["total"]["pb"]["score"]:
                         bucket["total"]["pb"] = {
                             "score": s_score,
@@ -316,7 +341,6 @@ class SkaterStatsView(APIView):
                             "date": comp_date,
                         }
 
-                    # 2. TES
                     if s_tes > bucket["tes"]["pb"]["score"]:
                         bucket["tes"]["pb"] = {
                             "score": s_tes,
@@ -330,7 +354,6 @@ class SkaterStatsView(APIView):
                             "date": comp_date,
                         }
 
-                    # 3. PCS
                     if s_pcs > bucket["pcs"]["pb"]["score"]:
                         bucket["pcs"]["pb"] = {
                             "score": s_pcs,
@@ -344,7 +367,6 @@ class SkaterStatsView(APIView):
                             "date": comp_date,
                         }
 
-        # 5. Volume
         total_sessions = (
             SessionLog.objects.filter(athlete_season=active_season).count()
             if active_season
@@ -357,5 +379,6 @@ class SkaterStatsView(APIView):
                 "segments": stats["segments"],
                 "volume": total_sessions,
                 "season_name": active_season.season if active_season else "None",
+                "history": history,
             }
         )

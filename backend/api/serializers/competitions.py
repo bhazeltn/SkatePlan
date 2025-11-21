@@ -24,8 +24,12 @@ class CompetitionResultSerializer(serializers.ModelSerializer):
             "level",
             "placement",
             "total_score",
+            "planned_base_value",
+            "detailed_protocol",
             "segment_scores",
             "notes",
+            "detail_sheet",
+            "video_url",
         )
 
 
@@ -41,6 +45,8 @@ class SkaterTestSerializer(serializers.ModelSerializer):
             "status",
             "result",
             "evaluator_notes",
+            "test_sheet",
+            "video_url",
         )
 
 
@@ -55,5 +61,10 @@ class ProgramSerializer(serializers.ModelSerializer):
             "music_title",
             "choreographer",
             "planned_elements",
+            "est_base_value",
             "is_active",
+            "music_file",
+            "costume_design",
+            "costume_photo",
+            "hair_photo",
         )

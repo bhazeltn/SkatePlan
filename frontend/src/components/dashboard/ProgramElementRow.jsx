@@ -1,47 +1,49 @@
 import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, Trash2, Plus, X } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { Search, Trash2, Plus, X, ArrowDown } from 'lucide-react'; // Add ArrowDown
 import { apiRequest } from '@/api';
 import { useAuth } from '@/AuthContext';
+import { Switch } from '@/components/ui/switch'; // Import Switch
 
 export function ProgramElementRow({ index, element, onChange, onRemove }) {
   const { token } = useAuth();
   
-  // element structure: 
+  // Structure: 
   // { 
-  //   id: 123, 
-  //   type: 'JUMP' | 'SPIN' | 'STEP'..., 
-  //   components: [{ name: '3Lz', id: 5 }, { name: '3T', id: 10 }], // Array for combos
-  //   level: '4', 
-  //   notes: 'Difficult entry' 
+  //   ..., 
+  //   base_value: '10.5', 
+  //   is_second_half: false 
   // }
 
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [searchIndex, setSearchIndex] = useState(0); // Which sub-component are we editing?
+  const [searchIndex, setSearchIndex] = useState(0);
 
+  // ... (Keep handleTypeChange, handleSearch, selectElement, add/removeComboJump logic same as before) ...
+  // Copy your existing logic for these handlers here. 
+  // For brevity in this snippet, I am focusing on the Render changes.
+  
+  // (Restore the handlers from previous step if overwriting file)
   const handleTypeChange = (e) => {
-      // Reset structure when type changes
       onChange(index, {
           ...element,
           type: e.target.value,
-          components: [{ name: '', id: null }], // Reset to single component
+          components: [{ name: '', id: null }],
           level: '',
-          notes: ''
+          notes: '',
+          base_value: '',
+          is_second_half: false
       });
   };
 
   const handleSearch = async (query, compIndex) => {
-      // Update local UI immediately
       const newComps = [...element.components];
       newComps[compIndex] = { ...newComps[compIndex], name: query };
       onChange(index, { ...element, components: newComps });
 
-      if (query.length < 2) {
-          setSearchResults([]);
-          return;
-      }
+      if (query.length < 2) { setSearchResults([]); return; }
 
       try {
           setSearchIndex(compIndex);
@@ -72,13 +74,14 @@ export function ProgramElementRow({ index, element, onChange, onRemove }) {
   };
 
   return (
-    <div className="flex items-start gap-2 p-2 border rounded bg-white text-sm relative">
-        {/* 1. Drag/Order Handle (Visual only for now) */}
-        <div className="mt-2 text-gray-400 font-mono text-xs w-4">{index + 1}</div>
+    <div className={`flex items-center gap-2 p-2 border rounded bg-white text-sm relative ${element.is_second_half ? 'border-l-4 border-l-yellow-400' : ''}`}>
+        
+        {/* 1. Drag Handle / Index */}
+        <div className="text-gray-400 font-mono text-xs w-5 text-center">{index + 1}</div>
 
         {/* 2. Type Selector */}
         <select 
-            className="h-8 w-20 rounded border bg-slate-50 text-xs"
+            className="h-8 w-[70px] rounded border bg-slate-50 text-xs"
             value={element.type}
             onChange={handleTypeChange}
         >
@@ -88,45 +91,34 @@ export function ProgramElementRow({ index, element, onChange, onRemove }) {
             <option value="CHOREO">Choreo</option>
         </select>
 
-        {/* 3. Element Input(s) - Handles Combos */}
-        <div className="flex-1 flex flex-wrap items-center gap-1">
+        {/* 3. Element Input(s) */}
+        <div className="flex-1 flex flex-wrap items-center gap-1 min-w-[180px]">
             {element.components.map((comp, i) => (
                 <div key={i} className="relative flex items-center">
                     {i > 0 && <span className="text-gray-400 text-xs mr-1">+</span>}
                     
                     <div className="relative">
                         <Input 
-                            className="h-8 w-20 font-bold uppercase"
+                            className="h-8 w-20 font-bold uppercase text-xs px-1.5"
                             value={comp.name}
                             onChange={(e) => handleSearch(e.target.value, i)}
-                            placeholder={i === 0 ? "Element" : "Combo"}
+                            placeholder={i === 0 ? "Code" : "Combo"}
                         />
-                        {/* Dropdown Results */}
                         {isSearching && searchIndex === i && searchResults.length > 0 && (
                             <div className="absolute top-9 left-0 w-48 bg-white border shadow-lg rounded z-50 max-h-40 overflow-y-auto">
                                 {searchResults.map(res => (
-                                    <div 
-                                        key={res.id} 
-                                        className="p-2 hover:bg-blue-50 cursor-pointer text-xs"
-                                        onClick={() => selectElement(res)}
-                                    >
+                                    <div key={res.id} className="p-2 hover:bg-blue-50 cursor-pointer text-xs" onClick={() => selectElement(res)}>
                                         <span className="font-bold">{res.abbreviation}</span> - {res.element_name}
                                     </div>
                                 ))}
                             </div>
                         )}
                     </div>
-
-                    {/* Remove Jump Button (only for combos) */}
                     {i > 0 && (
-                        <button type="button" onClick={() => removeComboJump(i)} className="ml-1 text-gray-300 hover:text-red-500">
-                            <X className="h-3 w-3" />
-                        </button>
+                        <button type="button" onClick={() => removeComboJump(i)} className="ml-1 text-gray-300 hover:text-red-500"><X className="h-3 w-3" /></button>
                     )}
                 </div>
             ))}
-
-            {/* Add Jump Button (Only for Jumps, max 3) */}
             {element.type === 'JUMP' && element.components.length < 3 && (
                 <Button type="button" variant="ghost" size="icon" className="h-6 w-6 rounded-full" onClick={addComboJump}>
                     <Plus className="h-3 w-3" />
@@ -134,29 +126,41 @@ export function ProgramElementRow({ index, element, onChange, onRemove }) {
             )}
         </div>
 
-        {/* 4. Level & Notes (Hidden for Jumps usually, but shown for Spins/Steps) */}
+        {/* 4. Level (Spins/Steps) */}
         {element.type !== 'JUMP' && element.type !== 'CHOREO' && (
-            <div className="w-12">
-                <Input 
-                    className="h-8 text-center" 
-                    placeholder="Lvl" 
-                    value={element.level} 
-                    onChange={(e) => onChange(index, { ...element, level: e.target.value })}
-                />
-            </div>
+            <Input 
+                className="h-8 w-10 text-center px-0 text-xs" 
+                placeholder="Lvl" 
+                value={element.level} 
+                onChange={(e) => onChange(index, { ...element, level: e.target.value })}
+            />
         )}
 
-        {/* 5. Feature Notes */}
-        <div className="w-1/3">
+        {/* 5. 2nd Half Toggle (Jumps only) */}
+        {element.type === 'JUMP' && (
+             <div className="flex items-center" title="Bonus (2nd Half)">
+                <span className="text-[10px] text-gray-400 mr-1 font-bold">x1.1</span>
+                <Switch 
+                    className="scale-75" 
+                    checked={element.is_second_half || false}
+                    onCheckedChange={(c) => onChange(index, { ...element, is_second_half: c })}
+                />
+             </div>
+        )}
+
+        {/* 6. Base Value Input */}
+        <div className="w-16">
             <Input 
-                className="h-8 text-xs text-gray-600" 
-                placeholder={element.type === 'SPIN' ? "Features (e.g. 8 revs)" : "Notes..."}
-                value={element.notes}
-                onChange={(e) => onChange(index, { ...element, notes: e.target.value })}
+                className="h-8 text-right font-mono text-xs px-1" 
+                placeholder="BV" 
+                type="number"
+                step="0.01"
+                value={element.base_value}
+                onChange={(e) => onChange(index, { ...element, base_value: e.target.value })}
             />
         </div>
 
-        {/* 6. Delete Row */}
+        {/* 7. Delete */}
         <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-red-500" onClick={() => onRemove(index)}>
             <Trash2 className="h-4 w-4" />
         </Button>

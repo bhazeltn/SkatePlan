@@ -1,10 +1,11 @@
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import Q
+from django.db.models import Q, Max
 from rest_framework.exceptions import ValidationError
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
+from rest_framework.views import APIView
 from datetime import date, timedelta
 from .permissions import IsCoachUser
 
@@ -989,3 +990,359 @@ class ProgramDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [permissions.IsAuthenticated, IsCoachUser]
     serializer_class = ProgramSerializer
     queryset = Program.objects.all()
+
+
+class SkaterStatsView(APIView):
+    """
+    Returns calculated statistics for a skater:
+    - Personal Best (PB) & Season Best (SB)
+    - Context: Competition Name AND Date
+    - Full Segment Breakdown (Total, TES, PCS)
+    """
+
+    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+
+    def get(self, request, skater_id):
+        skater = Skater.objects.get(id=skater_id)
+
+        # 1. Find all completed results
+        entity_ids = []
+        for e in skater.singles_entities.all():
+            entity_ids.append(e.id)
+        for e in skater.solodance_entities.all():
+            entity_ids.append(e.id)
+        for e in skater.teams_as_partner_a.all():
+            entity_ids.append(e.id)
+        for e in skater.teams_as_partner_b.all():
+            entity_ids.append(e.id)
+
+        all_results = CompetitionResult.objects.filter(
+            object_id__in=entity_ids, status=CompetitionResult.Status.COMPLETED
+        ).select_related("competition")
+
+        # 2. Define Active Season
+        active_season = AthleteSeason.objects.filter(
+            skater=skater, is_active=True
+        ).last()
+        season_start = active_season.start_date if active_season else None
+        season_end = active_season.end_date if active_season else None
+
+        # 3. Helper to create empty stat object
+        def make_stat():
+            return {"score": 0.0, "comp": "N/A", "date": None}
+
+        stats = {"total": {"pb": make_stat(), "sb": make_stat()}, "segments": {}}
+
+        # 4. Iterate and Calculate
+        for res in all_results:
+            is_current_season = False
+            if season_start and season_end:
+                if season_start <= res.competition.start_date <= season_end:
+                    is_current_season = True
+
+            comp_name = res.competition.title
+            comp_date = res.competition.start_date
+
+            # A. Overall Total Score
+            if res.total_score:
+                score = float(res.total_score)
+                if score > stats["total"]["pb"]["score"]:
+                    stats["total"]["pb"] = {
+                        "score": score,
+                        "comp": comp_name,
+                        "date": comp_date,
+                    }
+                if is_current_season and score > stats["total"]["sb"]["score"]:
+                    stats["total"]["sb"] = {
+                        "score": score,
+                        "comp": comp_name,
+                        "date": comp_date,
+                    }
+
+            # B. Segment Breakdown
+            if res.segment_scores and isinstance(res.segment_scores, list):
+                for seg in res.segment_scores:
+                    name = seg.get("name", "Unknown Segment")
+
+                    # --- FIX: Initialize ALL buckets (Total, TES, PCS) ---
+                    if name not in stats["segments"]:
+                        stats["segments"][name] = {
+                            "total": {"pb": make_stat(), "sb": make_stat()},
+                            "tes": {
+                                "pb": make_stat(),
+                                "sb": make_stat(),
+                            },  # <--- Was missing
+                            "pcs": {
+                                "pb": make_stat(),
+                                "sb": make_stat(),
+                            },  # <--- Was missing
+                        }
+
+                    bucket = stats["segments"][name]
+
+                    # Extract values safely
+                    s_score = float(seg.get("score") or 0)
+                    s_tes = float(seg.get("tes") or 0)
+                    s_pcs = float(seg.get("pcs") or 0)
+
+                    # 1. Segment Total
+                    if s_score > bucket["total"]["pb"]["score"]:
+                        bucket["total"]["pb"] = {
+                            "score": s_score,
+                            "comp": comp_name,
+                            "date": comp_date,
+                        }
+                    if is_current_season and s_score > bucket["total"]["sb"]["score"]:
+                        bucket["total"]["sb"] = {
+                            "score": s_score,
+                            "comp": comp_name,
+                            "date": comp_date,
+                        }
+
+                    # 2. TES
+                    if s_tes > bucket["tes"]["pb"]["score"]:
+                        bucket["tes"]["pb"] = {
+                            "score": s_tes,
+                            "comp": comp_name,
+                            "date": comp_date,
+                        }
+                    if is_current_season and s_tes > bucket["tes"]["sb"]["score"]:
+                        bucket["tes"]["sb"] = {
+                            "score": s_tes,
+                            "comp": comp_name,
+                            "date": comp_date,
+                        }
+
+                    # 3. PCS
+                    if s_pcs > bucket["pcs"]["pb"]["score"]:
+                        bucket["pcs"]["pb"] = {
+                            "score": s_pcs,
+                            "comp": comp_name,
+                            "date": comp_date,
+                        }
+                    if is_current_season and s_pcs > bucket["pcs"]["sb"]["score"]:
+                        bucket["pcs"]["sb"] = {
+                            "score": s_pcs,
+                            "comp": comp_name,
+                            "date": comp_date,
+                        }
+
+        # 5. Volume
+        total_sessions = (
+            SessionLog.objects.filter(athlete_season=active_season).count()
+            if active_season
+            else 0
+        )
+
+        return Response(
+            {
+                "overall": stats["total"],
+                "segments": stats["segments"],
+                "volume": total_sessions,
+                "season_name": active_season.season if active_season else "None",
+            }
+        )
+
+
+class CoachDashboardStatsView(APIView):
+    """
+    Aggregates "Air Traffic Control" data.
+    Refined to include Skater Names and IDs for navigation.
+    """
+
+    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+
+    def get(self, request):
+        skaters = Skater.objects.all()
+        today = date.today()
+        next_week = today + timedelta(days=7)
+        two_weeks = today + timedelta(days=14)
+
+        # 1. PREPARE ENTITY LOOKUP
+        # We need to find all Planning Entities (Singles, Dance, Teams) owned by these skaters
+        # so we can query Goals/Results efficiently.
+        entity_map = {}  # {entity_id: skater_obj}
+        for s in skaters:
+            for e in s.singles_entities.all():
+                entity_map[e.id] = s
+            for e in s.solodance_entities.all():
+                entity_map[e.id] = s
+            for e in s.teams_as_partner_a.all():
+                entity_map[e.id] = s
+            # ... add other relationships as needed
+
+        all_entity_ids = list(entity_map.keys())
+
+        # 2. RED FLAGS: INJURIES
+        active_injuries = (
+            InjuryLog.objects.filter(
+                skater__in=skaters, recovery_status__in=["Active", "Recovering"]
+            )
+            .select_related("skater")
+            .order_by("date_of_onset")
+        )
+
+        # 3. GOALS (Linked to Skaters via Entity)
+        # Fetch relevant goals
+        raw_goals = Goal.objects.filter(
+            object_id__in=all_entity_ids,
+            current_status__in=["IN_PROGRESS", "PENDING", "APPROVED"],
+        ).order_by("target_date")
+
+        overdue_list = []
+        due_soon_list = []
+
+        for g in raw_goals:
+            # resolve skater from map
+            skater = entity_map.get(g.object_id)
+            if not skater:
+                continue
+
+            goal_data = {
+                "title": g.title,
+                "due": g.target_date,
+                "skater_name": skater.full_name,
+                "skater_id": skater.id,
+            }
+
+            if g.target_date and g.target_date < today:
+                if len(overdue_list) < 5:
+                    overdue_list.append(goal_data)
+            elif g.target_date and g.target_date <= next_week:
+                if len(due_soon_list) < 5:
+                    due_soon_list.append(goal_data)
+
+        # 4. PLANNING ALERTS
+        planning_alerts = []
+        start_of_week = today - timedelta(days=today.weekday())
+
+        for skater in skaters:
+            if not skater.is_active:
+                continue
+            active_season = skater.athlete_seasons.filter(is_active=True).last()
+
+            if active_season:
+                if not active_season.yearly_plans.exists():
+                    planning_alerts.append(
+                        {
+                            "skater": skater.full_name,
+                            "id": skater.id,
+                            "issue": "No Yearly Plan",
+                        }
+                    )
+                else:
+                    current_week = WeeklyPlan.objects.filter(
+                        athlete_season=active_season, week_start=start_of_week
+                    ).first()
+                    if not current_week or not current_week.theme:
+                        planning_alerts.append(
+                            {
+                                "skater": skater.full_name,
+                                "id": skater.id,
+                                "issue": "Unplanned Week",
+                            }
+                        )
+
+        # 5. AGENDA (Competitions & Tests)
+        # A. Tests
+        upcoming_tests = (
+            SkaterTest.objects.filter(
+                test_date__range=(today, two_weeks), skater__in=skaters
+            )
+            .select_related("skater")
+            .order_by("test_date")
+        )
+
+        # B. Competitions (Grouped by Event)
+        # Find results/registrations for our skaters in the next 2 weeks
+        upcoming_results = CompetitionResult.objects.filter(
+            object_id__in=all_entity_ids,
+            competition__start_date__range=(today, two_weeks),
+        ).select_related("competition")
+
+        # Group skaters by competition
+        comp_map = {}
+        for res in upcoming_results:
+            comp_id = res.competition.id
+            if comp_id not in comp_map:
+                comp_map[comp_id] = {
+                    "type": "Competition",
+                    "title": res.competition.title,
+                    "date": res.competition.start_date,
+                    "attendees": set(),  # Use set to avoid dupes if skater has 2 events
+                }
+
+            skater = entity_map.get(res.object_id)
+            if skater:
+                comp_map[comp_id]["attendees"].add(
+                    skater.full_name.split(" ")[0]
+                )  # First name only for compactness
+
+        # Flatten Agenda
+        agenda_items = []
+        for t in upcoming_tests:
+            agenda_items.append(
+                {
+                    "type": "Test",
+                    "title": t.test_name,
+                    "who": t.skater.full_name,
+                    "date": t.test_date,
+                    "skater_id": t.skater.id,
+                }
+            )
+
+        for c in comp_map.values():
+            # Format attendees list: "Jane, Tom, Mary"
+            attendee_list = ", ".join(list(c["attendees"]))
+            agenda_items.append(
+                {
+                    "type": "Competition",
+                    "title": c["title"],
+                    "who": attendee_list,
+                    "date": c["date"],
+                    "is_group": True,  # Flag to disable single-skater linking if needed
+                }
+            )
+
+        agenda_items.sort(key=lambda x: x["date"])
+
+        # 6. RECENT ACTIVITY
+        three_days_ago = today - timedelta(days=3)
+        recent_logs = (
+            SessionLog.objects.filter(
+                session_date__gte=three_days_ago, athlete_season__skater__in=skaters
+            )
+            .select_related("athlete_season__skater")
+            .order_by("-session_date")[:10]
+        )
+
+        data = {
+            "red_flags": {
+                "injuries": [
+                    {
+                        "skater": i.skater.full_name,
+                        "skater_id": i.skater.id,
+                        "injury": i.injury_type,
+                        "status": i.recovery_status,
+                        "date": i.date_of_onset,
+                    }
+                    for i in active_injuries
+                ],
+                "planning": planning_alerts,
+                "overdue_goals": overdue_list,
+                "due_soon_goals": due_soon_list,
+            },
+            "activity": [
+                {
+                    "skater": l.athlete_season.skater.full_name,
+                    "skater_id": l.athlete_season.skater.id,
+                    "type": "Session",
+                    "date": l.session_date,
+                    "rating": l.session_rating,
+                }
+                for l in recent_logs
+            ],
+            "agenda": agenda_items,
+        }
+
+        return Response(data)

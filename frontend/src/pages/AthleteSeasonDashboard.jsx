@@ -12,6 +12,7 @@ import { HealthTab } from '@/components/dashboard/tabs/HealthTab';
 import { CompetitionsTab } from '@/components/dashboard/tabs/CompetitionsTab';
 import { TestsTab } from '@/components/dashboard/tabs/TestsTab';
 import { ProgramsTab } from '@/components/dashboard/tabs/ProgramsTab';
+import { AnalyticsTab } from '@/components/dashboard/tabs/AnalyticsTab';
 
 export default function AthleteSeasonDashboard() {
   const { token } = useAuth();
@@ -81,7 +82,7 @@ export default function AthleteSeasonDashboard() {
 
       {/* Tabs Navigation */}
       <div className="flex space-x-2 border-b mb-6 overflow-x-auto">
-        {['weekly', 'yearly', 'goals', 'programs', 'competitions', 'tests', 'logs', 'health', 'profile'].map((tab) => (
+        {['weekly', 'yearly', 'goals', 'programs', 'competitions', 'tests', 'logs', 'health', 'analytics','profile'].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -132,6 +133,10 @@ export default function AthleteSeasonDashboard() {
         {/* --- LOGS TAB --- */}
         {activeTab === 'logs' && (
            <LogsTab skater={skater} />
+        )}
+        {/* --- ANALYTICS TAB --- */}
+        {activeTab === 'analytics' && (
+           <AnalyticsTab skater={skater} />
         )}
         {/* ---------------- */}
         {/* --- PROFILE TAB --- */}

@@ -6,7 +6,9 @@ from django.contrib.auth.models import (
     ContentType,
 )
 from django.utils import timezone
+from datetime import date
 from django.contrib.contenttypes.fields import GenericForeignKey
+
 
 # --- 1. USER AUTHENTICATION MODELS ---
 # We must define a custom User Manager to tell Django
@@ -240,8 +242,6 @@ class Skater(models.Model):
 # These models represent an athlete's "career" in a specific discipline.
 # We will use a GenericForeignKey to link them to other models (like Goals, Logs).
 # NOTE: We need to import this first.
-from django.contrib.contenttypes.fields import GenericForeignKey
-from django.contrib.contenttypes.models import ContentType
 
 
 class SinglesEntity(models.Model):
@@ -550,7 +550,8 @@ class SessionLog(models.Model):
     """
 
     id = models.AutoField(primary_key=True)
-    session_date = models.DateTimeField(default=timezone.now)
+    session_date = models.DateField(default=date.today)
+
     author = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, related_name="authored_session_logs"
     )

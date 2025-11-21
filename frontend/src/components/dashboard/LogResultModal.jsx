@@ -14,7 +14,7 @@ export function LogResultModal({ skater, resultToEdit, onSaved, trigger }) {
   const [open, setOpen] = useState(false);
   const { token } = useAuth();
   
-  // If editing an existing result/plan, start at LOG step
+  // If editing an existing result, start at LOG step immediately
   const [step, setStep] = useState(resultToEdit ? 'LOG' : 'SEARCH');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -22,7 +22,10 @@ export function LogResultModal({ skater, resultToEdit, onSaved, trigger }) {
   // Search & Create State
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
+  
+  // Initialize Selected Comp from edit prop
   const [selectedComp, setSelectedComp] = useState(resultToEdit?.competition || null);
+  
   const [newTitle, setNewTitle] = useState('');
   const [countryCode, setCountryCode] = useState('CA');
   const [stateCode, setStateCode] = useState('');
@@ -31,7 +34,11 @@ export function LogResultModal({ skater, resultToEdit, onSaved, trigger }) {
   const [end, setEnd] = useState('');
 
   // Result / Plan State
-  const [selectedEntityId, setSelectedEntityId] = useState(skater?.planning_entities?.[0]?.id || '');
+  // If editing, use the entity from the result (requires backend to send entity ID, or we default)
+  // For now, default to first entity or user selection
+  const [selectedEntityId, setSelectedEntityId] = useState(
+      resultToEdit?.object_id || skater?.planning_entities?.[0]?.id || ''
+  );
   
   // Status State
   const [status, setStatus] = useState(resultToEdit?.status || 'COMPLETED'); 
@@ -41,6 +48,33 @@ export function LogResultModal({ skater, resultToEdit, onSaved, trigger }) {
   const [overallScore, setOverallScore] = useState(resultToEdit?.total_score || '');
   const [notes, setNotes] = useState(resultToEdit?.notes || '');
   const [segments, setSegments] = useState(resultToEdit?.segment_scores || []);
+
+  // Reset form when modal opens or resultToEdit changes
+  useEffect(() => {
+      if (open) {
+          if (resultToEdit) {
+              setStep('LOG');
+              setSelectedComp(resultToEdit.competition);
+              setStatus(resultToEdit.status);
+              setLevel(resultToEdit.level || '');
+              setPlacement(resultToEdit.placement || '');
+              setOverallScore(resultToEdit.total_score || '');
+              setNotes(resultToEdit.notes || '');
+              setSegments(resultToEdit.segment_scores || []);
+              // Ideally set selectedEntityId here if backend provides it
+          } else {
+              setStep('SEARCH');
+              // Reset all fields for new entry
+              setSelectedComp(null);
+              setStatus('COMPLETED');
+              setLevel('');
+              setPlacement('');
+              setOverallScore('');
+              setNotes('');
+              setSegments([]);
+          }
+      }
+  }, [open, resultToEdit]);
 
   // --- AUTO-CALCULATE TOTAL SCORE ---
   useEffect(() => {
@@ -118,9 +152,7 @@ export function LogResultModal({ skater, resultToEdit, onSaved, trigger }) {
               await apiRequest(`/skaters/${skater.id}/results/`, 'POST', payload, token);
           }
           
-          // THIS WAS THE ISSUE: Ensure we call onSaved(), NOT fetchResults()
           if (onSaved) onSaved();
-          
           setOpen(false);
       } catch (e) { alert("Failed to save."); }
       finally { setLoading(false); }

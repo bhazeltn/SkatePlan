@@ -38,4 +38,6 @@ urlpatterns = [
         views.CompetitionResultListCreateView.as_view(),
     ),
     path("results/<int:pk>/", views.CompetitionResultDetailView.as_view()),
+    path("skaters/<int:skater_id>/tests/", views.SkaterTestListCreateView.as_view()),
+    path("tests/<int:pk>/", views.SkaterTestDetailView.as_view()),
 ]

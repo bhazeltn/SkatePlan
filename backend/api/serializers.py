@@ -530,4 +530,12 @@ class CompetitionResultSerializer(serializers.ModelSerializer):
 class SkaterTestSerializer(serializers.ModelSerializer):
     class Meta:
         model = SkaterTest
-        fields = "__all__"
+        fields = (
+            "id",
+            "skater",
+            "test_name",
+            "test_date",
+            "status",
+            "result",
+            "evaluator_notes",
+        )

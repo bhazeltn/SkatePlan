@@ -910,3 +910,30 @@ class CompetitionResultDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [permissions.IsAuthenticated, IsCoachUser]
     serializer_class = CompetitionResultSerializer
     queryset = CompetitionResult.objects.all()
+
+
+class SkaterTestListCreateView(generics.ListCreateAPIView):
+    """
+    List tests for a skater, or log a new one.
+    Directly linked to the Skater profile.
+    """
+
+    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    serializer_class = SkaterTestSerializer
+
+    def get_queryset(self):
+        skater_id = self.kwargs["skater_id"]
+        # Order by date descending, but prioritize Planned/Scheduled at the top?
+        # For now, just simple date ordering.
+        return SkaterTest.objects.filter(skater_id=skater_id).order_by("-test_date")
+
+    def perform_create(self, serializer):
+        skater_id = self.kwargs["skater_id"]
+        skater = Skater.objects.get(id=skater_id)
+        serializer.save(skater=skater)
+
+
+class SkaterTestDetailView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    serializer_class = SkaterTestSerializer
+    queryset = SkaterTest.objects.all()

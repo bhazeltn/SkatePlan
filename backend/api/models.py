@@ -767,22 +767,45 @@ class CompetitionResult(models.Model):
 class SkaterTest(models.Model):
     """
     Tracks testing progress (e.g. "Gold Skills").
+    Linked directly to the Skater (Person), not a specific discipline.
     """
 
     id = models.AutoField(primary_key=True)
 
-    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
-    object_id = models.PositiveIntegerField()
-    planning_entity = GenericForeignKey("content_type", "object_id")
+    # Direct link to Skater
+    skater = models.ForeignKey(
+        Skater,
+        on_delete=models.CASCADE,
+        related_name="tests",
+        default=1,  # Temporary default for migration, will be removed
+    )
 
     test_name = models.CharField(max_length=255)
     test_date = models.DateField(null=True, blank=True)
+
+    class Status(models.TextChoices):
+        PLANNED = "PLANNED", "Planned"
+        SCHEDULED = "SCHEDULED", "Scheduled"
+        COMPLETED = "COMPLETED", "Completed"
+        WITHDRAWN = "WITHDRAWN", "Withdrawn"
+
+    status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.PLANNED
+    )
+
+    test_type = models.CharField(
+        max_length=100, default="Skills"  # Increased length for custom names
+    )
+
+    # Result is now optional (only for Completed tests)
     result = models.CharField(
         max_length=50,
         choices=[("Pass", "Pass"), ("Retry", "Retry"), ("Honors", "Pass with Honors")],
+        null=True,
+        blank=True,
     )
 
     evaluator_notes = models.TextField(blank=True, null=True)
 
     def __str__(self):
-        return f"{self.test_name} - {self.result}"
+        return f"{self.test_name} ({self.status})"

@@ -19,6 +19,7 @@ from .models import (
     Competition,
     CompetitionResult,
     SkaterTest,
+    Program,
 )
 
 User = get_user_model()
@@ -538,4 +539,19 @@ class SkaterTestSerializer(serializers.ModelSerializer):
             "status",
             "result",
             "evaluator_notes",
+        )
+
+
+class ProgramSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Program
+        fields = (
+            "id",
+            "title",
+            "season",
+            "program_category",
+            "music_title",
+            "choreographer",
+            "planned_elements",
+            "is_active",
         )

@@ -809,3 +809,47 @@ class SkaterTest(models.Model):
 
     def __str__(self):
         return f"{self.test_name} ({self.status})"
+
+
+class Program(models.Model):
+    """
+    Defines a specific competitive program (music, layout, etc.).
+    """
+
+    id = models.AutoField(primary_key=True)
+
+    # Link to the Discipline (Singles, Team, etc.)
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+    planning_entity = GenericForeignKey("content_type", "object_id")
+
+    title = models.CharField(max_length=255)  # e.g. "Star Wars Short"
+    season = models.CharField(max_length=50)  # e.g. "2025-2026"
+    is_active = models.BooleanField(
+        default=True, help_text="Set to false if program is dropped/retired."
+    )
+
+    # We use a text choice for standard categories but keep it flexible
+    class Category(models.TextChoices):
+        SHORT = "Short Program", "Short Program"
+        FREE = "Free Skate", "Free Skate"
+        RHYTHM = "Rhythm Dance", "Rhythm Dance"
+        FREE_DANCE = "Free Dance", "Free Dance"
+        ARTISTIC = "Artistic", "Artistic"
+        OTHER = "Other", "Other"
+
+    program_category = models.CharField(
+        max_length=50, choices=Category.choices, default=Category.FREE
+    )
+
+    music_title = models.CharField(max_length=255, blank=True, null=True)
+    choreographer = models.CharField(max_length=255, blank=True, null=True)
+
+    # The actual content of the program
+    # Structure: [{ "order": 1, "element_id": 5, "name": "3Lz", "planned_level": 4, "notes": "" }]
+    planned_elements = models.JSONField(default=list, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.title} ({self.season})"

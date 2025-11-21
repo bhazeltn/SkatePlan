@@ -27,6 +27,7 @@ from .models import (
     Competition,
     CompetitionResult,
     SkaterTest,
+    Program,
 )
 from .serializers import (
     SkaterSerializer,
@@ -50,6 +51,7 @@ from .serializers import (
     CompetitionSerializer,
     CompetitionResultSerializer,
     SkaterTestSerializer,
+    ProgramSerializer,
 )
 
 
@@ -937,3 +939,53 @@ class SkaterTestDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [permissions.IsAuthenticated, IsCoachUser]
     serializer_class = SkaterTestSerializer
     queryset = SkaterTest.objects.all()
+
+
+class ProgramListCreateView(generics.ListCreateAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    serializer_class = ProgramSerializer
+
+    def get_queryset(self):
+        skater_id = self.kwargs["skater_id"]
+        skater = Skater.objects.get(id=skater_id)
+
+        # Find entities for this skater
+        entity_ids = []
+        for e in skater.singles_entities.all():
+            entity_ids.append(e.id)
+        for e in skater.solodance_entities.all():
+            entity_ids.append(e.id)
+        for e in skater.teams_as_partner_a.all():
+            entity_ids.append(e.id)
+        for e in skater.teams_as_partner_b.all():
+            entity_ids.append(e.id)
+
+        # Return programs linked to these entities
+        return Program.objects.filter(object_id__in=entity_ids).order_by(
+            "-season", "program_category"
+        )
+
+    def perform_create(self, serializer):
+        # Link to the specific entity provided in the request
+        entity_id = self.request.data.get("planning_entity_id")
+        entity_type = self.request.data.get("planning_entity_type")
+
+        if not entity_id or not entity_type:
+            raise ValidationError("Program must be linked to a discipline.")
+
+        model_map = {
+            "SinglesEntity": SinglesEntity,
+            "SoloDanceEntity": SoloDanceEntity,
+            "Team": Team,
+            "SynchroTeam": SynchroTeam,
+        }
+        model_class = model_map.get(entity_type)
+        content_type = ContentType.objects.get_for_model(model_class)
+
+        serializer.save(content_type=content_type, object_id=entity_id)
+
+
+class ProgramDetailView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    serializer_class = ProgramSerializer
+    queryset = Program.objects.all()

@@ -8,6 +8,8 @@ from .skaters import (
     SoloDanceEntityDetailView,
     TeamDetailView,
     SynchroTeamDetailView,
+    TeamListView,
+    CreateTeamView,
 )
 from .planning import (
     AthleteSeasonList,
@@ -21,6 +23,8 @@ from .planning import (
     GoalListCreateByPlanView,
     GoalListBySkaterView,
     GoalDetailView,
+    TeamYearlyPlanListCreateView,
+    MasterWeeklyPlanView,
 )
 from .logs import (
     SessionLogListCreateView,

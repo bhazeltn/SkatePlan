@@ -2,24 +2,20 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../AuthContext';
 import { apiRequest } from '../api';
 import { AddSkaterModal } from '../components/dashboard/AddSkaterModal';
+import { CreateTeamModal } from '@/components/dashboard/CreateTeamModal';
 import { RosterList } from '../components/dashboard/RosterList';
+import { TeamList } from '@/components/dashboard/TeamList';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
-    Clock, 
-    Calendar, 
-    Activity, 
-    HeartPulse, 
-    CheckCircle2, 
-    FileWarning, 
-    ArrowRight,
-    ShieldCheck,
-    ClipboardList
+    Clock, Calendar, Activity, HeartPulse, CheckCircle2, FileWarning, 
+    ArrowRight, ShieldCheck, ClipboardList 
 } from 'lucide-react';
 
 export default function Home() {
   const { user, logout, token } = useAuth();
   const [roster, setRoster] = useState([]);
+  const [teams, setTeams] = useState([]); 
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -27,12 +23,14 @@ export default function Home() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [rosterData, statsData] = await Promise.all([
+      const [rosterData, teamsData, statsData] = await Promise.all([
         apiRequest('/roster/', 'GET', null, token),
+        apiRequest('/teams/', 'GET', null, token),
         apiRequest('/dashboard/stats/', 'GET', null, token)
       ]);
       
-      setRoster(rosterData);
+      setRoster(rosterData || []);
+      setTeams(teamsData || []);
       setStats(statsData);
     } catch (err) {
       console.error(err);
@@ -46,9 +44,8 @@ export default function Home() {
     fetchData();
   }, [token]);
 
-  const handleSkaterAdded = (newSkater) => {
-    setRoster([...roster, newSkater]);
-  };
+  const handleSkaterAdded = () => fetchData();
+  const handleTeamCreated = () => fetchData();
 
   // ----- Render for Coach -----
   return (
@@ -61,6 +58,7 @@ export default function Home() {
         </div>
         <div className="flex items-center gap-4">
           <AddSkaterModal onSkaterAdded={handleSkaterAdded} />
+          <CreateTeamModal onTeamCreated={handleTeamCreated} />
           <a href="#/settings"><Button variant="secondary">Settings</Button></a>
           <Button variant="outline" onClick={logout}>Log Out</Button>
         </div>
@@ -74,20 +72,20 @@ export default function Home() {
             <div className="space-y-6">
                 
                 {/* A. HEALTH STATUS */}
-                <Card className={stats.red_flags.injuries.length > 0 ? "border-red-200 bg-red-50/30" : "border-green-200 bg-green-50/30"}>
+                <Card className={stats.red_flags?.injuries?.length > 0 ? "border-red-200 bg-red-50/30" : "border-green-200 bg-green-50/30"}>
                     <CardHeader className="pb-2 flex flex-row items-center gap-2 space-y-0">
-                        <HeartPulse className={`h-5 w-5 ${stats.red_flags.injuries.length > 0 ? "text-red-600" : "text-green-600"}`} />
+                        <HeartPulse className={`h-5 w-5 ${stats.red_flags?.injuries?.length > 0 ? "text-red-600" : "text-green-600"}`} />
                         <CardTitle className="text-base font-semibold text-gray-900">Health Status</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        {stats.red_flags.injuries.length === 0 ? (
+                        {stats.red_flags?.injuries?.length === 0 ? (
                             <div className="flex items-center gap-2 text-sm text-green-700 font-medium">
                                 <ShieldCheck className="h-5 w-5" />
                                 All athletes healthy.
                             </div>
                         ) : (
                             <div className="space-y-2">
-                                {stats.red_flags.injuries.map((inj, i) => (
+                                {stats.red_flags?.injuries?.map((inj, i) => (
                                     <a 
                                         key={i} 
                                         href={`#/skater/${inj.skater_id}?tab=health`}
@@ -106,20 +104,20 @@ export default function Home() {
                 </Card>
 
                 {/* B. PLANNING ALERTS */}
-                <Card className={stats.red_flags.planning.length > 0 ? "border-orange-200 bg-orange-50/30" : "border-slate-200 bg-slate-50/50"}>
+                <Card className={stats.red_flags?.planning?.length > 0 ? "border-orange-200 bg-orange-50/30" : "border-slate-200 bg-slate-50/50"}>
                     <CardHeader className="pb-2 flex flex-row items-center gap-2 space-y-0">
-                        <FileWarning className={`h-5 w-5 ${stats.red_flags.planning.length > 0 ? "text-orange-600" : "text-slate-400"}`} />
+                        <FileWarning className={`h-5 w-5 ${stats.red_flags?.planning?.length > 0 ? "text-orange-600" : "text-slate-400"}`} />
                         <CardTitle className="text-base font-semibold text-gray-900">Planning Status</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        {stats.red_flags.planning.length === 0 ? (
+                        {stats.red_flags?.planning?.length === 0 ? (
                             <div className="flex items-center gap-2 text-sm text-slate-600">
                                 <CheckCircle2 className="h-4 w-4 text-slate-400" />
                                 All active skaters planned.
                             </div>
                         ) : (
                             <div className="space-y-2">
-                                {stats.red_flags.planning.map((item, i) => (
+                                {stats.red_flags?.planning?.map((item, i) => (
                                     <a 
                                         key={`plan-${i}`} 
                                         href={`#/skater/${item.id}?tab=${item.issue.includes('Yearly') ? 'yearly' : 'weekly'}`}
@@ -144,14 +142,14 @@ export default function Home() {
                         <CardTitle className="text-base font-semibold text-gray-900">Goal Tracker</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        {stats.red_flags.overdue_goals.length === 0 && stats.red_flags.due_soon_goals.length === 0 ? (
+                        {stats.red_flags?.overdue_goals?.length === 0 && stats.red_flags?.due_soon_goals?.length === 0 ? (
                             <div className="flex items-center gap-2 text-sm text-slate-500">
                                 <ClipboardList className="h-4 w-4" />
                                 No urgent goals.
                             </div>
                         ) : (
                             <div className="space-y-2">
-                                {stats.red_flags.overdue_goals.map((g, i) => (
+                                {stats.red_flags?.overdue_goals?.map((g, i) => (
                                     <a 
                                         key={`ov-${i}`} 
                                         href={`#/skater/${g.skater_id}?tab=goals`}
@@ -164,7 +162,7 @@ export default function Home() {
                                         <span className="text-[10px] font-bold uppercase tracking-wider bg-white px-1.5 rounded border border-red-200">Overdue</span>
                                     </a>
                                 ))}
-                                {stats.red_flags.due_soon_goals.map((g, i) => (
+                                {stats.red_flags?.due_soon_goals?.map((g, i) => (
                                     <a 
                                         key={`soon-${i}`} 
                                         href={`#/skater/${g.skater_id}?tab=goals`}
@@ -251,10 +249,18 @@ export default function Home() {
         </div>
       )}
 
-      {/* Roster Section */}
+      {/* --- TEAMS SECTION --- */}
+      {teams.length > 0 && (
+          <div className="mb-8">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">My Teams ({teams.length})</h2>
+              <TeamList teams={teams} />
+          </div>
+      )}
+
+      {/* --- ROSTER SECTION --- */}
       {error && <p className="text-red-600">Error: {error}</p>}
 
-      {roster.length === 0 && !error && (
+      {roster.length === 0 && teams.length === 0 && !error && (
         <div className="text-center p-12 border-2 border-dashed rounded-lg">
           <h2 className="text-2xl font-semibold">Your Roster is Empty</h2>
           <p className="text-muted-foreground mt-2 mb-4">

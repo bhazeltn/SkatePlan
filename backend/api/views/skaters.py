@@ -211,3 +211,82 @@ class SynchroTeamDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [permissions.IsAuthenticated, IsCoachUser]
     serializer_class = SynchroTeamSerializer
     queryset = SynchroTeam.objects.all()
+
+
+class CreateTeamView(generics.CreateAPIView):
+    """
+    Creates a Team (Pairs/Dance) by linking two existing skaters.
+    Gender-neutral: Uses 'partner_a' and 'partner_b'.
+    """
+
+    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    serializer_class = TeamSerializer
+
+    def create(self, request, *args, **kwargs):
+        partner_a_id = request.data.get("partner_a_id")
+        partner_b_id = request.data.get("partner_b_id")
+        discipline = request.data.get("discipline")  # PAIRS or ICE_DANCE
+        team_name = request.data.get("team_name")
+        level = request.data.get("level", "Unknown")
+
+        if not all([partner_a_id, partner_b_id, discipline, team_name]):
+            return Response(
+                {"error": "All fields are required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if partner_a_id == partner_b_id:
+            return Response(
+                {"error": "Partners must be different people."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            p1 = Skater.objects.get(id=partner_a_id)
+            p2 = Skater.objects.get(id=partner_b_id)
+        except Skater.DoesNotExist:
+            return Response(
+                {"error": "Skater not found."}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Create the Team Entity
+        team = Team.objects.create(
+            team_name=team_name,
+            discipline=discipline,
+            partner_a=p1,
+            partner_b=p2,
+            current_level=level,
+            # Optional: Inherit federation from Partner A for now
+            federation=p1.federation,
+        )
+
+        # Grant Coach Permissions
+        PlanningEntityAccess.objects.create(
+            user=request.user,
+            access_level=PlanningEntityAccess.AccessLevel.COACH,
+            planning_entity=team,
+        )
+
+        return Response(TeamSerializer(team).data, status=status.HTTP_201_CREATED)
+
+
+class TeamListView(generics.ListAPIView):
+    """
+    Returns a list of Teams the coach has access to.
+    """
+
+    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    serializer_class = TeamSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+
+        # Find all Team entities where this user has access
+        from django.contrib.contenttypes.models import ContentType
+
+        ct = ContentType.objects.get_for_model(Team)
+
+        access_records = PlanningEntityAccess.objects.filter(user=user, content_type=ct)
+        team_ids = access_records.values_list("object_id", flat=True)
+
+        return Team.objects.filter(id__in=team_ids)

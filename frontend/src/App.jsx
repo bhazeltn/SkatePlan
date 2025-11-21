@@ -6,6 +6,7 @@ import Register from './pages/Register';
 import AthleteSeasonDashboard from './pages/AthleteSeasonDashboard';
 import Settings from './pages/Settings';
 import YearlyPlanEditor from './pages/YearlyPlanEditor';
+import TeamDashboard from './pages/TeamDashboard';
 
 // Route Definitions
 const publicRoutes = {
@@ -17,6 +18,7 @@ const privateRoutes = {
   '/': Home,
   '/settings': Settings,
   '/skater/:id': AthleteSeasonDashboard,
+  '/team/:id': TeamDashboard,
   '/plans/:id': YearlyPlanEditor,
 };
 

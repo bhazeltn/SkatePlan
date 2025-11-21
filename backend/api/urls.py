@@ -45,4 +45,9 @@ urlpatterns = [
     path("skaters/<int:skater_id>/stats/", views.SkaterStatsView.as_view()),
     path("dashboard/stats/", views.CoachDashboardStatsView.as_view()),
     path("elements/", views.SkatingElementList.as_view()),
+    path("teams/", views.TeamListView.as_view()),
+    path("teams/create/", views.CreateTeamView.as_view()),
+    path("teams/<int:pk>/", views.TeamDetailView.as_view()),
+    path("teams/<int:team_id>/ytps/", views.TeamYearlyPlanListCreateView.as_view()),
+    path("skaters/<int:skater_id>/week-view/", views.MasterWeeklyPlanView.as_view()),
 ]

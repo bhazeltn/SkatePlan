@@ -68,10 +68,28 @@ class SoloDanceEntitySerializer(serializers.ModelSerializer):
 
 class TeamSerializer(serializers.ModelSerializer):
     federation = FederationSerializer(read_only=True)
+    # Add nested representations (Read Only)
+    partner_a_details = SimpleSkaterSerializer(source="partner_a", read_only=True)
+    partner_b_details = SimpleSkaterSerializer(source="partner_b", read_only=True)
+    name = serializers.SerializerMethodField()
 
     class Meta:
         model = Team
-        fields = ("id", "team_name", "discipline", "current_level", "federation")
+        fields = (
+            "id",
+            "name",
+            "team_name",
+            "discipline",
+            "current_level",
+            "federation",
+            "partner_a",
+            "partner_b",
+            "partner_a_details",
+            "partner_b_details",
+        )
+
+    def get_name(self, obj):
+        return obj.get_discipline_display()
 
 
 class SynchroTeamSerializer(serializers.ModelSerializer):
@@ -175,9 +193,21 @@ class SkaterSerializer(serializers.ModelSerializer):
 class RosterSkaterSerializer(serializers.ModelSerializer):
     planning_entities = serializers.SerializerMethodField()
 
+    # --- FIXED: Include these fields ---
+    federation = FederationSerializer(read_only=True)
+    gender = serializers.CharField(source="get_gender_display", read_only=True)
+    # -----------------------------------
+
     class Meta:
         model = Skater
-        fields = ("id", "full_name", "date_of_birth", "planning_entities")
+        fields = (
+            "id",
+            "full_name",
+            "date_of_birth",
+            "gender",
+            "federation",
+            "planning_entities",
+        )
 
     def get_planning_entities(self, obj):
         entities = []

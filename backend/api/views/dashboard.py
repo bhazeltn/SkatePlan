@@ -54,29 +54,42 @@ class CoachDashboardStatsView(APIView):
         for skater in skaters:
             if not skater.is_active:
                 continue
-            active_season = skater.athlete_seasons.filter(is_active=True).last()
 
-            if active_season:
+            # CHANGED: Fetch ALL active seasons, not just the last one
+            active_seasons = skater.athlete_seasons.filter(is_active=True)
+
+            if not active_seasons.exists():
+                # Optional: Warn if NO active season exists at all?
+                # planning_alerts.append({ ... "No Active Season" ... })
+                continue
+
+            for season in active_seasons:
                 # Check A: Yearly Plan
-                if not active_season.yearly_plans.exists():
+                if not season.yearly_plans.exists():
                     planning_alerts.append(
                         {
                             "skater": skater.full_name,
                             "id": skater.id,
-                            "issue": "No Yearly Plan",
+                            "issue": f"No Plan for {season.season}",  # Detailed message
                         }
                     )
                 else:
-                    # Check B: Weekly Plan
+                    # Check B: Weekly Plan (Only if within date range)
+                    # If today is outside this season's dates, don't nag about weekly plans
+                    if season.start_date and season.end_date:
+                        if not (season.start_date <= today <= season.end_date):
+                            continue
+
                     current_week = WeeklyPlan.objects.filter(
-                        athlete_season=active_season, week_start=start_of_week
+                        athlete_season=season, week_start=start_of_week
                     ).first()
+
                     if not current_week or not current_week.theme:
                         planning_alerts.append(
                             {
                                 "skater": skater.full_name,
                                 "id": skater.id,
-                                "issue": "Unplanned Week",
+                                "issue": f"Unplanned Week ({season.season})",
                             }
                         )
 

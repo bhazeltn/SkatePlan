@@ -2,7 +2,8 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
 from django.contrib.contenttypes.models import ContentType
-from datetime import timedelta
+from datetime import date, timedelta
+from rest_framework.views import APIView
 
 from api.models import (
     Skater,
@@ -258,3 +259,146 @@ class GoalDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [permissions.IsAuthenticated, IsCoachUser]
     serializer_class = GoalSerializer
     queryset = Goal.objects.all()
+
+
+class TeamYearlyPlanListCreateView(generics.ListCreateAPIView):
+    """
+    List/Create Plans for a TEAM.
+    Auto-creates AthleteSeasons for partners if they don't exist.
+    """
+
+    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    serializer_class = YearlyPlanSerializer
+
+    def get_queryset(self):
+        team_id = self.kwargs["team_id"]
+        ct = ContentType.objects.get_for_model(Team)
+        return YearlyPlan.objects.filter(content_type=ct, object_id=team_id)
+
+    def perform_create(self, serializer):
+        team_id = self.kwargs["team_id"]
+        team = Team.objects.get(id=team_id)
+
+        # 1. Determine Season Name & Dates
+        # We expect the frontend to send 'new_season_data' or 'season_id'
+        season_data = self.request.data.get("new_season_data")
+        season_id = self.request.data.get("season_id")
+
+        target_seasons = []
+        season_name = None
+        start_date = None
+        end_date = None
+
+        if season_data and season_data.get("season"):
+            season_name = season_data["season"]
+            start_date = season_data.get("start_date")
+            end_date = season_data.get("end_date")
+
+        elif season_id:
+            # If user picked an existing season from the dropdown (likely Partner A's),
+            # we use its details to sync Partner B.
+            try:
+                ref_season = AthleteSeason.objects.get(id=season_id)
+                season_name = ref_season.season
+                start_date = ref_season.start_date
+                end_date = ref_season.end_date
+                target_seasons.append(ref_season)  # Add the one we found
+            except AthleteSeason.DoesNotExist:
+                raise ValidationError("Selected season invalid.")
+
+        if not season_name:
+            # Fallback: Auto-generate based on today
+            today = date.today()
+            start_year = today.year if today.month >= 7 else today.year - 1
+            season_name = f"{start_year}-{start_year + 1}"
+
+        # 2. Ensure BOTH partners have this season bucket
+        # (We loop through both to be safe, get_or_create handles duplicates)
+        for skater in [team.partner_a, team.partner_b]:
+            # If we already added this skater's season via season_id, skip
+            if any(s.skater == skater for s in target_seasons):
+                continue
+
+            obj, created = AthleteSeason.objects.get_or_create(
+                skater=skater,
+                season=season_name,
+                defaults={
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "primary_coach": self.request.user,
+                },
+            )
+            target_seasons.append(obj)
+
+        # 3. Link Plan to Team
+        ct = ContentType.objects.get_for_model(Team)
+        plan = serializer.save(
+            coach_owner=self.request.user, content_type=ct, object_id=team.id
+        )
+
+        # 4. Link Plan to BOTH Seasons
+        plan.athlete_seasons.set(target_seasons)
+
+
+class MasterWeeklyPlanView(APIView):
+    """
+    Aggregates ALL weekly plans for a skater for a specific week.
+    Auto-generates weekly records if they are missing for an active season.
+    """
+
+    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+
+    def get(self, request, skater_id):
+        skater = Skater.objects.get(id=skater_id)
+        date_str = request.query_params.get("date")
+
+        if not date_str:
+            today = date.today()
+            week_start = today - timedelta(days=today.weekday())
+        else:
+            try:
+                week_start = date.fromisoformat(date_str)
+            except ValueError:
+                return Response(
+                    {"error": "Invalid date"}, status=status.HTTP_400_BAD_REQUEST
+                )
+
+        # --- 1. FIND ACTIVE SEASONS ---
+        # Logic: Season is Active AND (Date falls in range OR Dates are missing)
+        active_seasons = AthleteSeason.objects.filter(
+            skater=skater, is_active=True
+        ).filter(
+            Q(start_date__lte=week_start, end_date__gte=week_start)
+            | Q(start_date__isnull=True)
+            | Q(end_date__isnull=True)
+        )
+
+        # --- 2. AUTO-GENERATE MISSING WEEKS ---
+        for season in active_seasons:
+            # Ensure the container exists for this week
+            WeeklyPlan.objects.get_or_create(
+                athlete_season=season, week_start=week_start, defaults={"theme": ""}
+            )
+
+        # --- 3. QUERY PLANS ---
+        plans = WeeklyPlan.objects.filter(
+            athlete_season__skater=skater, week_start=week_start
+        ).select_related("athlete_season")
+
+        # --- 4. SERIALIZE ---
+        data = []
+        for plan in plans:
+            label = plan.athlete_season.season
+            ytp = plan.athlete_season.yearly_plans.first()
+            if ytp:
+                label = str(ytp.planning_entity)
+
+            data.append(
+                {
+                    "plan_data": WeeklyPlanSerializer(plan).data,
+                    "label": label,
+                    "season_id": plan.athlete_season.id,
+                }
+            )
+
+        return Response({"week_start": week_start, "plans": data})

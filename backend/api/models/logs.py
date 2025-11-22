@@ -40,6 +40,8 @@ class SessionLog(models.Model):
     coach_notes = models.TextField(blank=True, null=True)
     skater_notes = models.TextField(blank=True, null=True)
 
+    attendance = models.JSONField(default=list, blank=True)
+
     # Focus Areas
     jump_focus = models.JSONField(default=dict, blank=True)
     spin_focus = models.JSONField(default=dict, blank=True)

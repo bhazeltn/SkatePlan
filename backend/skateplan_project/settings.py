@@ -1,6 +1,3 @@
-# This file was created by `django-admin startproject`.
-# We are OVERWRITING it with our full stack configuration.
-
 import os
 from pathlib import Path
 from dotenv import load_dotenv
@@ -16,7 +13,6 @@ SECRET_KEY = os.environ.get("SECRET_KEY")
 DEBUG = os.environ.get("DEBUG", "False") == "True"
 
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost 127.0.0.1").split(" ")
-
 
 # Application definition
 INSTALLED_APPS = [
@@ -39,7 +35,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
-    "corsheaders.middleware.CorsMiddleware",  # <-- This must be high up
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -67,9 +63,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "skateplan_project.wsgi.application"
 
-
 # --- Database ---
-# Uses environment variables from .env
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
@@ -81,7 +75,7 @@ DATABASES = {
     }
 }
 
-# --- Cache (for Celery & Performance) ---
+# --- Cache ---
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
@@ -92,7 +86,7 @@ CACHES = {
     }
 }
 
-# --- Celery (Async Tasks) ---
+# --- Celery ---
 CELERY_BROKER_URL = (
     f"redis://{os.environ.get('REDIS_HOST')}:{os.environ.get('REDIS_PORT')}/0"
 )
@@ -104,21 +98,14 @@ CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = "UTC"
 
-
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {
-        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
     },
-    {
-        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
-    },
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
 # --- Internationalization ---
@@ -127,30 +114,16 @@ TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
 
-
-# --- Static & Media Files (Using MinIO/S3) ---
+# --- Static Files ---
 STATIC_URL = "static/"
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 
-# Media files (uploads)
-DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
-AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
-AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
-AWS_STORAGE_BUCKET_NAME = os.environ.get("AWS_STORAGE_BUCKET_NAME")
-AWS_S3_ENDPOINT_URL = os.environ.get("AWS_S3_ENDPOINT_URL")
-AWS_S3_USE_SSL = os.environ.get("AWS_S3_USE_SSL") == "True"
-AWS_DEFAULT_ACL = os.environ.get("AWS_DEFAULT_ACL", "private")
-AWS_S3_OBJECT_PARAMETERS = {
-    "CacheControl": os.environ.get("AWS_S3_OBJECT_PARAMETERS", "max-age=86400")
-}
+# --- Media Files (Uploads) ---
+MEDIA_URL = "/media/"
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
-# --- CORS (Cross-Origin Resource Sharing) ---
-# --- THIS IS THE FIX ---
-
-# For debugging, we will allow ALL origins
+# --- CORS ---
 CORS_ALLOW_ALL_ORIGINS = True
-
-# We still need to allow the headers
 CORS_ALLOW_HEADERS = [
     "accept",
     "authorization",
@@ -160,13 +133,10 @@ CORS_ALLOW_HEADERS = [
     "x-requested-with",
 ]
 CORS_ALLOW_CREDENTIALS = True
-
-# And we still need to trust the origin for CSRF
 CSRF_TRUSTED_ORIGINS = [
     "https://skateplan.bradnet.net",
     "https://skateplan.skatecoach.ca",
 ]
-
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
@@ -183,21 +153,17 @@ REST_FRAMEWORK = {
 }
 
 # --- Custom User Model ---
-# Tell Django to use our new User model instead of its built-in one.
 AUTH_USER_MODEL = "api.User"
 
+# --- MinIO / S3 Configuration ---
 if os.getenv("USE_S3", "True") == "True":
     DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
-
-    # MinIO Connection Details (Matches your docker-compose service 'minio')
     AWS_ACCESS_KEY_ID = os.getenv("MINIO_ROOT_USER", "minioadmin")
     AWS_SECRET_ACCESS_KEY = os.getenv("MINIO_ROOT_PASSWORD", "minioadmin")
     AWS_STORAGE_BUCKET_NAME = "skateplan-media"
-    AWS_S3_ENDPOINT_URL = "http://minio:9000"  # Internal Docker URL
-    AWS_S3_USE_SSL = False  # Local dev uses HTTP
+    AWS_S3_ENDPOINT_URL = "http://minio:9000"
+    AWS_S3_USE_SSL = False
 
-    # Public URL generation (Browser needs localhost, not 'minio')
-    # You might need to adjust this port if you changed your docker-compose ports
+    # For local dev, use localhost. For prod, this should be your public domain.
     AWS_S3_CUSTOM_DOMAIN = "localhost:9000/skateplan-media"
-
-    AWS_QUERYSTRING_AUTH = False  # Generate clean public URLs
+    AWS_QUERYSTRING_AUTH = False

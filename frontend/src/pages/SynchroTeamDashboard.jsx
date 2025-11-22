@@ -14,7 +14,8 @@ import { LogsTab } from '@/components/dashboard/tabs/LogsTab';
 import { AnalyticsTab } from '@/components/dashboard/tabs/AnalyticsTab';
 import { HealthTab } from '@/components/dashboard/tabs/HealthTab';
 import { WeeklyPlanTab } from '@/components/dashboard/tabs/WeeklyPlanTab';
-import { SynchroRosterTab } from '@/components/dashboard/tabs/SynchroRosterTab'; // <--- New Tab
+import { SynchroRosterTab } from '@/components/dashboard/tabs/SynchroRosterTab';
+import { LogisticsTab } from '@/components/dashboard/tabs/LogisticsTab';
 
 export default function SynchroTeamDashboard() {
   const { token } = useAuth();
@@ -40,7 +41,7 @@ export default function SynchroTeamDashboard() {
 
   const tabs = [
       'roster', 'weekly', 'yearly', 'goals', 'programs', 
-      'competitions', 'logs', 'health', 'analytics'
+      'competitions', 'logs', 'health', 'logistics', 'analytics'
   ];
 
   return (
@@ -93,6 +94,7 @@ export default function SynchroTeamDashboard() {
         {activeTab === 'competitions' && <CompetitionsTab team={team} isSynchro={true}/>}
         {activeTab === 'logs' && <LogsTab team={team} isSynchro={true} />}
         {activeTab === 'health' && <HealthTab team={team} isSynchro={true} />}
+        {activeTab === 'logistics' && <LogisticsTab team={team} isSynchro={true} />}
         {activeTab === 'analytics' && <AnalyticsTab team={team} isSynchro={true}/>}
       </div>
     </div>

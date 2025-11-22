@@ -54,11 +54,22 @@ from .competitions import (
     ProgramListCreateView,
     ProgramDetailView,
     ProgramListCreateByTeamView,
-    SynchroProgramListCreateView,  # <--- ADD THIS
+    SynchroProgramListCreateView,
+    ProgramAssetCreateView,
+    ProgramAssetDestroyView,
 )
 from .dashboard import (
     CoachDashboardStatsView,
     SkaterStatsView,
     TeamStatsView,
     SynchroStatsView,
+)
+
+from .logistics import (
+    SynchroTripListCreateView,
+    TeamTripDetailView,
+    ItineraryListCreateView,
+    ItineraryDetailView,
+    HousingListCreateView,
+    HousingDetailView,
 )

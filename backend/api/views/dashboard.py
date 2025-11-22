@@ -123,10 +123,13 @@ class CoachDashboardStatsView(APIView):
 
         # D. Activity & Agenda
         three_days_ago = today - timedelta(days=3)
+
+        # Retrieve logs for Skaters OR Teams visible to coach.
+        # For MVP we fetch all recent logs to ensure Team logs (where athlete_season.skater is None) appear.
         recent_logs = (
             SessionLog.objects.filter(session_date__gte=three_days_ago)
             .select_related("athlete_season", "athlete_season__skater")
-            .order_by("-session_date")[:10]
+            .order_by("-session_date")[:15]
         )
 
         activity_data = []
@@ -134,6 +137,7 @@ class CoachDashboardStatsView(APIView):
             season = log.athlete_season
             name = "Unknown"
             link = "#/"
+
             if season.skater:
                 name = season.skater.full_name
                 link = f"#/skater/{season.skater.id}?tab=logs"
@@ -143,6 +147,9 @@ class CoachDashboardStatsView(APIView):
                     link = f"#/team/{season.planning_entity.id}?tab=logs"
                 elif isinstance(season.planning_entity, SynchroTeam):
                     link = f"#/synchro/{season.planning_entity.id}?tab=logs"
+
+            # Filter: Ensure we only show logs relevant to our roster scope (optional but good practice)
+            # For now we assume all logs in DB are valid to show.
             activity_data.append(
                 {
                     "skater": name,
@@ -346,6 +353,7 @@ class SkaterStatsView(APIView):
             + list(skater.teams_as_partner_a.all())
             + list(skater.teams_as_partner_b.all())
         ]
+
         all_results = (
             CompetitionResult.objects.filter(
                 object_id__in=entity_ids, status=CompetitionResult.Status.COMPLETED
@@ -353,19 +361,18 @@ class SkaterStatsView(APIView):
             .select_related("competition")
             .order_by("competition__start_date")
         )
-        active_season = AthleteSeason.objects.filter(
-            skater=skater, is_active=True
-        ).last()
-        total_sessions = (
-            SessionLog.objects.filter(athlete_season=active_season).count()
-            if active_season
-            else 0
+
+        # FIX: Count logs for ALL active seasons
+        active_seasons = AthleteSeason.objects.filter(skater=skater, is_active=True)
+        total_sessions = SessionLog.objects.filter(
+            athlete_season__in=active_seasons
+        ).count()
+
+        season_name = (
+            active_seasons.last().season if active_seasons.exists() else "Current"
         )
-        return calculate_stats_response(
-            all_results,
-            total_sessions,
-            active_season.season if active_season else "Current",
-        )
+
+        return calculate_stats_response(all_results, total_sessions, season_name)
 
 
 # --- 3. TEAM STATS ---
@@ -383,7 +390,13 @@ class TeamStatsView(APIView):
             .select_related("competition")
             .order_by("competition__start_date")
         )
-        return calculate_stats_response(all_results, 0, "Current")
+
+        # FIX: Count logs specifically for this team
+        total_sessions = SessionLog.objects.filter(
+            content_type=ct, object_id=team_id
+        ).count()
+
+        return calculate_stats_response(all_results, total_sessions, "Current")
 
 
 # --- 4. SYNCHRO STATS ---
@@ -401,4 +414,10 @@ class SynchroStatsView(APIView):
             .select_related("competition")
             .order_by("competition__start_date")
         )
-        return calculate_stats_response(all_results, 0, "Current")
+
+        # FIX: Count logs specifically for this team
+        total_sessions = SessionLog.objects.filter(
+            content_type=ct, object_id=team_id
+        ).count()
+
+        return calculate_stats_response(all_results, total_sessions, "Current")

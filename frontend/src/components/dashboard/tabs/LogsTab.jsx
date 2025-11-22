@@ -5,21 +5,31 @@ import { Card, CardContent } from '@/components/ui/card';
 import { LogSessionModal } from '@/components/dashboard/LogSessionModal';
 import { Calendar, Star, Zap } from 'lucide-react';
 
+function TravelSummary({ segments }) {
+    if (!segments || segments.length === 0) return <span className="text-gray-400 italic">No travel booked</span>;
+    
+    return (
+        <div className="space-y-2">
+            {segments.map((seg, i) => (
+                <div key={i} className="flex items-center gap-2 text-sm text-gray-800 bg-white p-1.5 rounded border">
+                    <span className="font-bold text-xs bg-slate-100 px-1.5 py-0.5 rounded">{seg.type}</span>
+                    <span className="font-medium">{seg.carrier} {seg.number}</span>
+                    {seg.dep_time && <span className="text-xs text-gray-500">({seg.dep_time} - {seg.arr_time})</span>}
+                </div>
+            ))}
+        </div>
+    );
+}
+
 export function LogsTab({ skater, team, isSynchro }) {
   const { token } = useAuth();
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // --- DYNAMIC URL SELECTION ---
   let fetchUrl = '';
-  if (isSynchro) {
-      fetchUrl = `/synchro/${team.id}/logs/`;
-  } else if (team) {
-      fetchUrl = `/teams/${team.id}/logs/`;
-  } else if (skater) {
-      fetchUrl = `/skaters/${skater.id}/logs/`;
-  }
-  // -----------------------------
+  if (isSynchro) fetchUrl = `/synchro/${team.id}/logs/`;
+  else if (team) fetchUrl = `/teams/${team.id}/logs/`;
+  else fetchUrl = `/skaters/${skater.id}/logs/`;
 
   const fetchLogs = async () => {
     if (!fetchUrl) return;
@@ -27,101 +37,73 @@ export function LogsTab({ skater, team, isSynchro }) {
       setLoading(true);
       const data = await apiRequest(fetchUrl, 'GET', null, token);
       setLogs(data || []);
-    } catch (err) {
-      console.error("Failed to load logs", err);
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { console.error("Failed to load logs", err); } 
+    finally { setLoading(false); }
   };
 
-  useEffect(() => {
-    if (skater || team) fetchLogs();
-  }, [skater, team, isSynchro, token]);
+  useEffect(() => { if (skater || team) fetchLogs(); }, [skater, team, isSynchro, token]);
 
   if (loading) return <div className="p-8 text-center">Loading history...</div>;
 
   return (
     <div className="space-y-6">
-      
       <div className="flex justify-between items-center">
         <div>
             <h3 className="text-lg font-semibold">Training Logs</h3>
             <p className="text-sm text-muted-foreground">History of all sessions</p>
         </div>
-        <LogSessionModal 
-            skater={skater} 
-            team={team} 
-            isSynchro={isSynchro} // Pass down to modal so it knows where to POST
-            onLogCreated={fetchLogs} 
-        />
+        <LogSessionModal skater={skater} team={team} isSynchro={isSynchro} onLogCreated={fetchLogs} />
       </div>
 
       <div className="space-y-4">
           {logs.length === 0 ? (
-             <div className="text-center p-12 border-2 border-dashed rounded-lg text-muted-foreground">
-                No logs recorded yet.
-             </div>
+             <div className="text-center p-12 border-2 border-dashed rounded-lg text-muted-foreground">No logs recorded yet.</div>
           ) : (
              logs.map((log) => (
-                 <Card key={log.id} className="hover:border-brand-blue transition-colors">
-                     <CardContent className="p-4">
-                        <div className="flex flex-col md:flex-row justify-between gap-4">
-                            
-                            {/* Meta Info */}
-                            <div className="min-w-[200px] space-y-2">
-                                <div className="flex items-center gap-2 font-semibold text-gray-900">
-                                    <Calendar className="h-4 w-4 text-brand-blue" />
-                                    {new Date(log.session_date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
-                                </div>
-                                
-                                <div className="flex gap-0.5" title="Session Quality">
-                                    {[1, 2, 3, 4, 5].map((star) => (
-                                        <Star 
-                                            key={star}
-                                            className={`h-4 w-4 ${star <= (log.session_rating || 0) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-200'}`} 
-                                        />
-                                    ))}
-                                </div>
-
-                                <div className="text-xs text-muted-foreground flex items-center gap-2">
-                                    <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-600">{log.discipline_name}</span>
-                                </div>
-                            </div>
-
-                            {/* Wellbeing Panel */}
-                            <div className="min-w-[180px] p-2 bg-slate-50 rounded border text-sm flex flex-col gap-2">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-xs font-semibold text-gray-500 uppercase">Energy</span>
-                                    <div className="flex gap-0.5">
-                                        {[1, 2, 3, 4, 5].map((val) => (
-                                            <Zap 
-                                                key={val}
-                                                className={`h-3 w-3 ${val <= (log.energy_stamina || 0) ? 'fill-blue-400 text-blue-400' : 'text-gray-300'}`} 
-                                            />
-                                        ))}
+                 /* --- WRAP CARD IN MODAL --- */
+                 <LogSessionModal 
+                     key={log.id}
+                     skater={skater} 
+                     team={team} 
+                     isSynchro={isSynchro}
+                     logToEdit={log} // <--- Pass existing data
+                     onLogCreated={fetchLogs}
+                     trigger={
+                         <Card className="hover:border-brand-blue transition-colors cursor-pointer">
+                             <CardContent className="p-4">
+                                <div className="flex flex-col md:flex-row justify-between gap-4">
+                                    <div className="min-w-[200px] space-y-2">
+                                        <div className="flex items-center gap-2 font-semibold text-gray-900">
+                                            <Calendar className="h-4 w-4 text-brand-blue" />
+                                            {new Date(log.session_date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                                        </div>
+                                        <div className="flex gap-0.5">
+                                            {[1, 2, 3, 4, 5].map((star) => (<Star key={star} className={`h-4 w-4 ${star <= (log.session_rating || 0) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-200'}`} />))}
+                                        </div>
+                                        <span className="text-xs bg-slate-100 px-2 py-0.5 rounded text-slate-600">{log.discipline_name}</span>
+                                    </div>
+                                    <div className="min-w-[180px] p-2 bg-slate-50 rounded border text-sm flex flex-col gap-2">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs font-semibold text-gray-500 uppercase">Energy</span>
+                                            <div className="flex gap-0.5">{[1, 2, 3, 4, 5].map((val) => (<Zap key={val} className={`h-3 w-3 ${val <= (log.energy_stamina || 0) ? 'fill-blue-400 text-blue-400' : 'text-gray-300'}`} />))}</div>
+                                        </div>
+                                        <div className="flex items-center gap-2 border-t border-slate-200 pt-2 mt-1">
+                                            <span className="text-xl">{log.sentiment_emoji || "🙂"}</span>
+                                            <span className="text-xs text-gray-600 italic leading-tight">{log.wellbeing_mental_focus_notes || "No focus notes"}</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex-1 text-sm text-gray-700 border-l pl-4">
+                                        <span className="font-semibold text-gray-900 block mb-1">Notes:</span>
+                                        <p className="whitespace-pre-wrap text-slate-600">{log.coach_notes || "No notes."}</p>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2 border-t border-slate-200 pt-2 mt-1">
-                                    <span className="text-xl">{log.sentiment_emoji || "🙂"}</span>
-                                    <span className="text-xs text-gray-600 italic leading-tight">
-                                        {log.wellbeing_mental_focus_notes || "No focus notes"}
-                                    </span>
-                                </div>
-                            </div>
-
-                            {/* Notes */}
-                            <div className="flex-1 text-sm text-gray-700 border-l pl-4">
-                                <span className="font-semibold text-gray-900 block mb-1">Notes:</span>
-                                <p className="whitespace-pre-wrap text-slate-600">{log.coach_notes || "No notes."}</p>
-                            </div>
-                            
-                        </div>
-                     </CardContent>
-                 </Card>
+                             </CardContent>
+                         </Card>
+                     }
+                 />
              ))
           )}
       </div>
-
     </div>
   );
 }

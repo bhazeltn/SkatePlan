@@ -20,6 +20,7 @@ class SessionLogSerializer(serializers.ModelSerializer):
             "wellbeing_mental_focus_notes",
             "coach_notes",
             "skater_notes",
+            "attendance",
             "jump_focus",
             "spin_focus",
             "synchro_element_focus",

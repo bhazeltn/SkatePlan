@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from api.models import Competition, CompetitionResult, SkaterTest, Program
+from api.models import Competition, CompetitionResult, SkaterTest, Program, ProgramAsset
 import json
 
 
@@ -61,7 +61,15 @@ class SkaterTestSerializer(serializers.ModelSerializer):
         )
 
 
+class ProgramAssetSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProgramAsset
+        fields = "__all__"
+
+
 class ProgramSerializer(serializers.ModelSerializer):
+    assets = ProgramAssetSerializer(many=True, read_only=True)  # <--- Nested list
+
     class Meta:
         model = Program
         fields = (
@@ -75,9 +83,7 @@ class ProgramSerializer(serializers.ModelSerializer):
             "est_base_value",
             "is_active",
             "music_file",
-            "costume_design",
-            "costume_photo",
-            "hair_photo",
+            "assets",  # <--- Changed fields
         )
 
     # --- FIX: Parse JSON strings from FormData ---

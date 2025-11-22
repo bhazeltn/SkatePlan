@@ -7,11 +7,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { DatePicker } from '@/components/ui/date-picker';
-import { Search, Plus, MapPin, Trash2, ChevronDown, ChevronUp, Video } from 'lucide-react';
+import { Search, Plus, MapPin, Trash2, ChevronDown, ChevronUp, Video, FileText, Paperclip } from 'lucide-react';
 import { Country, State, City } from 'country-state-city';
 import { ProtocolEditor } from './ProtocolEditor';
 
 export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved, trigger }) {
+  // ... (Existing State) ...
   const [open, setOpen] = useState(false);
   const { token } = useAuth();
   
@@ -48,6 +49,7 @@ export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved,
 
   // Files
   const [detailSheet, setDetailSheet] = useState(null);
+  const [currentDetailSheet, setCurrentDetailSheet] = useState(null); // <--- New
   const [videoUrl, setVideoUrl] = useState('');
 
   // Init / Reset
@@ -57,7 +59,6 @@ export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved,
               setStep('LOG');
               setSelectedComp(resultToEdit.competition);
               if (resultToEdit.object_id) setSelectedEntityId(resultToEdit.object_id);
-              
               setStatus(resultToEdit.status);
               setLevel(resultToEdit.level || '');
               setPlacement(resultToEdit.placement || '');
@@ -65,26 +66,23 @@ export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved,
               setNotes(resultToEdit.notes || '');
               setSegments(resultToEdit.segment_scores || []);
               setVideoUrl(resultToEdit.video_url || '');
-              setDetailSheet(null); // Files cannot be pre-filled
+              
+              setCurrentDetailSheet(resultToEdit.detail_sheet); // Load existing
+              setDetailSheet(null); 
           } else {
               setStep('SEARCH');
               setSelectedComp(null);
               if (team) setSelectedEntityId(team.id);
               else if (skater?.planning_entities?.length > 0) setSelectedEntityId(skater.planning_entities[0].id);
-              
-              setStatus('COMPLETED'); // Default to Completed so fields show
-              setLevel('');
-              setPlacement('');
-              setOverallScore('');
-              setNotes('');
-              setSegments([]);
-              setVideoUrl('');
-              setDetailSheet(null);
+              setStatus('COMPLETED');
+              setLevel(''); setPlacement(''); setOverallScore(''); setNotes(''); setSegments([]);
+              setVideoUrl(''); 
+              setCurrentDetailSheet(null); setDetailSheet(null);
           }
       }
   }, [open, resultToEdit, skater, team]);
 
-  // Auto-Calculate Total Score
+  // ... (Auto Calc Effect) ...
   useEffect(() => {
       if (segments.length > 0 && status === 'COMPLETED') {
           const total = segments.reduce((sum, seg) => sum + (parseFloat(seg.score) || 0), 0);
@@ -92,72 +90,17 @@ export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved,
       }
   }, [segments, status]);
 
-  // --- HANDLERS ---
-
-  const handleSearch = async () => {
-      setLoading(true); setError(null);
-      try {
-          const data = await apiRequest(`/competitions/?search=${searchTerm}`, 'GET', null, token);
-          setSearchResults(data || []);
-      } catch(e) { console.error(e); } 
-      finally { setLoading(false); }
-  };
-
-  const handleCreate = async () => {
-      setLoading(true); setError(null);
-      try {
-          const data = await apiRequest('/competitions/', 'POST', {
-              title: newTitle,
-              country: countryCode,
-              province_state: stateCode,
-              city: cityName,
-              start_date: start,
-              end_date: end
-          }, token);
-          setSelectedComp(data);
-          setStep('LOG');
-      } catch (e) { setError("Failed to create event (Duplicate?)."); } 
-      finally { setLoading(false); }
-  };
-
-  // Segment Logic
-  const addSegment = () => {
-      setSegments([...segments, { 
-          id: Date.now(), 
-          name: 'Short Program', 
-          score: '', 
-          tes: '', 
-          pcs: '', 
-          pcs_composition: '', 
-          pcs_presentation: '', 
-          pcs_skills: '', 
-          deductions: '', 
-          bonus: '', 
-          placement: '', 
-          protocol: [] 
-      }]);
-  };
-  
+  // ... (Search/Create/Segment Handlers same as before) ...
+  const handleSearch = async () => { setLoading(true); setError(null); try { const data = await apiRequest(`/competitions/?search=${searchTerm}`, 'GET', null, token); setSearchResults(data || []); } catch(e) { console.error(e); } finally { setLoading(false); } };
+  const handleCreate = async () => { setLoading(true); setError(null); try { const data = await apiRequest('/competitions/', 'POST', { title: newTitle, country: countryCode, province_state: stateCode, city: cityName, start_date: start, end_date: end }, token); setSelectedComp(data); setStep('LOG'); } catch (e) { setError("Failed/Duplicate"); } finally { setLoading(false); } };
+  const addSegment = () => { setSegments([...segments, { id: Date.now(), name: 'Short Program', score: '', tes: '', pcs: '', pcs_composition: '', pcs_presentation: '', pcs_skills: '', deductions: '', bonus: '', placement: '', protocol: [] }]); };
   const removeSegment = (id) => setSegments(segments.filter(s => s.id !== id));
   const updateSegment = (id, field, value) => setSegments(segments.map(s => s.id === id ? { ...s, [field]: value } : s));
-  
-  // Toggles
   const togglePCS = (id) => setExpandedPCS(expandedPCS === id ? null : id);
   const toggleProtocol = (id) => setExpandedProtocol(expandedProtocol === id ? null : id);
-  
-  const updateProtocol = (id, newProto) => {
-      const updated = segments.map(s => {
-          if (s.id === id) {
-              // Optional: Auto-calc TES from protocol sum?
-              // For now just save the protocol data
-              return { ...s, protocol: newProto };
-          }
-          return s;
-      });
-      setSegments(updated);
-  };
+  const updateProtocol = (id, newProto) => { const updated = segments.map(s => s.id === id ? { ...s, protocol: newProto } : s); setSegments(updated); };
 
-  // --- SAVE LOGIC (FormData) ---
+  // --- SAVE LOGIC ---
   const saveResult = async () => {
       const formData = new FormData();
       formData.append('competition_id', selectedComp.id);
@@ -171,11 +114,9 @@ export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved,
       if (status === 'COMPLETED') {
           formData.append('placement', placement);
           formData.append('total_score', overallScore);
-          // JSON.stringify ensures complex segment data survives FormData
           formData.append('segment_scores', JSON.stringify(segments));
       }
 
-      // Dynamic Endpoint Selection
       if (resultToEdit) {
           await apiRequest(`/results/${resultToEdit.id}/`, 'PATCH', formData, token);
       } else if (isSynchro) {
@@ -191,34 +132,59 @@ export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved,
 
   const handleSave = async () => {
       setLoading(true);
-      try {
-          await saveResult();
-          setOpen(false);
-      } catch (e) { 
-          console.error(e);
-          alert("Failed to save: " + (e.message || "Unknown error")); 
-      } finally { setLoading(false); }
+      try { await saveResult(); setOpen(false); } 
+      catch (e) { console.error(e); alert("Failed to save: " + (e.message || "Unknown error")); } 
+      finally { setLoading(false); }
   };
 
   const handleSaveAndAdd = async () => {
       setLoading(true);
       try {
           await saveResult();
-          // Reset result fields but keep competition context
           setLevel(''); setPlacement(''); setOverallScore(''); setNotes(''); 
           setSegments([]); setDetailSheet(null); setVideoUrl('');
           alert("Result saved! Ready for next entry.");
-      } catch (e) { 
-          console.error(e);
-          alert("Failed to save: " + (e.message || "Unknown error")); 
-      } finally { setLoading(false); }
+      } catch (e) { console.error(e); alert("Failed to save: " + (e.message || "Unknown error")); } 
+      finally { setLoading(false); }
   };
 
-  // --- RENDER HELPERS ---
+  // --- NEW: DELETE FILE HANDLER ---
+  const handleDeleteSheet = async () => {
+      if (!confirm("Remove protocol sheet?")) return;
+      setLoading(true);
+      try {
+          const formData = new FormData();
+          formData.append('detail_sheet', ''); // Clear file
+          await apiRequest(`/results/${resultToEdit.id}/`, 'PATCH', formData, token);
+          
+          setCurrentDetailSheet(null);
+          if (onSaved) onSaved();
+      } catch (e) { alert("Failed to remove file."); }
+      finally { setLoading(false); }
+  };
+
+  // --- HELPER: FILE PREVIEW WITH DELETE ---
+  const FilePreview = ({ url }) => {
+      if (!url) return null;
+      const filename = url.split('/').pop().split('?')[0];
+      return (
+          <div className="flex items-center justify-between mb-2 text-xs bg-blue-50 p-2 rounded border border-blue-100">
+              <div className="flex items-center gap-2 overflow-hidden">
+                  <Paperclip className="h-3 w-3 text-blue-600 flex-shrink-0" />
+                  <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-700 hover:underline truncate" title={filename}>
+                      {filename}
+                  </a>
+              </div>
+              <Button type="button" variant="ghost" size="sm" className="h-5 w-5 p-0 text-red-400 hover:text-red-600" onClick={handleDeleteSheet}>
+                  <Trash2 className="h-3 w-3" />
+              </Button>
+          </div>
+      );
+  };
+
+  // ... (renderLocationSelectors same as before) ...
   const renderLocationSelectors = () => {
-      const countries = Country.getAllCountries();
-      const states = State.getStatesOfCountry(countryCode);
-      const cities = City.getCitiesOfState(countryCode, stateCode);
+      const countries = Country.getAllCountries(); const states = State.getStatesOfCountry(countryCode); const cities = City.getCitiesOfState(countryCode, stateCode);
       return (
           <div className="space-y-3 p-3 bg-slate-50 rounded border">
              <div className="grid grid-cols-2 gap-2">
@@ -269,7 +235,7 @@ export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved,
                                       <div><Label className="text-xs text-red-500">Ded</Label><Input className="h-8 bg-white text-red-600" type="number" step="0.01" value={seg.deductions} onChange={(e) => updateSegment(seg.id, 'deductions', e.target.value)} /></div>
                                       <div><Label className="text-xs text-green-600">Bon</Label><Input className="h-8 bg-white text-green-600" type="number" step="0.01" value={seg.bonus} onChange={(e) => updateSegment(seg.id, 'bonus', e.target.value)} /></div>
                                   </div>
-
+                                  
                                   {/* --- PCS DETAILS TOGGLE --- */}
                                   <div className="mt-2">
                                       <Button type="button" variant="ghost" size="sm" className="h-5 text-[10px] text-slate-500" onClick={() => togglePCS(seg.id)}>{expandedPCS === seg.id ? "Hide PCS Details" : "Show PCS Details"}</Button>
@@ -295,9 +261,12 @@ export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved,
               </>
           )}
 
-          {/* Files Section */}
           <div className="grid grid-cols-2 gap-4 pt-2 border-t">
-              <div className="space-y-2"><Label>Protocol / Detail Sheet</Label><Input type="file" className="text-xs h-9" onChange={(e) => setDetailSheet(e.target.files[0])} /></div>
+              <div className="space-y-2">
+                  <Label>Protocol / Detail Sheet</Label>
+                  <FilePreview url={currentDetailSheet} />
+                  <Input type="file" className="text-xs h-9" onChange={(e) => setDetailSheet(e.target.files[0])} />
+              </div>
               <div className="space-y-2"><Label>Video URL</Label><div className="relative"><Video className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" /><Input className="pl-8" value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} placeholder="https://..." /></div></div>
           </div>
 

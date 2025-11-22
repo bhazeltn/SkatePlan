@@ -25,4 +25,11 @@ from .competitions import (
     CompetitionResultSerializer,
     SkaterTestSerializer,
     ProgramSerializer,
+    ProgramAssetSerializer,
+)
+
+from .logistics import (
+    TeamTripSerializer,
+    ItineraryItemSerializer,
+    HousingAssignmentSerializer,
 )

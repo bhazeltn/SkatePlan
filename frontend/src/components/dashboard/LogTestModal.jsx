@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { DatePicker } from '@/components/ui/date-picker';
-import { Plus, ChevronLeft, Video, FileText } from 'lucide-react';
+import { Plus, ChevronLeft, Video, FileText, Trash2 } from 'lucide-react'; // Added Trash2
 
 const DEFAULT_TYPES = ['Skills', 'Freeskate', 'Dance', 'Artistic'];
 
@@ -25,8 +25,9 @@ export function LogTestModal({ skater, testToEdit, onSaved, trigger }) {
   const [result, setResult] = useState('Pass');
   const [notes, setNotes] = useState('');
 
-  // NEW STATE
-  const [testSheet, setTestSheet] = useState(null);
+  // Files
+  const [testSheet, setTestSheet] = useState(null); // New upload
+  const [currentTestSheet, setCurrentTestSheet] = useState(null); // Existing file URL
   const [videoUrl, setVideoUrl] = useState('');
 
   useEffect(() => {
@@ -46,17 +47,15 @@ export function LogTestModal({ skater, testToEdit, onSaved, trigger }) {
               setResult(testToEdit.result || 'Pass');
               setNotes(testToEdit.evaluator_notes || '');
               setVideoUrl(testToEdit.video_url || '');
-              setTestSheet(null); // Clear file input
+              
+              setCurrentTestSheet(testToEdit.test_sheet); // Load existing
+              setTestSheet(null); 
           } else {
-              setTestType('Skills');
-              setIsCustomType(false);
-              setTestName('');
+              setTestType('Skills'); setIsCustomType(false); setTestName('');
               setTestDate(new Date().toISOString().split('T')[0]);
-              setStatus('COMPLETED');
-              setResult('Pass');
-              setNotes('');
-              setVideoUrl('');
-              setTestSheet(null);
+              setStatus('COMPLETED'); setResult('Pass'); setNotes('');
+              setVideoUrl(''); 
+              setCurrentTestSheet(null); setTestSheet(null);
           }
       }
   }, [open, testToEdit]);
@@ -82,8 +81,10 @@ export function LogTestModal({ skater, testToEdit, onSaved, trigger }) {
           
           if (onSaved) onSaved();
           setOpen(false);
-      } catch (e) { alert("Failed to save test."); }
-      finally { setLoading(false); }
+      } catch (e) { 
+          console.error(e);
+          alert("Failed to save test: " + (e.message || "Unknown error")); 
+      } finally { setLoading(false); }
   };
 
   const handleDelete = async () => {
@@ -97,6 +98,40 @@ export function LogTestModal({ skater, testToEdit, onSaved, trigger }) {
       finally { setLoading(false); }
   }
 
+  // --- NEW: DELETE FILE HANDLER ---
+  const handleDeleteSheet = async () => {
+      if (!confirm("Remove test sheet?")) return;
+      setLoading(true);
+      try {
+          const formData = new FormData();
+          formData.append('test_sheet', ''); // Clear file
+          await apiRequest(`/tests/${testToEdit.id}/`, 'PATCH', formData, token);
+          
+          setCurrentTestSheet(null);
+          if (onSaved) onSaved();
+      } catch (e) { alert("Failed to remove file."); }
+      finally { setLoading(false); }
+  };
+
+  // --- UPDATED HELPER ---
+  const FilePreview = ({ url }) => {
+      if (!url) return null;
+      const filename = url.split('/').pop().split('?')[0];
+      return (
+          <div className="flex items-center justify-between mb-2 text-xs bg-blue-50 p-2 rounded border border-blue-100">
+              <div className="flex items-center gap-2 overflow-hidden">
+                  <FileText className="h-3 w-3 text-blue-600 flex-shrink-0" />
+                  <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-700 hover:underline truncate" title={filename}>
+                      {filename}
+                  </a>
+              </div>
+              <Button type="button" variant="ghost" size="sm" className="h-5 w-5 p-0 text-red-400 hover:text-red-600" onClick={handleDeleteSheet}>
+                  <Trash2 className="h-3 w-3" />
+              </Button>
+          </div>
+      );
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -109,7 +144,6 @@ export function LogTestModal({ skater, testToEdit, onSaved, trigger }) {
         
         <div className="space-y-4">
             
-            {/* Category & Name (Keep same) */}
             <div className="grid grid-cols-3 gap-4">
                 <div className="col-span-1 space-y-2">
                     <Label>Category</Label>
@@ -126,7 +160,7 @@ export function LogTestModal({ skater, testToEdit, onSaved, trigger }) {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2"><Label>Status</Label><select className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm" value={status} onChange={(e) => setStatus(e.target.value)}><option value="PLANNED">Planned</option><option value="SCHEDULED">Scheduled</option><option value="COMPLETED">Completed</option><option value="WITHDRAWN">Withdrawn</option></select></div>
+                <div className="space-y-2"><Label>Status</Label><select className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm" value={status} onChange={(e) => setStatus(e.target.value)}><option value="COMPLETED">Completed</option><option value="PLANNED">Planned</option><option value="SCHEDULED">Scheduled</option><option value="WITHDRAWN">Withdrawn</option></select></div>
                 <div className="space-y-2"><Label>Date</Label><DatePicker date={testDate} setDate={setTestDate} placeholder="Select Date" /></div>
             </div>
 
@@ -137,10 +171,11 @@ export function LogTestModal({ skater, testToEdit, onSaved, trigger }) {
                 </div>
             )}
 
-            {/* --- NEW FILE INPUTS --- */}
+            {/* --- FILES SECTION --- */}
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                     <Label>Test Sheet (PDF)</Label>
+                    <FilePreview url={currentTestSheet} />
                     <Input type="file" accept="application/pdf,image/*" className="h-9 text-xs" onChange={(e) => setTestSheet(e.target.files[0])} />
                 </div>
                 <div className="space-y-2">
@@ -151,7 +186,6 @@ export function LogTestModal({ skater, testToEdit, onSaved, trigger }) {
                     </div>
                 </div>
             </div>
-            {/* ----------------------- */}
 
             <div className="space-y-2"><Label>Notes / Feedback</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Evaluator feedback..." /></div>
             <div className="flex justify-between pt-2">{testToEdit && <Button variant="destructive" onClick={handleDelete} disabled={loading}>Delete</Button>}<Button onClick={handleSave} disabled={loading} className={!testToEdit ? "w-full" : ""}>Save Record</Button></div>

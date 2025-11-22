@@ -15,12 +15,14 @@ from api.models import (
     SoloDanceEntity,
     Team,
     SynchroTeam,
+    ProgramAsset,
 )
 from api.serializers import (
     CompetitionSerializer,
     CompetitionResultSerializer,
     SkaterTestSerializer,
     ProgramSerializer,
+    ProgramAssetSerializer,
 )
 from api.permissions import IsCoachUser
 
@@ -248,3 +250,19 @@ class SynchroProgramListCreateView(generics.ListCreateAPIView):
         team_id = self.kwargs["team_id"]
         ct = ContentType.objects.get_for_model(SynchroTeam)
         serializer.save(content_type=ct, object_id=team_id)
+
+
+class ProgramAssetCreateView(generics.CreateAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    serializer_class = ProgramAssetSerializer
+
+    def perform_create(self, serializer):
+        program_id = self.kwargs["program_id"]
+        program = Program.objects.get(id=program_id)
+        serializer.save(program=program)
+
+
+class ProgramAssetDestroyView(generics.DestroyAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    serializer_class = ProgramAssetSerializer
+    queryset = ProgramAsset.objects.all()

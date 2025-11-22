@@ -83,4 +83,14 @@ urlpatterns = [
         views.SynchroCompetitionResultListCreateView.as_view(),
     ),
     path("synchro/<int:team_id>/stats/", views.SynchroStatsView.as_view()),
+    path("programs/<int:program_id>/assets/", views.ProgramAssetCreateView.as_view()),
+    path("assets/<int:pk>/", views.ProgramAssetDestroyView.as_view()),
+    # Synchro Logistics
+    path("synchro/<int:team_id>/trips/", views.SynchroTripListCreateView.as_view()),
+    # Shared Detail Views (Trip / Itinerary / Housing)
+    path("trips/<int:pk>/", views.TeamTripDetailView.as_view()),
+    path("trips/<int:trip_id>/itinerary/", views.ItineraryListCreateView.as_view()),
+    path("itinerary/<int:pk>/", views.ItineraryDetailView.as_view()),
+    path("trips/<int:trip_id>/housing/", views.HousingListCreateView.as_view()),
+    path("housing/<int:pk>/", views.HousingDetailView.as_view()),
 ]

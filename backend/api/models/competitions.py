@@ -139,12 +139,8 @@ class SkaterTest(models.Model):
 
 
 class Program(models.Model):
-    """
-    Defines a specific competitive program.
-    """
-
     id = models.AutoField(primary_key=True)
-
+    # ... (Keep Links, Title, Season, Category) ...
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
     object_id = models.PositiveIntegerField()
     planning_entity = GenericForeignKey("content_type", "object_id")
@@ -166,23 +162,41 @@ class Program(models.Model):
 
     music_title = models.CharField(max_length=255, blank=True, null=True)
     choreographer = models.CharField(max_length=255, blank=True, null=True)
-    planned_elements = models.JSONField(default=list, blank=True)
-    est_base_value = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
-    is_active = models.BooleanField(default=True)
 
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    # The cut music file (.mp3, .wav)
+    # Keep Music here as the "Master Track"
     music_file = models.FileField(upload_to="programs/music/", blank=True, null=True)
 
-    # Design assets
-    costume_design = models.FileField(
-        upload_to="programs/design/", blank=True, null=True, help_text="Sketch or PDF"
-    )
-    costume_photo = models.ImageField(
-        upload_to="programs/photos/", blank=True, null=True, help_text="Final look"
-    )
-    hair_photo = models.ImageField(upload_to="programs/photos/", blank=True, null=True)
+    est_base_value = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
+    planned_elements = models.JSONField(default=list, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.title} ({self.season})"
+
+
+class ProgramAsset(models.Model):
+    """
+    Multiple files for a program (Costume photos, sketches, hair ideas, etc.)
+    """
+
+    id = models.AutoField(primary_key=True)
+    program = models.ForeignKey(
+        Program, on_delete=models.CASCADE, related_name="assets"
+    )
+
+    file = models.FileField(upload_to="programs/assets/")
+
+    class AssetType(models.TextChoices):
+        COSTUME = "COSTUME", "Costume"
+        HAIR_MAKEUP = "HAIR", "Hair & Makeup"
+        DESIGN = "DESIGN", "Design/Sketch"
+        OTHER = "OTHER", "Other"
+
+    asset_type = models.CharField(
+        max_length=20, choices=AssetType.choices, default=AssetType.OTHER
+    )
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.asset_type} for {self.program.title}"

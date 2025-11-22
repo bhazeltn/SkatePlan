@@ -14,4 +14,12 @@ from .skaters import (
 )
 from .planning import AthleteSeason, YearlyPlan, Macrocycle, WeeklyPlan, Goal
 from .logs import SessionLog, InjuryLog, MeetingLog
-from .competitions import Competition, CompetitionResult, SkaterTest, Program
+from .competitions import (
+    Competition,
+    CompetitionResult,
+    SkaterTest,
+    Program,
+    ProgramAsset,
+)
+
+from .logistics import TeamTrip, ItineraryItem, HousingAssignment

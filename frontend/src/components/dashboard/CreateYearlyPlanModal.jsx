@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/AuthContext';
 import { apiRequest } from '@/api';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { DatePicker } from '@/components/ui/date-picker';
 import { AlertCircle } from 'lucide-react';
 
-export function CreateYearlyPlanModal({ skater, team, onPlanCreated }) {
+export function CreateYearlyPlanModal({ skater, team, isSynchro, onPlanCreated }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -33,19 +33,21 @@ export function CreateYearlyPlanModal({ skater, team, onPlanCreated }) {
       
       // 1. Initialize Discipline Selection
       if (team) {
-          // If Team, value is fixed (Team ID | 'Team')
-          setSelectedValue(`${team.id}|Team`);
+          // If Team, value is fixed. We construct a dummy ID|Type for the logic,
+          // though the specific Team Views often infer this from the URL ID.
+          setSelectedValue(`${team.id}|${isSynchro ? 'SynchroTeam' : 'Team'}`);
       } else if (skater?.planning_entities?.length > 0) {
-          // If Skater, default to first
+          // If Skater, default to first available discipline
           const def = skater.planning_entities[0];
           setSelectedValue(`${def.id}|${def.type}`);
       }
 
-      // 2. Fetch Seasons (Only for Individual Skaters for now)
-      // For Teams, merging two season lists is complex, so we default to "Create New" or just list Partner A's.
-      // Simplest MVP: If Team, force "Create New / Manual Name" or fetch Partner A.
-      const fetchTargetId = team ? team.partner_a : skater?.id;
-      
+      // 2. Fetch Seasons Logic
+      // Only fetch existing seasons for individual skaters.
+      // For Teams/Synchro, we force "Create New" mode to avoid complexity with merging partners' seasons.
+      let fetchTargetId = null;
+      if (!team && !isSynchro) fetchTargetId = skater?.id;
+
       if (fetchTargetId) {
           const fetchSeasons = async () => {
             try {
@@ -60,27 +62,31 @@ export function CreateYearlyPlanModal({ skater, team, onPlanCreated }) {
             } catch (e) { console.error(e); }
           };
           fetchSeasons();
+      } else {
+          // --- TEAM/SYNCHRO DEFAULT ---
+          setSelectedSeasonMode('new'); // Force new mode so inputs show!
+          setSeasons([]);
       }
 
-      // Auto-fill next season name
+      // Auto-fill next season name (e.g. "2026-2027")
       const nextYear = new Date().getFullYear() + 1;
       setNewSeasonName(`${nextYear}-${nextYear + 1}`);
     }
-  }, [open, skater, team, token]);
+  }, [open, skater, team, isSynchro, token]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
 
-    if (!selectedValue) return setError("Please select a discipline.");
+    // Only enforce discipline selection if not a team (Teams are the discipline)
+    if (!team && !selectedValue) return setError("Please select a discipline.");
 
     // Validation
     if (selectedSeasonMode === 'new') {
         if (!newSeasonName) return setError("Please enter a season name.");
-        // Dates are optional but recommended
     }
 
-    const [entityId, entityType] = selectedValue.split('|');
+    const [entityId, entityType] = selectedValue ? selectedValue.split('|') : [null, null];
     setLoading(true);
 
     try {
@@ -97,8 +103,12 @@ export function CreateYearlyPlanModal({ skater, team, onPlanCreated }) {
          payload.season_id = selectedSeasonId;
       }
       
-      // Dynamic URL
-      const url = team ? `/teams/${team.id}/ytps/` : `/skaters/${skater.id}/ytps/`;
+      // --- DYNAMIC URL ---
+      let url = '';
+      if (isSynchro) url = `/synchro/${team.id}/ytps/`;
+      else if (team) url = `/teams/${team.id}/ytps/`;
+      else url = `/skaters/${skater.id}/ytps/`;
+      // -------------------
       
       await apiRequest(url, 'POST', payload, token);
       
@@ -129,10 +139,16 @@ export function CreateYearlyPlanModal({ skater, team, onPlanCreated }) {
             </div>
           )}
 
-          {/* 1. Season */}
+          {/* 1. Season Section */}
           <div className="p-3 bg-slate-50 border rounded-md space-y-3">
             <Label>Season</Label>
-            <select className="flex h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm" value={selectedSeasonMode} onChange={(e) => setSelectedSeasonMode(e.target.value)}>
+            <select 
+                className="flex h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm" 
+                value={selectedSeasonMode} 
+                onChange={(e) => setSelectedSeasonMode(e.target.value)}
+                // Lock to 'new' for teams to prevent confusion
+                disabled={!!team}
+            >
                 {seasons.length > 0 && <option value="id">Use Existing ({seasons[seasons.length-1]?.season})</option>}
                 <option value="new">Create / Define New Season...</option>
             </select>
@@ -145,7 +161,10 @@ export function CreateYearlyPlanModal({ skater, team, onPlanCreated }) {
 
             {selectedSeasonMode === 'new' && (
                <div className="space-y-2">
-                  <div><Label className="text-xs text-muted-foreground">Season Name</Label><Input value={newSeasonName} onChange={(e) => setNewSeasonName(e.target.value)} placeholder="2026-2027" /></div>
+                  <div>
+                      <Label className="text-xs text-muted-foreground">Season Name</Label>
+                      <Input value={newSeasonName} onChange={(e) => setNewSeasonName(e.target.value)} placeholder="2026-2027" />
+                  </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div><Label className="text-xs text-muted-foreground">Start</Label><DatePicker date={newStartDate} setDate={setNewStartDate} /></div>
                     <div><Label className="text-xs text-muted-foreground">End</Label><DatePicker date={newEndDate} setDate={setNewEndDate} /></div>
@@ -154,7 +173,7 @@ export function CreateYearlyPlanModal({ skater, team, onPlanCreated }) {
             )}
           </div>
 
-          {/* 2. Discipline (Only show if Skater, hide if Team) */}
+          {/* 2. Discipline (Only show if Skater, hide if Team/Synchro) */}
           {!team && (
               <div className="space-y-2">
                 <Label>Discipline</Label>

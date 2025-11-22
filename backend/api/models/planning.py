@@ -7,15 +7,29 @@ from .skaters import Skater
 
 class AthleteSeason(models.Model):
     """
-    An "umbrella" holding all plans for one Skater (person) in one season.
+    An "umbrella" holding plans.
+    Can belong to a Skater, Team, or SynchroTeam.
     """
 
     id = models.AutoField(primary_key=True)
-    skater = models.ForeignKey(
-        Skater, on_delete=models.CASCADE, related_name="athlete_seasons"
-    )
-    season = models.CharField(max_length=50)  # e.g., "2025-2026"
 
+    # OLD: Link to Skater (Make optional now)
+    skater = models.ForeignKey(
+        Skater,
+        on_delete=models.CASCADE,
+        related_name="athlete_seasons",
+        null=True,
+        blank=True,
+    )
+
+    # NEW: Generic Link (For Teams/Synchro)
+    content_type = models.ForeignKey(
+        ContentType, on_delete=models.CASCADE, null=True, blank=True
+    )
+    object_id = models.PositiveIntegerField(null=True, blank=True)
+    planning_entity = GenericForeignKey("content_type", "object_id")
+
+    season = models.CharField(max_length=50)
     start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
@@ -29,11 +43,10 @@ class AthleteSeason(models.Model):
     )
 
     def __str__(self):
-        return f"{self.skater.full_name} ({self.season})"
+        return f"{self.season} ({self.planning_entity or self.skater})"
 
     class Meta:
-        unique_together = ("skater", "season")
-        ordering = ["skater__full_name", "-season"]
+        ordering = ["-season"]
 
 
 class YearlyPlan(models.Model):

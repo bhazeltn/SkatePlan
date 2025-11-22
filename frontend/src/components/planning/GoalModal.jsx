@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea'; 
 import { DatePicker } from '@/components/ui/date-picker'; 
 
-export function GoalModal({ planId, skaterId, teamId, goal, onSaved, trigger }) {
+export function GoalModal({ planId, skaterId, teamId, isSynchro, goal, onSaved, trigger }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const { token } = useAuth();
@@ -47,22 +47,27 @@ export function GoalModal({ planId, skaterId, teamId, goal, onSaved, trigger }) 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    try {
-      const payload = {
-        title,
-        goal_type: type,
-        goal_timeframe: timeframe,
-        smart_description: description,
-        current_status: status,
-        start_date: startDate || null,
-        target_date: targetDate || null,
-      };
+    
+    // --- DEBUG: ensure payload is correct ---
+    const payload = {
+      title,
+      goal_type: type,
+      goal_timeframe: timeframe,
+      smart_description: description,
+      current_status: status,
+      // Ensure empty strings are converted to null for the backend
+      start_date: startDate ? startDate : null,
+      target_date: targetDate ? targetDate : null,
+    };
 
+    try {
       if (goal) {
         await apiRequest(`/goals/${goal.id}/`, 'PATCH', payload, token);
       } else {
         // --- DYNAMIC CREATION ENDPOINT ---
-        if (teamId) {
+        if (isSynchro) {
+             await apiRequest(`/synchro/${teamId}/goals/`, 'POST', payload, token);
+        } else if (teamId) {
              await apiRequest(`/teams/${teamId}/goals/`, 'POST', payload, token);
         } else if (planId) {
             await apiRequest(`/ytps/${planId}/goals/`, 'POST', payload, token);
@@ -75,7 +80,12 @@ export function GoalModal({ planId, skaterId, teamId, goal, onSaved, trigger }) 
       if (onSaved) onSaved();
       setOpen(false);
     } catch (err) {
-      alert('Failed to save goal.');
+      // --- BETTER ERROR HANDLING ---
+      console.error("Goal Save Error:", err);
+      // Try to extract validation message
+      let msg = "Failed to save goal.";
+      if (err.message) msg += ` ${err.message}`;
+      alert(msg);
     } finally {
       setLoading(false);
     }

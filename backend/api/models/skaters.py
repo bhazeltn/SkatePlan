@@ -136,10 +136,16 @@ class Team(models.Model):
 class SynchroTeam(models.Model):
     id = models.AutoField(primary_key=True)
     team_name = models.CharField(max_length=255, unique=True)
+
+    # --- NEW: ROSTER ---
+    # A skater can belong to multiple synchro teams (e.g. Junior & Open)
+    roster = models.ManyToManyField(Skater, related_name="synchro_teams", blank=True)
+    # -------------------
+
     federation = models.ForeignKey(
         Federation, on_delete=models.SET_NULL, null=True, blank=True
     )
-    level = models.CharField(max_length=100)
+    level = models.CharField(max_length=100)  # e.g. "Junior", "Novice"
 
     def __str__(self):
         return self.team_name

@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea'; 
 import { MacrocycleModal } from '@/components/planning/MacrocycleModal';
-// Make sure Pencil is imported!
 import { ArrowLeft, Calendar, CheckCircle2, Circle, Trash2, Pencil } from 'lucide-react';
 import { GoalModal } from '@/components/planning/GoalModal';
 
@@ -45,7 +44,6 @@ export default function YearlyPlanEditor() {
       fetchGoals(); 
   }, [planId, token]);
 
-  // ... (Keep existing handlers: handleUpdateDetails, handleDeleteMacrocycle, getNextDay) ...
   const handleUpdateDetails = async () => {
     try {
       await apiRequest(`/ytps/${planId}/`, 'PATCH', {
@@ -68,7 +66,20 @@ export default function YearlyPlanEditor() {
     }
   }
 
-  // --- HELPER: Calculate "Next Day" ---
+  // --- NEW: DELETE PLAN HANDLER ---
+  const handleDeletePlan = async () => {
+      if (!confirm("Are you sure you want to DELETE this entire plan? This cannot be undone.")) return;
+      
+      try {
+          await apiRequest(`/ytps/${planId}/`, 'DELETE', null, token);
+          // Redirect back to the correct dashboard (Skater/Team/Synchro)
+          window.location.hash = plan.dashboard_url || '#/';
+      } catch (err) {
+          alert("Failed to delete plan.");
+      }
+  };
+  // --------------------------------
+
   const getNextDay = (dateStr) => {
     if (!dateStr) return '';
     const date = new Date(dateStr);
@@ -96,24 +107,29 @@ export default function YearlyPlanEditor() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
-            {/* Link back to the athlete dashboard with TAB selection */}
-            <a href={`#/skater/${plan.skater_id || ''}?tab=yearly`}>
+            <a href={plan.dashboard_url || '#/'}>
                 <Button variant="outline" size="icon">
                     <ArrowLeft className="h-4 w-4" />
                 </Button>
             </a>
-            {/* ------------------------------------------------------------- */}
             <div>
                 <h1 className="text-3xl font-bold text-gray-900">{plan.discipline_name} Plan</h1>
                 <p className="text-muted-foreground">Yearly Training Plan Editor</p>
             </div>
         </div>
-        <Button onClick={handleUpdateDetails}>Save Changes</Button>
+        
+        <div className="flex gap-2">
+            {/* DELETE BUTTON */}
+            <Button variant="destructive" onClick={handleDeletePlan}>
+                <Trash2 className="h-4 w-4 mr-2" /> Delete Plan
+            </Button>
+            <Button onClick={handleUpdateDetails}>Save Changes</Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        {/* LEFT COLUMN: Plan Settings & Goals */}
+        {/* LEFT COLUMN */}
         <div className="lg:col-span-1 space-y-6">
             <Card>
                 <CardHeader>
@@ -154,10 +170,8 @@ export default function YearlyPlanEditor() {
                         <p className="text-sm text-muted-foreground text-center py-4">No goals set.</p>
                     ) : (
                         <div className="space-y-3">
-                            {/* --- UPDATED GOAL RENDERING --- */}
                             {goals.map(goal => (
                                 <div key={goal.id} className="flex items-start gap-3 p-3 border rounded-md hover:bg-slate-50 group bg-white">
-                                    {/* Status Icon */}
                                     {goal.current_status === 'COMPLETED' ? (
                                         <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5" />
                                     ) : (
@@ -168,11 +182,8 @@ export default function YearlyPlanEditor() {
                                         <div className="flex justify-between items-start">
                                             <div>
                                                 <p className="font-medium text-sm">{goal.title}</p>
-                                                
-                                                {/* Badges & Dates */}
                                                 <div className="flex flex-wrap gap-2 text-xs text-muted-foreground mt-1 items-center">
                                                     <span className="px-1.5 py-0.5 bg-slate-100 rounded">{goal.goal_type}</span>
-                                                    
                                                     {goal.target_date && (
                                                         <div className="flex items-center gap-1 ml-1 text-gray-500">
                                                             <Calendar className="h-3 w-3" />
@@ -181,8 +192,6 @@ export default function YearlyPlanEditor() {
                                                     )}
                                                 </div>
                                             </div>
-                                            
-                                            {/* Edit Trigger */}
                                             <GoalModal 
                                                 planId={planId} 
                                                 goal={goal} 
@@ -197,14 +206,13 @@ export default function YearlyPlanEditor() {
                                     </div>
                                 </div>
                             ))}
-                            {/* -------------------------------- */}
                         </div>
                     )}
                 </CardContent>
             </Card>
         </div>
 
-        {/* RIGHT COLUMN: Timeline (Macrocycles) */}
+        {/* RIGHT COLUMN: Timeline */}
         <div className="lg:col-span-2 space-y-6">
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
@@ -217,7 +225,6 @@ export default function YearlyPlanEditor() {
                     />
                 </CardHeader>
                 <CardContent>
-                    {/* ... (Keep Existing Timeline Rendering) ... */}
                     {sortedCycles.length === 0 ? (
                         <div className="text-center p-8 border-2 border-dashed rounded-lg text-muted-foreground">
                             No phases defined yet. Click "Add Phase" to build your timeline.

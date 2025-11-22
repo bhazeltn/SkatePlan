@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { DatePicker } from '@/components/ui/date-picker';
 import { AlertTriangle } from 'lucide-react';
 
-export function InjuryModal({ skater, team, injury, onSaved, trigger }) {
+export function InjuryModal({ skater, team, isSynchro, injury, onSaved, trigger }) {
   const [open, setOpen] = useState(false);
   const { token } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -47,6 +47,8 @@ export function InjuryModal({ skater, team, injury, onSaved, trigger }) {
     }
   }, [open, injury, team]);
 
+  const rosterSource = isSynchro ? team.roster : (team ? [team.partner_a_details, team.partner_b_details] : []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!selectedSkaterId) return alert("Please select the injured skater.");
@@ -65,12 +67,14 @@ export function InjuryModal({ skater, team, injury, onSaved, trigger }) {
       };
 
       if (injury) {
-        await apiRequest(`/injuries/${injury.id}/`, 'PATCH', payload, token);
-      } else if (team) {
-        await apiRequest(`/teams/${team.id}/injuries/`, 'POST', payload, token);
-      } else {
-        await apiRequest(`/skaters/${skater.id}/injuries/`, 'POST', payload, token);
-      }
+            await apiRequest(`/injuries/${injury.id}/`, 'PATCH', payload, token);
+        } else if (isSynchro) {
+            await apiRequest(`/synchro/${team.id}/injuries/`, 'POST', payload, token);
+        } else if (team) {
+            await apiRequest(`/teams/${team.id}/injuries/`, 'POST', payload, token);
+        } else {
+            await apiRequest(`/skaters/${skater.id}/injuries/`, 'POST', payload, token);
+        }
       
       if (onSaved) onSaved();
       setOpen(false);
@@ -90,9 +94,16 @@ export function InjuryModal({ skater, team, injury, onSaved, trigger }) {
               <div className="space-y-2">
                   <Label>Who is injured?</Label>
                   <select className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm" value={selectedSkaterId} onChange={(e) => setSelectedSkaterId(e.target.value)} required>
-                      <option value="">Select Partner...</option>
-                      <option value={team.partner_a}>{team.partner_a_details?.full_name}</option>
-                      <option value={team.partner_b}>{team.partner_b_details?.full_name}</option>
+                      <option value="">Select Skater...</option>
+                      {isSynchro 
+                        ? team.roster?.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)
+                        : (
+                            <>
+                                <option value={team.partner_a}>{team.partner_a_details?.full_name}</option>
+                                <option value={team.partner_b}>{team.partner_b_details?.full_name}</option>
+                            </>
+                        )
+                      }
                   </select>
               </div>
           )}

@@ -61,4 +61,15 @@ urlpatterns = [
         "teams/<int:team_id>/injuries/", views.InjuryLogListCreateByTeamView.as_view()
     ),
     path("teams/<int:team_id>/week-view/", views.TeamMasterWeeklyPlanView.as_view()),
+    path("synchro/create/", views.CreateSynchroTeamView.as_view()),
+    path("synchro/<int:pk>/", views.SynchroTeamDetailView.as_view()),
+    path("synchro/", views.SynchroTeamListView.as_view()),
+    path(
+        "synchro/<int:team_id>/ytps/", views.SynchroYearlyPlanListCreateView.as_view()
+    ),
+    path(
+        "synchro/<int:team_id>/injuries/",
+        views.SynchroInjuryLogListCreateView.as_view(),
+    ),
+    path("synchro/<int:team_id>/goals/", views.SynchroGoalListCreateView.as_view()),
 ]

@@ -13,11 +13,11 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Plus } from 'lucide-react';
 
 export function AddSkaterModal({ onSkaterAdded }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
   const { token } = useAuth();
 
   // Form State
@@ -25,62 +25,47 @@ export function AddSkaterModal({ onSkaterAdded }) {
   const [dob, setDob] = useState('');
   const [gender, setGender] = useState('');
   const [homeClub, setHomeClub] = useState('');
-  const [discipline, setDiscipline] = useState('SINGLES');
-  const [level, setLevel] = useState('Pre-Juvenile');
-  
-  // Federation State
-  const [federations, setFederations] = useState([]);
   const [federationId, setFederationId] = useState('');
+  const [discipline, setDiscipline] = useState('SINGLES');
+  const [level, setLevel] = useState('');
 
-  // Fetch Federations on mount
+  // Data State
+  const [federations, setFederations] = useState([]);
+
   useEffect(() => {
-    const fetchFeds = async () => {
-      if (!token) return;
-      try {
-        const data = await apiRequest('/federations/', 'GET', null, token);
-        setFederations(data || []);
-      } catch (e) {
-        console.error("Failed to load federations", e);
-      }
-    };
-    fetchFeds();
-  }, [token]);
+    if (open) {
+        const fetchFeds = async () => {
+            try {
+                const data = await apiRequest('/federations/', 'GET', null, token);
+                setFederations(data || []);
+                if (data && data.length > 0) setFederationId(data[0].id);
+            } catch (e) { console.error(e); }
+        };
+        fetchFeds();
+    }
+  }, [open, token]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError(null);
 
     try {
-      const data = {
+      await apiRequest('/skaters/', 'POST', {
         full_name: fullName,
         date_of_birth: dob,
-        gender: gender,
+        gender,
         home_club: homeClub,
-        discipline: discipline,
-        level: level,
-        federation_id: federationId // Send to backend
-      };
-      
-      const newSkater = await apiRequest('/skaters/create/', 'POST', data, token);
-      onSkaterAdded(newSkater);
+        federation_id: federationId,
+        discipline,
+        level
+      }, token);
+
+      if (onSkaterAdded) onSkaterAdded();
       setOpen(false);
       
-      // Reset Form
-      setFullName('');
-      setDob('');
-      setGender('');
-      setHomeClub('');
-      setDiscipline('SINGLES');
-      setLevel('Pre-Juvenile');
-      setFederationId('');
-
+      setFullName(''); setDob(''); setGender(''); setHomeClub(''); setLevel('');
     } catch (err) {
-      if (err.message.includes('409')) {
-        setError('A skater with this name and birthday already exists.');
-      } else {
-        setError(err.message || 'Failed to create skater.');
-      }
+      alert('Failed to add skater. Name/DOB collision?');
     } finally {
       setLoading(false);
     }
@@ -89,121 +74,73 @@ export function AddSkaterModal({ onSkaterAdded }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>Add New Athlete</Button>
+        <Button>
+            <Plus className="h-4 w-4 mr-2" /> 
+            Add Skater
+        </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Add New Athlete</DialogTitle>
           <DialogDescription>
-            Create a new athlete profile.
+            Create a profile for a new skater. This will start their training history.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           
-          {/* Row 1: Name & DOB */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="fullName">Full Name</Label>
-              <Input
-                id="fullName"
-                placeholder="Ulrich Salchow"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="dob">Date of Birth</Label>
-              <Input
-                id="dob"
-                type="date"
-                value={dob}
-                onChange={(e) => setDob(e.target.value)}
-                required
-              />
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="name">Full Name</Label>
+                <Input id="name" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Jane Doe" required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="dob">Date of Birth</Label>
+                <Input id="dob" type="date" value={dob} onChange={(e) => setDob(e.target.value)} required />
+              </div>
           </div>
 
-          {/* Row 2: Gender & Club */}
           <div className="grid grid-cols-2 gap-4">
-             <div className="space-y-2">
-              <Label htmlFor="gender">Gender</Label>
-              <select
-                id="gender"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                value={gender}
-                onChange={(e) => setGender(e.target.value)}
-              >
-                <option value="">Select...</option>
-                <option value="MALE">Male</option>
-                <option value="FEMALE">Female</option>
-                <option value="NON_BINARY">Non-Binary</option>
-                <option value="OTHER">Other</option>
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="homeClub">Home Club/Rink</Label>
-              <Input
-                id="homeClub"
-                placeholder="Your FSC"
-                value={homeClub}
-                onChange={(e) => setHomeClub(e.target.value)}
-              />
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="gender">Gender</Label>
+                <select className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm" value={gender} onChange={(e) => setGender(e.target.value)}>
+                    <option value="">Select...</option>
+                    <option value="FEMALE">Female</option>
+                    <option value="MALE">Male</option>
+                    <option value="NON_BINARY">Non-Binary</option>
+                    <option value="OTHER">Other</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="fed">Federation</Label>
+                <select className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm" value={federationId} onChange={(e) => setFederationId(e.target.value)}>
+                    {federations.map(f => (<option key={f.id} value={f.id}>{f.flag_emoji} {f.name}</option>))}
+                </select>
+              </div>
           </div>
 
-          {/* Row 3: Federation */}
           <div className="space-y-2">
-              <Label htmlFor="federation">Federation</Label>
-              <select
-                id="federation"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                value={federationId}
-                onChange={(e) => setFederationId(e.target.value)}
-              >
-                <option value="">Select Federation...</option>
-                {federations.map((fed) => (
-                  <option key={fed.id} value={fed.id}>
-                    {fed.flag_emoji} {fed.name}
-                  </option>
-                ))}
-              </select>
+            <Label htmlFor="club">Home Club</Label>
+            <Input id="club" value={homeClub} onChange={(e) => setHomeClub(e.target.value)} placeholder="e.g. Toronto Cricket Club" />
           </div>
-          
-          <div className="border-t my-2"></div>
 
-          {/* Row 4: Discipline & Level */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="discipline">Primary Discipline</Label>
-              <select
-                id="discipline"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                value={discipline}
-                onChange={(e) => setDiscipline(e.target.value)}
-              >
-                <option value="SINGLES">Singles</option>
-                <option value="SOLO_DANCE">Solo Dance</option>
-                <option value="PAIRS">Pairs</option>
-                <option value="ICE_DANCE">Ice Dance</option>
-                <option value="SYNCHRO">Synchro</option>
-              </select>
-            </div>
-            <div className="space-y-2">
-               <Label htmlFor="level">Current Level</Label>
-               <Input
-                 id="level"
-                 value={level}
-                 onChange={(e) => setLevel(e.target.value)}
-               />
-            </div>
+              <div className="space-y-2">
+                <Label>Primary Discipline</Label>
+                <select className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm" value={discipline} onChange={(e) => setDiscipline(e.target.value)}>
+                    <option value="SINGLES">Singles</option>
+                    <option value="SOLO_DANCE">Solo Dance</option>
+                    <option value="PAIRS">Pairs</option>
+                    <option value="ICE_DANCE">Ice Dance</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label>Current Level</Label>
+                <Input value={level} onChange={(e) => setLevel(e.target.value)} placeholder="e.g. Junior" />
+              </div>
           </div>
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
           <DialogFooter>
-            <Button type="submit" disabled={loading}>
-              {loading ? 'Saving...' : 'Save Athlete'}
-            </Button>
+            <Button type="submit" disabled={loading}>{loading ? 'Adding...' : 'Add Athlete'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

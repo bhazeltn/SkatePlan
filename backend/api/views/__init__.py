@@ -10,6 +10,8 @@ from .skaters import (
     SynchroTeamDetailView,
     TeamListView,
     CreateTeamView,
+    CreateSynchroTeamView,
+    SynchroTeamListView,
 )
 from .planning import (
     AthleteSeasonList,
@@ -27,6 +29,8 @@ from .planning import (
     MasterWeeklyPlanView,
     GoalListByTeamView,
     TeamMasterWeeklyPlanView,
+    SynchroYearlyPlanListCreateView,
+    SynchroGoalListCreateView,
 )
 from .logs import (
     SessionLogListCreateView,
@@ -35,6 +39,7 @@ from .logs import (
     InjuryLogDetailView,
     SessionLogListCreateByTeamView,
     InjuryLogListCreateByTeamView,
+    SynchroInjuryLogListCreateView,
 )
 from .competitions import (
     CompetitionListCreateView,

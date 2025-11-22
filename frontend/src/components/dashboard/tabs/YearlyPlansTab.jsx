@@ -11,15 +11,16 @@ import { Calendar, Trophy, ArrowRight } from 'lucide-react';
 const formatDate = (d) => new Date(d).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
 
 // --- UPDATED: Accept 'team' prop ---
-export function YearlyPlansTab({ skater, team }) {
+export function YearlyPlansTab({ skater, team, isSynchro }) {
   const { token } = useAuth();
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // --- DYNAMIC ENDPOINT ---
-  const fetchUrl = team 
-      ? `/teams/${team.id}/ytps/` 
-      : `/skaters/${skater.id}/ytps/`;
+  let fetchUrl = '';
+  if (isSynchro) fetchUrl = `/synchro/${team.id}/ytps/`;
+  else if (team) fetchUrl = `/teams/${team.id}/ytps/`;
+  else fetchUrl = `/skaters/${skater.id}/ytps/`;
 
   const fetchPlans = async () => {
     try {
@@ -48,7 +49,12 @@ export function YearlyPlansTab({ skater, team }) {
             <h3 className="text-lg font-semibold">Season Plans</h3>
             <p className="text-sm text-muted-foreground">Manage YTPs and Macrocycles</p>
         </div>
-        <CreateYearlyPlanModal skater={skater} team={team} onPlanCreated={fetchPlans} />
+        <CreateYearlyPlanModal 
+          skater={skater} 
+          team={team} 
+          isSynchro={isSynchro} // Pass it down
+          onPlanCreated={fetchPlans} 
+      />
       </div>
 
       {/* Plan List */}

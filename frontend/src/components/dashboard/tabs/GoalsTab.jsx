@@ -6,15 +6,16 @@ import { Button } from '@/components/ui/button';
 import { GoalModal } from '@/components/planning/GoalModal';
 import { CheckCircle2, Target, Calendar } from 'lucide-react';
 
-export function GoalsTab({ skater, team }) {
+export function GoalsTab({ skater, team, isSynchro }) {
   const { token } = useAuth();
   const [goals, setGoals] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // --- DYNAMIC ENDPOINT ---
-  const fetchUrl = team 
-    ? `/teams/${team.id}/goals/` 
-    : `/skaters/${skater.id}/goals/`;
+  let fetchUrl = '';
+  if (isSynchro) fetchUrl = `/synchro/${team.id}/goals/`;
+  else if (team) fetchUrl = `/teams/${team.id}/goals/`;
+  else fetchUrl = `/skaters/${skater.id}/goals/`;
   // ------------------------
 
   const fetchGoals = async () => {
@@ -22,11 +23,8 @@ export function GoalsTab({ skater, team }) {
       setLoading(true);
       const data = await apiRequest(fetchUrl, 'GET', null, token);
       setGoals(data || []);
-    } catch (err) {
-      console.error("Failed to load goals", err);
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { console.error(err); } 
+    finally { setLoading(false); }
   };
 
   useEffect(() => {
@@ -48,7 +46,8 @@ export function GoalsTab({ skater, team }) {
         </div>
         <GoalModal 
             skaterId={skater?.id} 
-            teamId={team?.id} // Pass Team ID
+            teamId={team?.id}
+            isSynchro={isSynchro}
             onSaved={fetchGoals} 
             trigger={<Button>Add New Goal</Button>}
         />
@@ -62,7 +61,7 @@ export function GoalsTab({ skater, team }) {
         ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {activeGoals.map(goal => (
-                    <GoalCard key={goal.id} goal={goal} onUpdate={fetchGoals} />
+                    <GoalCard key={goal.id} goal={goal} onUpdate={fetchGoals} isSynchro={isSynchro} />
                 ))}
             </div>
         )}

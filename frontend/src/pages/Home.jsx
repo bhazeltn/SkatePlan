@@ -3,19 +3,22 @@ import { useAuth } from '../AuthContext';
 import { apiRequest } from '../api';
 import { AddSkaterModal } from '../components/dashboard/AddSkaterModal';
 import { CreateTeamModal } from '@/components/dashboard/CreateTeamModal';
+import { CreateSynchroTeamModal } from '@/components/dashboard/CreateSynchroTeamModal';
 import { RosterList } from '../components/dashboard/RosterList';
 import { TeamList } from '@/components/dashboard/TeamList';
+import { SynchroTeamList } from '@/components/dashboard/SynchroTeamList';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
     Clock, Calendar, Activity, HeartPulse, CheckCircle2, FileWarning, 
-    ArrowRight, ShieldCheck, ClipboardList 
+    ArrowRight, ShieldCheck, ClipboardList, Settings // <--- Restored Settings
 } from 'lucide-react';
 
 export default function Home() {
   const { user, logout, token } = useAuth();
   const [roster, setRoster] = useState([]);
   const [teams, setTeams] = useState([]); 
+  const [synchroTeams, setSynchroTeams] = useState([]); 
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -23,14 +26,16 @@ export default function Home() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [rosterData, teamsData, statsData] = await Promise.all([
+      const [rosterData, teamsData, synchroData, statsData] = await Promise.all([
         apiRequest('/roster/', 'GET', null, token),
         apiRequest('/teams/', 'GET', null, token),
+        apiRequest('/synchro/', 'GET', null, token),
         apiRequest('/dashboard/stats/', 'GET', null, token)
       ]);
       
       setRoster(rosterData || []);
       setTeams(teamsData || []);
+      setSynchroTeams(synchroData || []);
       setStats(statsData);
     } catch (err) {
       console.error(err);
@@ -44,8 +49,7 @@ export default function Home() {
     fetchData();
   }, [token]);
 
-  const handleSkaterAdded = () => fetchData();
-  const handleTeamCreated = () => fetchData();
+  const handleRefresh = () => fetchData();
 
   // ----- Render for Coach -----
   return (
@@ -57,9 +61,17 @@ export default function Home() {
             <p className="text-muted-foreground">Welcome back, {user?.full_name}</p>
         </div>
         <div className="flex items-center gap-4">
-          <AddSkaterModal onSkaterAdded={handleSkaterAdded} />
-          <CreateTeamModal onTeamCreated={handleTeamCreated} />
-          <a href="#/settings"><Button variant="secondary">Settings</Button></a>
+          <AddSkaterModal onSkaterAdded={handleRefresh} />
+          <CreateTeamModal onTeamCreated={handleRefresh} />
+          <CreateSynchroTeamModal onTeamCreated={handleRefresh} />
+          
+          <a href="#/settings">
+             <Button variant="secondary" size="icon">
+                <Settings className="h-5 w-5 text-gray-600" />
+             </Button>
+          </a>
+          {/* -------------------------------- */}
+          
           <Button variant="outline" onClick={logout}>Log Out</Button>
         </div>
       </div>
@@ -249,10 +261,18 @@ export default function Home() {
         </div>
       )}
 
-      {/* --- TEAMS SECTION --- */}
+      {/* --- SYNCHRO TEAMS SECTION --- */}
+      {synchroTeams.length > 0 && (
+          <div className="mb-8">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Synchro Teams ({synchroTeams.length})</h2>
+              <SynchroTeamList teams={synchroTeams} />
+          </div>
+      )}
+
+      {/* --- PAIRS/DANCE TEAMS SECTION --- */}
       {teams.length > 0 && (
           <div className="mb-8">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">My Teams ({teams.length})</h2>
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Pairs & Dance ({teams.length})</h2>
               <TeamList teams={teams} />
           </div>
       )}
@@ -260,19 +280,19 @@ export default function Home() {
       {/* --- ROSTER SECTION --- */}
       {error && <p className="text-red-600">Error: {error}</p>}
 
-      {roster.length === 0 && teams.length === 0 && !error && (
+      {roster.length === 0 && teams.length === 0 && synchroTeams.length === 0 && !error && (
         <div className="text-center p-12 border-2 border-dashed rounded-lg">
           <h2 className="text-2xl font-semibold">Your Roster is Empty</h2>
           <p className="text-muted-foreground mt-2 mb-4">
             Click the button to add your first athlete and get started.
           </p>
-          <AddSkaterModal onSkaterAdded={handleSkaterAdded} />
+          <AddSkaterModal onSkaterAdded={handleRefresh} />
         </div>
       )}
 
       {roster.length > 0 && (
         <>
-          <h2 className="text-2xl font-semibold mb-4">My Roster ({roster.length})</h2>
+          <h2 className="text-2xl font-semibold mb-4">Individual Athletes ({roster.length})</h2>
           <RosterList roster={roster} />
         </>
       )}

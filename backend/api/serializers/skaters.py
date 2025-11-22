@@ -95,9 +95,37 @@ class TeamSerializer(serializers.ModelSerializer):
 class SynchroTeamSerializer(serializers.ModelSerializer):
     federation = FederationSerializer(read_only=True)
 
+    federation_id = serializers.PrimaryKeyRelatedField(
+        queryset=Federation.objects.all(),
+        source="federation",
+        write_only=True,
+        required=False,
+        allow_null=True,
+    )
+
+    # Return full skater objects for the roster list
+    roster = SimpleSkaterSerializer(many=True, read_only=True)
+
+    # Allow writing IDs to update the roster
+    roster_ids = serializers.PrimaryKeyRelatedField(
+        queryset=Skater.objects.all(),
+        source="roster",
+        many=True,
+        write_only=True,
+        required=False,
+    )
+
     class Meta:
         model = SynchroTeam
-        fields = ("id", "team_name", "level", "federation")
+        fields = (
+            "id",
+            "team_name",
+            "level",
+            "federation",
+            "federation_id",
+            "roster",
+            "roster_ids",
+        )
 
 
 class GenericPlanningEntitySerializer(serializers.Serializer):

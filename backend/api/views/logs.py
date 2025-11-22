@@ -142,3 +142,29 @@ class InjuryLogDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [permissions.IsAuthenticated, IsCoachUser]
     serializer_class = InjuryLogSerializer
     queryset = InjuryLog.objects.all()
+
+
+class SynchroInjuryLogListCreateView(generics.ListCreateAPIView):
+    """
+    List injuries for ALL skaters in a Synchro Team Roster.
+    """
+
+    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    serializer_class = InjuryLogSerializer
+
+    def get_queryset(self):
+        team_id = self.kwargs["team_id"]
+        team = SynchroTeam.objects.get(id=team_id)
+        # Return injuries for anyone in the roster
+        return InjuryLog.objects.filter(skater__in=team.roster.all()).order_by(
+            "recovery_status", "-date_of_onset"
+        )
+
+    def perform_create(self, serializer):
+        skater_id = self.request.data.get("skater_id")
+        if not skater_id:
+            raise ValidationError("You must specify which skater is injured.")
+
+        skater = Skater.objects.get(id=skater_id)
+        status = self.request.data.get("recovery_status", "Active")
+        serializer.save(skater=skater, recovery_status=status)

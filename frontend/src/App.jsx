@@ -7,6 +7,7 @@ import AthleteSeasonDashboard from './pages/AthleteSeasonDashboard';
 import Settings from './pages/Settings';
 import YearlyPlanEditor from './pages/YearlyPlanEditor';
 import TeamDashboard from './pages/TeamDashboard';
+import SynchroTeamDashboard from './pages/SynchroTeamDashboard';
 
 // Route Definitions
 const publicRoutes = {
@@ -19,6 +20,7 @@ const privateRoutes = {
   '/settings': Settings,
   '/skater/:id': AthleteSeasonDashboard,
   '/team/:id': TeamDashboard,
+  '/synchro/:id': SynchroTeamDashboard,
   '/plans/:id': YearlyPlanEditor,
 };
 

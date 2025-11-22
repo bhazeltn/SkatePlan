@@ -1,3 +1,4 @@
+from django.contrib.contenttypes.models import ContentType
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from django.db.models import Q
@@ -17,6 +18,10 @@ from api.serializers import (
     SkaterSerializer,
     SkaterUpdateSerializer,
     RosterSkaterSerializer,
+    SinglesEntitySerializer,
+    SoloDanceEntitySerializer,
+    TeamSerializer,
+    SynchroTeamSerializer,
 )
 from api.permissions import IsCoachUser
 
@@ -181,12 +186,6 @@ class RosterView(generics.ListAPIView):
 
 # --- Entity Management Views ---
 # (Small enough to live here for now)
-from api.serializers import (
-    SinglesEntitySerializer,
-    SoloDanceEntitySerializer,
-    TeamSerializer,
-    SynchroTeamSerializer,
-)
 
 
 class SinglesEntityDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -290,3 +289,40 @@ class TeamListView(generics.ListAPIView):
         team_ids = access_records.values_list("object_id", flat=True)
 
         return Team.objects.filter(id__in=team_ids)
+
+
+class CreateSynchroTeamView(generics.CreateAPIView):
+    """
+    Creates a Synchro Team shell.
+    """
+
+    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    serializer_class = SynchroTeamSerializer
+
+    def perform_create(self, serializer):
+        team = serializer.save()
+
+        # Grant Coach Permissions
+        PlanningEntityAccess.objects.create(
+            user=self.request.user,
+            access_level=PlanningEntityAccess.AccessLevel.COACH,
+            planning_entity=team,
+        )
+
+
+class SynchroTeamListView(generics.ListAPIView):
+    """
+    Returns a list of Synchro Teams the coach has access to.
+    """
+
+    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    serializer_class = SynchroTeamSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        ct = ContentType.objects.get_for_model(SynchroTeam)
+
+        access_records = PlanningEntityAccess.objects.filter(user=user, content_type=ct)
+        team_ids = access_records.values_list("object_id", flat=True)
+
+        return SynchroTeam.objects.filter(id__in=team_ids).order_by("team_name")

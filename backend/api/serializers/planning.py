@@ -20,6 +20,7 @@ class YearlyPlanSerializer(serializers.ModelSerializer):
     planning_entity = serializers.SerializerMethodField()
     season_info = serializers.SerializerMethodField()
     skater_id = serializers.SerializerMethodField()
+    dashboard_url = serializers.SerializerMethodField()
 
     class Meta:
         model = YearlyPlan
@@ -32,6 +33,7 @@ class YearlyPlanSerializer(serializers.ModelSerializer):
             "primary_season_goal",
             "macrocycles",
             "season_info",
+            "dashboard_url",
         )
 
     def get_season_info(self, obj):
@@ -58,6 +60,30 @@ class YearlyPlanSerializer(serializers.ModelSerializer):
 
     def get_planning_entity(self, obj):
         return str(obj.planning_entity)
+
+    def get_dashboard_url(self, obj):
+        # Helper to determine where the "Back" button should go
+        if not obj.planning_entity:
+            return "#/"
+
+        # Check type of entity
+        model_name = obj.content_type.model
+        if model_name == "synchroteam":
+            return f"#/synchro/{obj.object_id}"
+        elif model_name == "team":
+            return f"#/team/{obj.object_id}"
+        elif model_name in ["singlesentity", "solodanceentity"]:
+            # For singles, we need the skater ID
+            # Access via the entity relation (e.g. obj.planning_entity.skater.id)
+            if hasattr(obj.planning_entity, "skater"):
+                return f"#/skater/{obj.planning_entity.skater.id}"
+
+        # Fallback: Try finding via season
+        season = obj.athlete_seasons.first()
+        if season and season.skater:
+            return f"#/skater/{season.skater.id}"
+
+        return "#/"
 
 
 class WeeklyPlanSerializer(serializers.ModelSerializer):

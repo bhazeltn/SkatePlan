@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Users } from 'lucide-react';
+import { Plus } from 'lucide-react';
 
 export function CreateTeamModal({ onTeamCreated }) {
   const [open, setOpen] = useState(false);
@@ -78,9 +78,11 @@ export function CreateTeamModal({ onTeamCreated }) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline">
-            <Users className="h-4 w-4 mr-2" /> Create Team
+            <Plus className="h-4 w-4 mr-2" /> 
+            Add Dance/Pair Team
         </Button>
       </DialogTrigger>
+      {/* ... (Dialog Content same as before) ... */}
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
             <DialogTitle>Create Pairs / Dance Team</DialogTitle>
@@ -89,11 +91,7 @@ export function CreateTeamModal({ onTeamCreated }) {
             
             <div className="space-y-2">
                 <Label>Discipline</Label>
-                <select 
-                    className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm" 
-                    value={discipline} 
-                    onChange={(e) => setDiscipline(e.target.value)}
-                >
+                <select className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm" value={discipline} onChange={(e) => setDiscipline(e.target.value)}>
                     <option value="ICE_DANCE">Ice Dance</option>
                     <option value="PAIRS">Pairs</option>
                 </select>
@@ -102,24 +100,14 @@ export function CreateTeamModal({ onTeamCreated }) {
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                     <Label>Partner A</Label>
-                    <select 
-                        className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm" 
-                        value={partnerA} 
-                        onChange={(e) => setPartnerA(e.target.value)} 
-                        required
-                    >
+                    <select className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm" value={partnerA} onChange={(e) => setPartnerA(e.target.value)} required>
                         <option value="">Select...</option>
                         {skaters.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}
                     </select>
                 </div>
                 <div className="space-y-2">
                     <Label>Partner B</Label>
-                    <select 
-                        className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm" 
-                        value={partnerB} 
-                        onChange={(e) => setPartnerB(e.target.value)} 
-                        required
-                    >
+                    <select className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm" value={partnerB} onChange={(e) => setPartnerB(e.target.value)} required>
                         <option value="">Select...</option>
                         {skaters.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}
                     </select>

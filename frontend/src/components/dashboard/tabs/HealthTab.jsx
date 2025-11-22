@@ -7,16 +7,17 @@ import { InjuryModal } from '@/components/dashboard/InjuryModal';
 import { AlertTriangle, CheckCircle2, Activity, Calendar } from 'lucide-react';
 
 
-export function HealthTab({ skater, team }) {
+export function HealthTab({ skater, team, isSynchro }) {
   const { token } = useAuth();
   const [injuries, setInjuries] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // --- DYNAMIC ENDPOINT ---
   // If 'team' is present, fetch team injuries. Otherwise fetch skater injuries.
-  const fetchUrl = team 
-      ? `/teams/${team.id}/injuries/` 
-      : `/skaters/${skater.id}/injuries/`;
+  let fetchUrl = '';
+  if (isSynchro) fetchUrl = `/synchro/${team.id}/injuries/`;
+  else if (team) fetchUrl = `/teams/${team.id}/injuries/`;
+  else fetchUrl = `/skaters/${skater.id}/injuries/`;
 
   const fetchInjuries = async () => {
     try {
@@ -52,7 +53,8 @@ export function HealthTab({ skater, team }) {
         </div>
         <InjuryModal 
             skater={skater} 
-            team={team} // Pass Team context so modal knows to ask "Who is injured?"
+            team={team}
+            isSynchro={isSynchro}
             onSaved={fetchInjuries} 
             trigger={
                 <Button variant="destructive">

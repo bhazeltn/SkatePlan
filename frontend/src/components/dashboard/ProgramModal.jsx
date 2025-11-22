@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Plus, Music, User, Archive, FileText, Image } from 'lucide-react';
 import { ProgramElementRow } from './ProgramElementRow';
 
-export function ProgramModal({ skater, programToEdit, onSaved, trigger }) {
+export function ProgramModal({ skater, team, isSynchro, programToEdit, onSaved, trigger }) {
   const [open, setOpen] = useState(false);
   const { token } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -26,15 +26,23 @@ export function ProgramModal({ skater, programToEdit, onSaved, trigger }) {
   const [elements, setElements] = useState([]);
   const [totalBV, setTotalBV] = useState(0);
 
-  // --- NEW: FILE STATE ---
+  // File State
   const [musicFile, setMusicFile] = useState(null);
   const [designFile, setDesignFile] = useState(null);
   const [costumePhoto, setCostumePhoto] = useState(null);
   const [hairPhoto, setHairPhoto] = useState(null);
 
+  // --- FILTERED ENTITIES (For Skater View) ---
+  // Only show individual disciplines (Singles, Solo Dance). 
+  // Hide Teams/Synchro because those must be managed on their respective dashboards.
+  const individualEntities = skater?.planning_entities?.filter(e => 
+      ['SinglesEntity', 'SoloDanceEntity'].includes(e.type)
+  ) || [];
+
   useEffect(() => {
     if (open) {
         if (programToEdit) {
+            // Edit Mode
             setSelectedEntityId(programToEdit.object_id);
             setTitle(programToEdit.title);
             setSeason(programToEdit.season);
@@ -44,15 +52,18 @@ export function ProgramModal({ skater, programToEdit, onSaved, trigger }) {
             setIsActive(programToEdit.is_active);
             setElements(programToEdit.planned_elements || []);
             
-            // Clear files on open (user must re-upload to change)
-            setMusicFile(null);
-            setDesignFile(null);
-            setCostumePhoto(null);
-            setHairPhoto(null);
+            // Reset files
+            setMusicFile(null); setDesignFile(null); setCostumePhoto(null); setHairPhoto(null);
         } else {
-            if (skater?.planning_entities?.length > 0) {
-                setSelectedEntityId(skater.planning_entities[0].id);
+            // Create Mode
+            if (team) {
+                // TEAM CONTEXT: Hardcode to this team
+                setSelectedEntityId(team.id);
+            } else if (individualEntities.length > 0) {
+                // SKATER CONTEXT: Default to first individual entity
+                setSelectedEntityId(individualEntities[0].id);
             }
+            
             setTitle('');
             setSeason('2025-2026'); 
             setCategory('Free Skate');
@@ -60,13 +71,10 @@ export function ProgramModal({ skater, programToEdit, onSaved, trigger }) {
             setChoreo('');
             setIsActive(true);
             setElements([]);
-            setMusicFile(null);
-            setDesignFile(null);
-            setCostumePhoto(null);
-            setHairPhoto(null);
+            setMusicFile(null); setDesignFile(null); setCostumePhoto(null); setHairPhoto(null);
         }
     }
-  }, [open, programToEdit, skater]);
+  }, [open, programToEdit, skater, team]);
 
   // Auto-Calc BV
   useEffect(() => {
@@ -79,26 +87,33 @@ export function ProgramModal({ skater, programToEdit, onSaved, trigger }) {
   }, [elements]);
 
   // Element Handlers
-  const addElementRow = () => {
-      setElements([...elements, { type: 'JUMP', components: [{ name: '', id: null }], level: '', notes: '', base_value: '', is_second_half: false }]);
-  };
-  const updateElementRow = (index, newData) => {
-      const updated = [...elements];
-      updated[index] = newData;
-      setElements(updated);
-  };
-  const removeElementRow = (index) => {
-      setElements(elements.filter((_, i) => i !== index));
-  };
+  const addElementRow = () => { setElements([...elements, { type: 'JUMP', components: [{ name: '', id: null }], level: '', notes: '', base_value: '', is_second_half: false }]); };
+  const updateElementRow = (index, newData) => { const updated = [...elements]; updated[index] = newData; setElements(updated); };
+  const removeElementRow = (index) => { setElements(elements.filter((_, i) => i !== index)); };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
-    const entity = skater.planning_entities.find(e => String(e.id) === String(selectedEntityId));
-    const entityType = entity ? entity.type : null;
+    // --- DETERMINE ENTITY TYPE ---
+    let entityType = null;
+    
+    if (team) {
+        // If on Team Dashboard, it's always a Team entity
+        entityType = isSynchro ? 'SynchroTeam' : 'Team';
+    } else {
+        // If on Skater Dashboard, lookup the selected individual entity
+        const entity = individualEntities.find(e => String(e.id) === String(selectedEntityId));
+        entityType = entity ? entity.type : null;
+    }
 
-    // --- BUILD FORM DATA ---
+    if (!entityType || !selectedEntityId) {
+        alert("Error: Could not determine discipline linkage.");
+        setLoading(false);
+        return;
+    }
+
+    // Build FormData
     const formData = new FormData();
     formData.append('title', title);
     formData.append('season', season);
@@ -109,11 +124,8 @@ export function ProgramModal({ skater, programToEdit, onSaved, trigger }) {
     formData.append('planning_entity_type', entityType);
     formData.append('is_active', isActive);
     formData.append('est_base_value', totalBV);
-    
-    // Complex objects must be stringified
     formData.append('planned_elements', JSON.stringify(elements));
 
-    // Append files only if selected
     if (musicFile) formData.append('music_file', musicFile);
     if (designFile) formData.append('costume_design', designFile);
     if (costumePhoto) formData.append('costume_photo', costumePhoto);
@@ -122,6 +134,11 @@ export function ProgramModal({ skater, programToEdit, onSaved, trigger }) {
     try {
       if (programToEdit) {
         await apiRequest(`/programs/${programToEdit.id}/`, 'PATCH', formData, token);
+      } else if (isSynchro) {
+         // Use Synchro-specific endpoint if needed, or standard team logic
+         await apiRequest(`/synchro/${team.id}/programs/`, 'POST', formData, token); // Assuming we add this endpoint next if needed, or reuse team
+      } else if (team) {
+        await apiRequest(`/teams/${team.id}/programs/`, 'POST', formData, token);
       } else {
         await apiRequest(`/skaters/${skater.id}/programs/`, 'POST', formData, token);
       }
@@ -160,9 +177,26 @@ export function ProgramModal({ skater, programToEdit, onSaved, trigger }) {
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                     <Label>Discipline</Label>
-                    <select className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm" value={selectedEntityId} onChange={(e) => setSelectedEntityId(e.target.value)} disabled={!!programToEdit}>
-                        {skater?.planning_entities?.map(e => (<option key={e.id} value={e.id}>{e.name}</option>))}
-                    </select>
+                    {team ? (
+                        // TEAM/SYNCHRO MODE: Read-only Input
+                        <Input 
+                            value={team.team_name} 
+                            disabled 
+                            className="bg-slate-50 text-slate-500" 
+                        />
+                    ) : (
+                        // SKATER MODE: Filtered Dropdown (No Teams)
+                        <select 
+                            className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm"
+                            value={selectedEntityId}
+                            onChange={(e) => setSelectedEntityId(e.target.value)}
+                            disabled={!!programToEdit}
+                        >
+                            {individualEntities.map(e => (
+                                <option key={e.id} value={e.id}>{e.name} ({e.current_level || 'No Level'})</option>
+                            ))}
+                        </select>
+                    )}
                 </div>
                 <div className="space-y-2"><Label>Season</Label><Input value={season} onChange={(e) => setSeason(e.target.value)} placeholder="e.g. 2025-2026" /></div>
             </div>
@@ -173,33 +207,20 @@ export function ProgramModal({ skater, programToEdit, onSaved, trigger }) {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2"><Label>Music Title</Label><div className="relative"><Music className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" /><Input className="pl-8" value={music} onChange={(e) => setMusic(e.target.value)} /></div></div>
-                <div className="space-y-2"><Label>Choreographer</Label><div className="relative"><User className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" /><Input className="pl-8" value={choreo} onChange={(e) => setChoreo(e.target.value)} /></div></div>
+                <div className="space-y-2"><Label>Music Title</Label><div className="relative"><Music className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" /><Input className="pl-8" value={music} onChange={(e) => setMusic(e.target.value)} placeholder="e.g. Duel of the Fates" /></div></div>
+                <div className="space-y-2"><Label>Choreographer</Label><div className="relative"><User className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" /><Input className="pl-8" value={choreo} onChange={(e) => setChoreo(e.target.value)} placeholder="e.g. Lori Nichol" /></div></div>
             </div>
 
-            {/* --- NEW FILES SECTION --- */}
+            {/* Files Section */}
             <div className="space-y-3 p-3 bg-slate-50 rounded border">
                 <Label className="text-xs font-bold text-gray-500 uppercase">Files & Assets</Label>
                 <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                        <Label className="text-xs flex items-center gap-1"><Music className="h-3 w-3"/> Music File (MP3)</Label>
-                        <Input type="file" accept="audio/*" className="h-8 text-xs" onChange={(e) => setMusicFile(e.target.files[0])} />
-                    </div>
-                    <div className="space-y-1">
-                        <Label className="text-xs flex items-center gap-1"><FileText className="h-3 w-3"/> Costume Design</Label>
-                        <Input type="file" accept="image/*,application/pdf" className="h-8 text-xs" onChange={(e) => setDesignFile(e.target.files[0])} />
-                    </div>
-                    <div className="space-y-1">
-                        <Label className="text-xs flex items-center gap-1"><Image className="h-3 w-3"/> Costume Photo</Label>
-                        <Input type="file" accept="image/*" className="h-8 text-xs" onChange={(e) => setCostumePhoto(e.target.files[0])} />
-                    </div>
-                    <div className="space-y-1">
-                        <Label className="text-xs flex items-center gap-1"><Image className="h-3 w-3"/> Hair Photo</Label>
-                        <Input type="file" accept="image/*" className="h-8 text-xs" onChange={(e) => setHairPhoto(e.target.files[0])} />
-                    </div>
+                    <div className="space-y-1"><Label className="text-xs flex items-center gap-1"><Music className="h-3 w-3"/> Music (MP3)</Label><Input type="file" accept="audio/*" className="h-8 text-xs" onChange={(e) => setMusicFile(e.target.files[0])} /></div>
+                    <div className="space-y-1"><Label className="text-xs flex items-center gap-1"><FileText className="h-3 w-3"/> Design (PDF)</Label><Input type="file" accept="image/*,application/pdf" className="h-8 text-xs" onChange={(e) => setDesignFile(e.target.files[0])} /></div>
+                    <div className="space-y-1"><Label className="text-xs flex items-center gap-1"><Image className="h-3 w-3"/> Costume</Label><Input type="file" accept="image/*" className="h-8 text-xs" onChange={(e) => setCostumePhoto(e.target.files[0])} /></div>
+                    <div className="space-y-1"><Label className="text-xs flex items-center gap-1"><Image className="h-3 w-3"/> Hair</Label><Input type="file" accept="image/*" className="h-8 text-xs" onChange={(e) => setHairPhoto(e.target.files[0])} /></div>
                 </div>
             </div>
-            {/* ------------------------- */}
 
             <div className="border-t pt-4 mt-2">
                 <div className="flex justify-between items-center mb-2">

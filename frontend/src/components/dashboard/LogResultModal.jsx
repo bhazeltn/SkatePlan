@@ -7,11 +7,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { DatePicker } from '@/components/ui/date-picker';
-import { Search, Plus, MapPin, Trash2, ChevronDown, ChevronUp, FileText, Video } from 'lucide-react';
+import { Search, Plus, MapPin, Trash2, ChevronDown, ChevronUp, Video } from 'lucide-react';
 import { Country, State, City } from 'country-state-city';
 import { ProtocolEditor } from './ProtocolEditor';
 
-export function LogResultModal({ skater, team, resultToEdit, onSaved, trigger }) {
+export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved, trigger }) {
   const [open, setOpen] = useState(false);
   const { token } = useAuth();
   
@@ -42,22 +42,22 @@ export function LogResultModal({ skater, team, resultToEdit, onSaved, trigger })
   const [notes, setNotes] = useState(resultToEdit?.notes || '');
   const [segments, setSegments] = useState(resultToEdit?.segment_scores || []);
 
-  // --- RESTORED TOGGLE STATES ---
-  const [expandedSegment, setExpandedSegment] = useState(null); // Use this one instead of expandedProtocol to match previous logic or use expandedProtocol. Let's stick to one.
+  // Toggles
   const [expandedPCS, setExpandedPCS] = useState(null);
-  const [expandedProtocol, setExpandedProtocol] = useState(null); // Restored
+  const [expandedProtocol, setExpandedProtocol] = useState(null);
 
   // Files
   const [detailSheet, setDetailSheet] = useState(null);
   const [videoUrl, setVideoUrl] = useState('');
 
-  // Reset/Init
+  // Init / Reset
   useEffect(() => {
       if (open) {
           if (resultToEdit) {
               setStep('LOG');
               setSelectedComp(resultToEdit.competition);
               if (resultToEdit.object_id) setSelectedEntityId(resultToEdit.object_id);
+              
               setStatus(resultToEdit.status);
               setLevel(resultToEdit.level || '');
               setPlacement(resultToEdit.placement || '');
@@ -65,13 +65,14 @@ export function LogResultModal({ skater, team, resultToEdit, onSaved, trigger })
               setNotes(resultToEdit.notes || '');
               setSegments(resultToEdit.segment_scores || []);
               setVideoUrl(resultToEdit.video_url || '');
-              setDetailSheet(null);
+              setDetailSheet(null); // Files cannot be pre-filled
           } else {
               setStep('SEARCH');
               setSelectedComp(null);
               if (team) setSelectedEntityId(team.id);
               else if (skater?.planning_entities?.length > 0) setSelectedEntityId(skater.planning_entities[0].id);
-              setStatus('COMPLETED');
+              
+              setStatus('COMPLETED'); // Default to Completed so fields show
               setLevel('');
               setPlacement('');
               setOverallScore('');
@@ -91,27 +92,72 @@ export function LogResultModal({ skater, team, resultToEdit, onSaved, trigger })
       }
   }, [segments, status]);
 
-  // Handlers
-  const handleSearch = async () => { setLoading(true); setError(null); try { const data = await apiRequest(`/competitions/?search=${searchTerm}`, 'GET', null, token); setSearchResults(data || []); } catch(e) { console.error(e); } finally { setLoading(false); } };
-  const handleCreate = async () => { setLoading(true); setError(null); try { const data = await apiRequest('/competitions/', 'POST', { title: newTitle, country: countryCode, province_state: stateCode, city: cityName, start_date: start, end_date: end }, token); setSelectedComp(data); setStep('LOG'); } catch (e) { setError("Failed/Duplicate"); } finally { setLoading(false); } };
+  // --- HANDLERS ---
+
+  const handleSearch = async () => {
+      setLoading(true); setError(null);
+      try {
+          const data = await apiRequest(`/competitions/?search=${searchTerm}`, 'GET', null, token);
+          setSearchResults(data || []);
+      } catch(e) { console.error(e); } 
+      finally { setLoading(false); }
+  };
+
+  const handleCreate = async () => {
+      setLoading(true); setError(null);
+      try {
+          const data = await apiRequest('/competitions/', 'POST', {
+              title: newTitle,
+              country: countryCode,
+              province_state: stateCode,
+              city: cityName,
+              start_date: start,
+              end_date: end
+          }, token);
+          setSelectedComp(data);
+          setStep('LOG');
+      } catch (e) { setError("Failed to create event (Duplicate?)."); } 
+      finally { setLoading(false); }
+  };
+
+  // Segment Logic
+  const addSegment = () => {
+      setSegments([...segments, { 
+          id: Date.now(), 
+          name: 'Short Program', 
+          score: '', 
+          tes: '', 
+          pcs: '', 
+          pcs_composition: '', 
+          pcs_presentation: '', 
+          pcs_skills: '', 
+          deductions: '', 
+          bonus: '', 
+          placement: '', 
+          protocol: [] 
+      }]);
+  };
   
-  const addSegment = () => { setSegments([...segments, { id: Date.now(), name: 'Short Program', score: '', tes: '', pcs: '', pcs_composition: '', pcs_presentation: '', pcs_skills: '', deductions: '', bonus: '', placement: '', protocol: [] }]); };
   const removeSegment = (id) => setSegments(segments.filter(s => s.id !== id));
   const updateSegment = (id, field, value) => setSegments(segments.map(s => s.id === id ? { ...s, [field]: value } : s));
   
-  // --- RESTORED TOGGLE HANDLERS ---
+  // Toggles
   const togglePCS = (id) => setExpandedPCS(expandedPCS === id ? null : id);
   const toggleProtocol = (id) => setExpandedProtocol(expandedProtocol === id ? null : id);
   
   const updateProtocol = (id, newProto) => {
       const updated = segments.map(s => {
-          if (s.id === id) return { ...s, protocol: newProto };
+          if (s.id === id) {
+              // Optional: Auto-calc TES from protocol sum?
+              // For now just save the protocol data
+              return { ...s, protocol: newProto };
+          }
           return s;
       });
       setSegments(updated);
   };
-  // --------------------------------
 
+  // --- SAVE LOGIC (FormData) ---
   const saveResult = async () => {
       const formData = new FormData();
       formData.append('competition_id', selectedComp.id);
@@ -125,19 +171,18 @@ export function LogResultModal({ skater, team, resultToEdit, onSaved, trigger })
       if (status === 'COMPLETED') {
           formData.append('placement', placement);
           formData.append('total_score', overallScore);
+          // JSON.stringify ensures complex segment data survives FormData
           formData.append('segment_scores', JSON.stringify(segments));
       }
 
+      // Dynamic Endpoint Selection
       if (resultToEdit) {
           await apiRequest(`/results/${resultToEdit.id}/`, 'PATCH', formData, token);
       } else if (isSynchro) {
-          // --- SYNCHRO SAVE ---
           await apiRequest(`/synchro/${team.id}/results/`, 'POST', formData, token);
       } else if (team) {
-          // --- TEAM SAVE ---
           await apiRequest(`/teams/${team.id}/results/`, 'POST', formData, token);
       } else {
-          // --- SKATER SAVE ---
           await apiRequest(`/skaters/${skater.id}/results/`, 'POST', formData, token);
       }
       
@@ -146,20 +191,34 @@ export function LogResultModal({ skater, team, resultToEdit, onSaved, trigger })
 
   const handleSave = async () => {
       setLoading(true);
-      try { await saveResult(); setOpen(false); } catch (e) { alert("Failed to save."); } finally { setLoading(false); }
+      try {
+          await saveResult();
+          setOpen(false);
+      } catch (e) { 
+          console.error(e);
+          alert("Failed to save: " + (e.message || "Unknown error")); 
+      } finally { setLoading(false); }
   };
 
   const handleSaveAndAdd = async () => {
       setLoading(true);
       try {
           await saveResult();
-          setLevel(''); setPlacement(''); setOverallScore(''); setNotes(''); setSegments([]); setDetailSheet(null); setVideoUrl('');
-          alert("Result saved! Ready for next.");
-      } catch (e) { alert("Failed to save."); } finally { setLoading(false); }
+          // Reset result fields but keep competition context
+          setLevel(''); setPlacement(''); setOverallScore(''); setNotes(''); 
+          setSegments([]); setDetailSheet(null); setVideoUrl('');
+          alert("Result saved! Ready for next entry.");
+      } catch (e) { 
+          console.error(e);
+          alert("Failed to save: " + (e.message || "Unknown error")); 
+      } finally { setLoading(false); }
   };
 
+  // --- RENDER HELPERS ---
   const renderLocationSelectors = () => {
-      const countries = Country.getAllCountries(); const states = State.getStatesOfCountry(countryCode); const cities = City.getCitiesOfState(countryCode, stateCode);
+      const countries = Country.getAllCountries();
+      const states = State.getStatesOfCountry(countryCode);
+      const cities = City.getCitiesOfState(countryCode, stateCode);
       return (
           <div className="space-y-3 p-3 bg-slate-50 rounded border">
              <div className="grid grid-cols-2 gap-2">
@@ -210,15 +269,24 @@ export function LogResultModal({ skater, team, resultToEdit, onSaved, trigger })
                                       <div><Label className="text-xs text-red-500">Ded</Label><Input className="h-8 bg-white text-red-600" type="number" step="0.01" value={seg.deductions} onChange={(e) => updateSegment(seg.id, 'deductions', e.target.value)} /></div>
                                       <div><Label className="text-xs text-green-600">Bon</Label><Input className="h-8 bg-white text-green-600" type="number" step="0.01" value={seg.bonus} onChange={(e) => updateSegment(seg.id, 'bonus', e.target.value)} /></div>
                                   </div>
-                                  
+
+                                  {/* --- PCS DETAILS TOGGLE --- */}
                                   <div className="mt-2">
                                       <Button type="button" variant="ghost" size="sm" className="h-5 text-[10px] text-slate-500" onClick={() => togglePCS(seg.id)}>{expandedPCS === seg.id ? "Hide PCS Details" : "Show PCS Details"}</Button>
-                                      {expandedPCS === seg.id && (<div className="grid grid-cols-3 gap-2 mt-1 p-2 bg-slate-100 rounded border border-slate-200"><div className="col-span-1"><Label className="text-[10px]">Comp</Label><Input className="h-7 text-xs" value={seg.pcs_composition} onChange={(e)=>updateSegment(seg.id, 'pcs_composition', e.target.value)} /></div><div className="col-span-1"><Label className="text-[10px]">Pres</Label><Input className="h-7 text-xs" value={seg.pcs_presentation} onChange={(e)=>updateSegment(seg.id, 'pcs_presentation', e.target.value)} /></div><div className="col-span-1"><Label className="text-[10px]">Skills</Label><Input className="h-7 text-xs" value={seg.pcs_skills} onChange={(e)=>updateSegment(seg.id, 'pcs_skills', e.target.value)} /></div></div>)}
+                                      {expandedPCS === seg.id && (<div className="grid grid-cols-3 gap-2 mt-1 p-2 bg-slate-100 rounded border border-slate-200 animate-in fade-in slide-in-from-top-1"><div className="col-span-1"><Label className="text-[10px]">Comp</Label><Input className="h-7 text-xs" type="number" step="0.01" value={seg.pcs_composition} onChange={(e)=>updateSegment(seg.id, 'pcs_composition', e.target.value)} /></div><div className="col-span-1"><Label className="text-[10px]">Pres</Label><Input className="h-7 text-xs" type="number" step="0.01" value={seg.pcs_presentation} onChange={(e)=>updateSegment(seg.id, 'pcs_presentation', e.target.value)} /></div><div className="col-span-1"><Label className="text-[10px]">Skills</Label><Input className="h-7 text-xs" type="number" step="0.01" value={seg.pcs_skills} onChange={(e)=>updateSegment(seg.id, 'pcs_skills', e.target.value)} /></div></div>)}
                                   </div>
 
+                                  {/* --- PROTOCOL TOGGLE --- */}
                                   <div className="mt-2 pt-2 border-t border-slate-200">
-                                      <Button type="button" variant="ghost" size="sm" className="w-full h-6 text-xs flex justify-between text-slate-500 hover:text-slate-800 hover:bg-slate-100" onClick={() => toggleProtocol(seg.id)}><span>Detailed Protocol</span>{expandedProtocol === seg.id ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}</Button>
-                                      {expandedProtocol === seg.id && (<div className="mt-2"><ProtocolEditor elements={seg.protocol || []} onChange={(newProto) => updateProtocol(seg.id, newProto)} /></div>)}
+                                      <Button type="button" variant="ghost" size="sm" className="w-full h-6 text-xs flex justify-between text-slate-500 hover:text-slate-800 hover:bg-slate-100" onClick={() => toggleProtocol(seg.id)}>
+                                          <span>Detailed Protocol / Elements</span>
+                                          {expandedProtocol === seg.id ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                                      </Button>
+                                      {expandedProtocol === seg.id && (
+                                          <div className="mt-2 animate-in slide-in-from-top-1 fade-in duration-200">
+                                              <ProtocolEditor elements={seg.protocol || []} onChange={(newProto) => updateProtocol(seg.id, newProto)} />
+                                          </div>
+                                      )}
                                   </div>
                               </div>
                           ))}
@@ -227,6 +295,7 @@ export function LogResultModal({ skater, team, resultToEdit, onSaved, trigger })
               </>
           )}
 
+          {/* Files Section */}
           <div className="grid grid-cols-2 gap-4 pt-2 border-t">
               <div className="space-y-2"><Label>Protocol / Detail Sheet</Label><Input type="file" className="text-xs h-9" onChange={(e) => setDetailSheet(e.target.files[0])} /></div>
               <div className="space-y-2"><Label>Video URL</Label><div className="relative"><Video className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" /><Input className="pl-8" value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} placeholder="https://..." /></div></div>
@@ -235,7 +304,8 @@ export function LogResultModal({ skater, team, resultToEdit, onSaved, trigger })
           <div className="space-y-2 mt-2"><Label>Notes</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes..." /></div>
           <div className="flex justify-between pt-2">
               {!resultToEdit && <Button variant="ghost" onClick={() => { setStep('SEARCH'); setSelectedComp(null); }}>Back</Button>}
-              <Button onClick={handleSave} disabled={loading} className={!resultToEdit ? "" : "w-full"}>{status === 'COMPLETED' ? 'Save Result' : 'Save Plan'}</Button>
+              {!resultToEdit && <Button variant="secondary" onClick={handleSaveAndAdd} disabled={loading} className="w-2/3"><Plus className="h-4 w-4 mr-2" /> Save & Add Another</Button>}
+              {resultToEdit && <Button onClick={handleSave} disabled={loading} className="w-full">Save Changes</Button>}
           </div>
       </div>
   );

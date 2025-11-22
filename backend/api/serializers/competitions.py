@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from api.models import Competition, CompetitionResult, SkaterTest, Program
+import json
 
 
 class CompetitionSerializer(serializers.ModelSerializer):
@@ -25,12 +26,22 @@ class CompetitionResultSerializer(serializers.ModelSerializer):
             "placement",
             "total_score",
             "planned_base_value",
-            "detailed_protocol",
             "segment_scores",
             "notes",
             "detail_sheet",
             "video_url",
         )
+
+    # --- FIX: Parse JSON strings from FormData ---
+    def validate_segment_scores(self, value):
+        if isinstance(value, str):
+            try:
+                return json.loads(value)
+            except json.JSONDecodeError:
+                raise serializers.ValidationError("Invalid JSON format.")
+        return value
+
+    # ---------------------------------------------
 
 
 class SkaterTestSerializer(serializers.ModelSerializer):
@@ -68,3 +79,14 @@ class ProgramSerializer(serializers.ModelSerializer):
             "costume_photo",
             "hair_photo",
         )
+
+    # --- FIX: Parse JSON strings from FormData ---
+    def validate_planned_elements(self, value):
+        if isinstance(value, str):
+            try:
+                return json.loads(value)
+            except json.JSONDecodeError:
+                raise serializers.ValidationError("Invalid JSON format.")
+        return value
+
+    # ---------------------------------------------

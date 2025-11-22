@@ -1,15 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/AuthContext';
 import { apiRequest } from '@/api';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { LogResultModal } from '@/components/dashboard/LogResultModal';
 import { StatSnapshot } from '@/components/dashboard/StatSnapshot';
 import { Trophy, MapPin, Calendar, Award } from 'lucide-react';
 
-export function CompetitionsTab({ skater, team, isSynchro }) { // <--- Accept isSynchro
-  // ...
+export function CompetitionsTab({ skater, team, isSynchro }) {
+  const { token } = useAuth(); // <--- This was missing/undefined before
   const [results, setResults] = useState([]);
   const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   // --- DYNAMIC ENDPOINTS ---
   let resultsUrl = '';
@@ -61,6 +63,7 @@ export function CompetitionsTab({ skater, team, isSynchro }) { // <--- Accept is
   return (
     <div className="space-y-8">
       
+      {/* Header */}
       <div className="flex justify-between items-center">
         <div>
             <h3 className="text-lg font-semibold">Competitions</h3>
@@ -68,22 +71,38 @@ export function CompetitionsTab({ skater, team, isSynchro }) { // <--- Accept is
         </div>
         <LogResultModal 
             skater={skater} 
-            team={team} // Pass Team
+            team={team} 
+            isSynchro={isSynchro}
             onSaved={fetchData} 
         />
       </div>
 
-      {/* 1. STATS SNAPSHOT */}
+      {/* 1. PERSONAL BESTS SNAPSHOT */}
       {stats && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <StatSnapshot label="Total Score" pb={stats.overall?.pb} sb={stats.overall?.sb} icon={Trophy} color="text-yellow-600" bg="bg-yellow-50" />
+              <StatSnapshot 
+                  label="Total Score" 
+                  pb={stats.overall?.pb} 
+                  sb={stats.overall?.sb} 
+                  icon={Trophy}
+                  color="text-yellow-600"
+                  bg="bg-yellow-50"
+              />
               {stats.segments && Object.entries(stats.segments).map(([name, data]) => (
-                  <StatSnapshot key={name} label={name} pb={data.total?.pb} sb={data.total?.sb} icon={Award} color="text-brand-blue" bg="bg-blue-50" />
+                  <StatSnapshot 
+                      key={name}
+                      label={name} 
+                      pb={data.total?.pb} 
+                      sb={data.total?.sb} 
+                      icon={Award}
+                      color="text-brand-blue"
+                      bg="bg-blue-50"
+                  />
               ))}
           </div>
       )}
 
-      {/* 2. UPCOMING */}
+      {/* 2. UPCOMING EVENTS */}
       <div className="space-y-4">
           <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Upcoming Events</h4>
           {upcoming.length === 0 ? (
@@ -93,7 +112,9 @@ export function CompetitionsTab({ skater, team, isSynchro }) { // <--- Accept is
                 {upcoming.map(event => (
                    <LogResultModal 
                        key={event.id}
-                       skater={skater} team={team}
+                       skater={skater} 
+                       team={team}
+                       isSynchro={isSynchro}
                        resultToEdit={event} 
                        onSaved={fetchData} 
                        trigger={
@@ -119,7 +140,7 @@ export function CompetitionsTab({ skater, team, isSynchro }) { // <--- Accept is
           )}
       </div>
 
-      {/* 3. HISTORY */}
+      {/* 3. RESULTS HISTORY */}
       <div className="space-y-4">
         <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Results History</h4>
         {history.length === 0 ? (
@@ -129,12 +150,15 @@ export function CompetitionsTab({ skater, team, isSynchro }) { // <--- Accept is
                 {history.map((res) => (
                     <LogResultModal 
                         key={res.id}
-                        skater={skater} team={team}
+                        skater={skater} 
+                        team={team}
+                        isSynchro={isSynchro}
                         resultToEdit={res} 
                         onSaved={fetchData} 
                         trigger={
-                            <div className="flex items-start gap-4 p-4 border rounded-lg hover:border-brand-blue hover:shadow-sm transition-all bg-white cursor-pointer h-full">
+                            <div className="flex items-start gap-4 p-4 border rounded-lg hover:border-brand-blue hover:shadow-sm transition-all bg-white cursor-pointer h-full group">
                                 <div className="bg-yellow-50 p-3 rounded-full shrink-0"><Trophy className="h-6 w-6 text-yellow-600" /></div>
+                                
                                 <div className="flex-1 min-w-0">
                                     <div className="flex justify-between items-start">
                                         <h4 className="font-bold text-lg text-gray-900 pr-4 truncate">{res.competition.title}</h4>
@@ -143,11 +167,16 @@ export function CompetitionsTab({ skater, team, isSynchro }) { // <--- Accept is
                                             <span className="text-xs text-gray-500 uppercase tracking-wide">Total</span>
                                         </div>
                                     </div>
+                                    
                                     <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600 mt-1 mb-3">
                                         <div className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {res.competition.city}, {res.competition.province_state}</div>
                                         <div className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {res.competition.start_date}</div>
-                                        <span className="font-medium text-gray-900 border-l pl-3 ml-1">{res.level} • Place: {res.placement || "-"} <span className="ml-1">{getPlacementEmoji(res.placement)}</span></span>
+                                        
+                                        <span className="font-medium text-gray-900 border-l pl-3 ml-1">
+                                            {res.level} • Place: {res.placement || "-"} <span className="ml-1">{getPlacementEmoji(res.placement)}</span>
+                                        </span>
                                     </div>
+
                                     {res.segment_scores && res.segment_scores.length > 0 && (
                                         <div className="mt-3 border rounded-md overflow-x-auto">
                                             <table className="w-full text-sm text-left whitespace-nowrap">
@@ -161,7 +190,7 @@ export function CompetitionsTab({ skater, team, isSynchro }) { // <--- Accept is
                                                                 {seg.name}
                                                                 {(seg.pcs_composition || seg.pcs_presentation || seg.pcs_skills) && <div className="text-[10px] text-gray-400 mt-0.5 font-normal">C:{seg.pcs_composition || '-'} P:{seg.pcs_presentation || '-'} S:{seg.pcs_skills || '-'}</div>}
                                                             </td>
-                                                            <td className="px-3 py-2 text-right font-bold text-brand-blue">{seg.score}</td>
+                                                            <td className="px-3 py-2 text-right font-bold">{seg.score}</td>
                                                             <td className="px-3 py-2 text-right text-gray-500">{seg.tes}</td>
                                                             <td className="px-3 py-2 text-right text-gray-500">{seg.pcs}</td>
                                                             <td className="px-3 py-2 text-right text-red-500">{seg.deductions ? `-${seg.deductions}` : '-'}</td>

@@ -40,10 +40,16 @@ class SessionLogSerializer(serializers.ModelSerializer):
 
 
 class InjuryLogSerializer(serializers.ModelSerializer):
+    # --- NEW: Expose Skater Name ---
+    skater_name = serializers.SerializerMethodField()
+    # -------------------------------
+
     class Meta:
         model = InjuryLog
         fields = (
             "id",
+            "skater",
+            "skater_name",  # <--- Add field
             "injury_type",
             "body_area",
             "date_of_onset",
@@ -52,3 +58,6 @@ class InjuryLogSerializer(serializers.ModelSerializer):
             "recovery_status",
             "recovery_notes",
         )
+
+    def get_skater_name(self, obj):
+        return obj.skater.full_name if obj.skater else "Unknown"

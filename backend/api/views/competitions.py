@@ -172,3 +172,41 @@ class ProgramDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [permissions.IsAuthenticated, IsCoachUser]
     serializer_class = ProgramSerializer
     queryset = Program.objects.all()
+
+
+class CompetitionResultListByTeamView(generics.ListCreateAPIView):
+    """
+    List/Create Results for a specific TEAM.
+    """
+
+    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    serializer_class = CompetitionResultSerializer
+
+    def get_queryset(self):
+        team_id = self.kwargs["team_id"]
+        ct = ContentType.objects.get_for_model(Team)
+        return CompetitionResult.objects.filter(
+            content_type=ct, object_id=team_id
+        ).order_by("-competition__start_date")
+
+    def perform_create(self, serializer):
+        team_id = self.kwargs["team_id"]
+        ct = ContentType.objects.get_for_model(Team)
+        serializer.save(content_type=ct, object_id=team_id)
+
+
+class ProgramListCreateByTeamView(generics.ListCreateAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    serializer_class = ProgramSerializer
+
+    def get_queryset(self):
+        team_id = self.kwargs["team_id"]
+        ct = ContentType.objects.get_for_model(Team)
+        return Program.objects.filter(content_type=ct, object_id=team_id).order_by(
+            "-season"
+        )
+
+    def perform_create(self, serializer):
+        team_id = self.kwargs["team_id"]
+        ct = ContentType.objects.get_for_model(Team)
+        serializer.save(content_type=ct, object_id=team_id)

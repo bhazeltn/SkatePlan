@@ -25,12 +25,16 @@ from .planning import (
     GoalDetailView,
     TeamYearlyPlanListCreateView,
     MasterWeeklyPlanView,
+    GoalListByTeamView,
+    TeamMasterWeeklyPlanView,
 )
 from .logs import (
     SessionLogListCreateView,
     SessionLogDetailView,
     InjuryLogListCreateView,
     InjuryLogDetailView,
+    SessionLogListCreateByTeamView,
+    InjuryLogListCreateByTeamView,
 )
 from .competitions import (
     CompetitionListCreateView,
@@ -40,5 +44,7 @@ from .competitions import (
     SkaterTestDetailView,
     ProgramListCreateView,
     ProgramDetailView,
+    CompetitionResultListByTeamView,
+    ProgramListCreateByTeamView,
 )
-from .dashboard import CoachDashboardStatsView, SkaterStatsView
+from .dashboard import CoachDashboardStatsView, SkaterStatsView, TeamStatsView

@@ -395,3 +395,120 @@ class SkaterStatsView(APIView):
                 "history": history,
             }
         )
+
+
+class TeamStatsView(APIView):
+    """
+    Calculates PB/SB for a specific Team.
+    """
+
+    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+
+    def get(self, request, team_id):
+        # 1. Find Results
+        ct = ContentType.objects.get_for_model(Team)
+        all_results = (
+            CompetitionResult.objects.filter(
+                content_type=ct,
+                object_id=team_id,
+                status=CompetitionResult.Status.COMPLETED,
+            )
+            .select_related("competition")
+            .order_by("competition__start_date")
+        )
+
+        # 2. Setup Containers
+        def make_stat():
+            return {"score": 0.0, "comp": "N/A", "date": None}
+
+        stats = {"total": {"pb": make_stat(), "sb": make_stat()}, "segments": {}}
+
+        # Current Season Logic (Simple Year-Based)
+        today = date.today()
+        start_year = today.year if today.month >= 7 else today.year - 1
+        season_start = date(start_year, 7, 1)
+        season_end = date(start_year + 1, 6, 30)
+
+        history = []
+
+        # 3. Iterate Safely
+        for res in all_results:
+            comp_name = res.competition.title
+            comp_date = res.competition.start_date
+
+            total_tes = 0.0
+            # Safe JSON iteration
+            if res.segment_scores and isinstance(res.segment_scores, list):
+                for seg in res.segment_scores:
+                    total_tes += float(seg.get("tes") or 0)
+
+            planned_bv = float(res.planned_base_value or 0)
+            total_score = float(res.total_score or 0)
+
+            history.append(
+                {
+                    "date": comp_date,
+                    "name": comp_name,
+                    "total_score": total_score,
+                    "tes": total_tes,
+                    "planned_bv": planned_bv,
+                    "pcs_approx": total_score - total_tes,
+                }
+            )
+
+            is_current = season_start <= comp_date <= season_end
+
+            # Update Totals
+            if total_score > stats["total"]["pb"]["score"]:
+                stats["total"]["pb"] = {
+                    "score": total_score,
+                    "comp": comp_name,
+                    "date": comp_date,
+                }
+            if is_current and total_score > stats["total"]["sb"]["score"]:
+                stats["total"]["sb"] = {
+                    "score": total_score,
+                    "comp": comp_name,
+                    "date": comp_date,
+                }
+
+            # Update Segments
+            if res.segment_scores and isinstance(res.segment_scores, list):
+                for seg in res.segment_scores:
+                    name = seg.get("name", "Unknown")
+
+                    if name not in stats["segments"]:
+                        stats["segments"][name] = {
+                            "total": {"pb": make_stat(), "sb": make_stat()},
+                            "tes": {"pb": make_stat(), "sb": make_stat()},
+                            "pcs": {"pb": make_stat(), "sb": make_stat()},
+                        }
+                    bucket = stats["segments"][name]
+
+                    s_score = float(seg.get("score") or 0)
+                    s_tes = float(seg.get("tes") or 0)
+                    s_pcs = float(seg.get("pcs") or 0)
+
+                    # Segment Total
+                    if s_score > bucket["total"]["pb"]["score"]:
+                        bucket["total"]["pb"] = {
+                            "score": s_score,
+                            "comp": comp_name,
+                            "date": comp_date,
+                        }
+                    if is_current and s_score > bucket["total"]["sb"]["score"]:
+                        bucket["total"]["sb"] = {
+                            "score": s_score,
+                            "comp": comp_name,
+                            "date": comp_date,
+                        }
+
+        return Response(
+            {
+                "overall": stats["total"],
+                "segments": stats["segments"],
+                "volume": 0,
+                "season_name": f"{start_year}-{start_year+1}",
+                "history": history,
+            }
+        )

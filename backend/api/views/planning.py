@@ -4,6 +4,7 @@ from rest_framework.exceptions import ValidationError
 from django.contrib.contenttypes.models import ContentType
 from datetime import date, timedelta
 from rest_framework.views import APIView
+from django.db.models import Q
 
 from api.models import (
     Skater,
@@ -343,7 +344,7 @@ class TeamYearlyPlanListCreateView(generics.ListCreateAPIView):
 class MasterWeeklyPlanView(APIView):
     """
     Aggregates ALL weekly plans for a skater for a specific week.
-    Auto-generates weekly records if they are missing for an active season.
+    Handles Sunday/Monday alignment issues by finding the week that COVERS the target date.
     """
 
     permission_classes = [permissions.IsAuthenticated, IsCoachUser]
@@ -354,51 +355,164 @@ class MasterWeeklyPlanView(APIView):
 
         if not date_str:
             today = date.today()
-            week_start = today - timedelta(days=today.weekday())
+            # Default to current Monday if no date provided
+            target_date = today - timedelta(days=today.weekday())
         else:
             try:
-                week_start = date.fromisoformat(date_str)
+                target_date = date.fromisoformat(date_str)
             except ValueError:
                 return Response(
                     {"error": "Invalid date"}, status=status.HTTP_400_BAD_REQUEST
                 )
 
-        # --- 1. FIND ACTIVE SEASONS ---
-        # Logic: Season is Active AND (Date falls in range OR Dates are missing)
+        # --- 1. CALCULATE WINDOW ---
+        # We want the plan where: week_start <= target_date < week_start + 7
+        # Effectively: week_start is in [target_date - 6 days, target_date]
+        search_start = target_date - timedelta(days=6)
+
+        # --- 2. FIND OR CREATE PLANS ---
+        # Find Active Seasons covering this date
         active_seasons = AthleteSeason.objects.filter(
             skater=skater, is_active=True
         ).filter(
-            Q(start_date__lte=week_start, end_date__gte=week_start)
+            Q(start_date__lte=target_date, end_date__gte=target_date)
             | Q(start_date__isnull=True)
             | Q(end_date__isnull=True)
         )
 
-        # --- 2. AUTO-GENERATE MISSING WEEKS ---
-        for season in active_seasons:
-            # Ensure the container exists for this week
-            WeeklyPlan.objects.get_or_create(
-                athlete_season=season, week_start=week_start, defaults={"theme": ""}
-            )
-
-        # --- 3. QUERY PLANS ---
-        plans = WeeklyPlan.objects.filter(
-            athlete_season__skater=skater, week_start=week_start
-        ).select_related("athlete_season")
-
-        # --- 4. SERIALIZE ---
         data = []
-        for plan in plans:
-            label = plan.athlete_season.season
-            ytp = plan.athlete_season.yearly_plans.first()
+
+        for season in active_seasons:
+            # Try to find an existing week that covers this target date
+            # (Handles Sunday vs Monday start differences)
+            week_plan = (
+                WeeklyPlan.objects.filter(
+                    athlete_season=season,
+                    week_start__gte=search_start,
+                    week_start__lte=target_date,
+                )
+                .order_by("-week_start")
+                .first()
+            )  # Get the closest start date
+
+            if not week_plan:
+                # If no week exists, create one!
+                # We align the new week to the requested target_date (Monday)
+                # to fix the alignment moving forward.
+                week_plan = WeeklyPlan.objects.create(
+                    athlete_season=season, week_start=target_date, theme=""
+                )
+
+            # Determine Discipline Label
+            label = season.season
+            ytp = season.yearly_plans.first()
             if ytp:
                 label = str(ytp.planning_entity)
 
             data.append(
                 {
-                    "plan_data": WeeklyPlanSerializer(plan).data,
+                    "plan_data": WeeklyPlanSerializer(week_plan).data,
                     "label": label,
-                    "season_id": plan.athlete_season.id,
+                    "season_id": season.id,
                 }
             )
 
-        return Response({"week_start": week_start, "plans": data})
+        return Response({"week_start": target_date, "plans": data})
+
+
+class GoalListByTeamView(generics.ListCreateAPIView):
+    """
+    List/Create Goals for a specific TEAM.
+    """
+
+    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    serializer_class = GoalSerializer
+
+    def get_queryset(self):
+        team_id = self.kwargs["team_id"]
+        ct = ContentType.objects.get_for_model(Team)
+        return Goal.objects.filter(content_type=ct, object_id=team_id).order_by(
+            "-created_at"
+        )
+
+    def perform_create(self, serializer):
+        team_id = self.kwargs["team_id"]
+        ct = ContentType.objects.get_for_model(Team)
+        # Team goals are auto-approved
+        serializer.save(
+            content_type=ct, object_id=team_id, current_status=Goal.GoalStatus.APPROVED
+        )
+
+
+class TeamMasterWeeklyPlanView(APIView):
+    """
+    Aggregates ALL weekly plans for BOTH partners in a Team.
+    This gives the coach a complete picture of the team's load and availability.
+    """
+
+    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+
+    def get(self, request, team_id):
+        team = Team.objects.get(id=team_id)
+        date_str = request.query_params.get("date")
+
+        if not date_str:
+            today = date.today()
+            target_date = today - timedelta(days=today.weekday())
+        else:
+            try:
+                target_date = date.fromisoformat(date_str)
+            except ValueError:
+                return Response(
+                    {"error": "Invalid date"}, status=status.HTTP_400_BAD_REQUEST
+                )
+
+        # Calculate Window
+        search_start = target_date - timedelta(days=6)
+
+        data = []
+
+        # Loop through BOTH partners
+        for skater in [team.partner_a, team.partner_b]:
+
+            # 1. Find/Create Active Seasons for this skater
+            active_seasons = AthleteSeason.objects.filter(
+                skater=skater, is_active=True
+            ).filter(
+                Q(start_date__lte=target_date, end_date__gte=target_date)
+                | Q(start_date__isnull=True)
+                | Q(end_date__isnull=True)
+            )
+
+            for season in active_seasons:
+                # Ensure Week Exists
+                week_plan = (
+                    WeeklyPlan.objects.filter(
+                        athlete_season=season,
+                        week_start__gte=search_start,
+                        week_start__lte=target_date,
+                    )
+                    .order_by("-week_start")
+                    .first()
+                )
+
+                if not week_plan:
+                    week_plan = WeeklyPlan.objects.create(
+                        athlete_season=season, week_start=target_date, theme=""
+                    )
+
+                # Determine Label (e.g. "Jane: 2025 Singles")
+                ytp = season.yearly_plans.first()
+                discipline_name = str(ytp.planning_entity) if ytp else season.season
+                label = f"{skater.full_name.split(' ')[0]}: {discipline_name}"
+
+                data.append(
+                    {
+                        "plan_data": WeeklyPlanSerializer(week_plan).data,
+                        "label": label,
+                        "season_id": season.id,
+                        "skater_id": skater.id,
+                    }
+                )
+
+        return Response({"week_start": target_date, "plans": data})

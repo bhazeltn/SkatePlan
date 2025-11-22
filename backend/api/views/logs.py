@@ -1,6 +1,7 @@
 from rest_framework import generics, permissions, status
 from rest_framework.exceptions import ValidationError
 from django.contrib.contenttypes.models import ContentType
+from django.db.models import Q  # <--- Critical for Team Lookup
 
 from api.models import (
     Skater,
@@ -14,6 +15,8 @@ from api.models import (
 )
 from api.serializers import SessionLogSerializer, InjuryLogSerializer
 from api.permissions import IsCoachUser
+
+# --- SESSION LOGS ---
 
 
 class SessionLogListCreateView(generics.ListCreateAPIView):
@@ -56,10 +59,40 @@ class SessionLogListCreateView(generics.ListCreateAPIView):
         )
 
 
+class SessionLogListCreateByTeamView(generics.ListCreateAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    serializer_class = SessionLogSerializer
+
+    def get_queryset(self):
+        team_id = self.kwargs["team_id"]
+        ct = ContentType.objects.get_for_model(Team)
+        return SessionLog.objects.filter(content_type=ct, object_id=team_id).order_by(
+            "-session_date"
+        )
+
+    def perform_create(self, serializer):
+        team_id = self.kwargs["team_id"]
+        team = Team.objects.get(id=team_id)
+        active_season = team.partner_a.athlete_seasons.last()  # Default anchor
+        if not active_season:
+            raise ValidationError("Partner A has no active season.")
+
+        ct = ContentType.objects.get_for_model(Team)
+        serializer.save(
+            author=self.request.user,
+            athlete_season=active_season,
+            content_type=ct,
+            object_id=team.id,
+        )
+
+
 class SessionLogDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [permissions.IsAuthenticated, IsCoachUser]
     serializer_class = SessionLogSerializer
     queryset = SessionLog.objects.all()
+
+
+# --- INJURY LOGS ---
 
 
 class InjuryLogListCreateView(generics.ListCreateAPIView):
@@ -74,6 +107,33 @@ class InjuryLogListCreateView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         skater = Skater.objects.get(id=self.kwargs["skater_id"])
+        status = self.request.data.get("recovery_status", "Active")
+        serializer.save(skater=skater, recovery_status=status)
+
+
+class InjuryLogListCreateByTeamView(generics.ListCreateAPIView):
+    """
+    List injuries for BOTH partners in a team.
+    """
+
+    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    serializer_class = InjuryLogSerializer
+
+    def get_queryset(self):
+        team_id = self.kwargs["team_id"]
+        team = Team.objects.get(id=team_id)
+        # Return injuries for Partner A OR Partner B
+        return InjuryLog.objects.filter(
+            Q(skater=team.partner_a) | Q(skater=team.partner_b)
+        ).order_by("recovery_status", "-date_of_onset")
+
+    def perform_create(self, serializer):
+        # Frontend must send 'skater_id' to identify WHICH partner is injured
+        skater_id = self.request.data.get("skater_id")
+        if not skater_id:
+            raise ValidationError("You must specify which partner is injured.")
+
+        skater = Skater.objects.get(id=skater_id)
         status = self.request.data.get("recovery_status", "Active")
         serializer.save(skater=skater, recovery_status=status)
 

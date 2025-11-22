@@ -6,26 +6,26 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ProgramModal } from '@/components/dashboard/ProgramModal';
 import { Music, User } from 'lucide-react';
 
-export function ProgramsTab({ skater }) {
+export function ProgramsTab({ skater, team }) {
   const { token } = useAuth();
   const [programs, setPrograms] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Dynamic URL
+  const fetchUrl = team 
+    ? `/teams/${team.id}/programs/` 
+    : `/skaters/${skater.id}/programs/`;
+
   const fetchPrograms = async () => {
       try {
           setLoading(true);
-          const data = await apiRequest(`/skaters/${skater.id}/programs/`, 'GET', null, token);
+          const data = await apiRequest(fetchUrl, 'GET', null, token);
           setPrograms(data || []);
-      } catch (e) { 
-          console.error(e); 
-      } finally {
-          setLoading(false);
-      }
+      } catch (e) { console.error(e); } 
+      finally { setLoading(false); }
   };
 
-  useEffect(() => {
-      if (skater) fetchPrograms();
-  }, [skater, token]);
+    useEffect(() => { if (skater || team) fetchPrograms(); }, [skater, team, token]);
 
   // Sort: Active first, then by Season
   const sortedPrograms = [...programs].sort((a, b) => {

@@ -7,18 +7,24 @@ import { CreateYearlyPlanModal } from '../CreateYearlyPlanModal';
 import { EditSeasonModal } from '../EditSeasonModal';
 import { Calendar, Trophy, ArrowRight } from 'lucide-react';
 
-// Helper to format dates (e.g., "Jul 2025")
+// Helper to format dates
 const formatDate = (d) => new Date(d).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
 
-export function YearlyPlansTab({ skater }) {
+// --- UPDATED: Accept 'team' prop ---
+export function YearlyPlansTab({ skater, team }) {
   const { token } = useAuth();
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // --- DYNAMIC ENDPOINT ---
+  const fetchUrl = team 
+      ? `/teams/${team.id}/ytps/` 
+      : `/skaters/${skater.id}/ytps/`;
+
   const fetchPlans = async () => {
     try {
       setLoading(true);
-      const data = await apiRequest(`/skaters/${skater.id}/ytps/`, 'GET', null, token);
+      const data = await apiRequest(fetchUrl, 'GET', null, token);
       setPlans(data || []);
     } catch (err) {
       console.error("Failed to load plans", err);
@@ -27,9 +33,10 @@ export function YearlyPlansTab({ skater }) {
     }
   };
 
+  // Trigger fetch if EITHER skater or team exists
   useEffect(() => {
-    if (skater) fetchPlans();
-  }, [skater, token]);
+    if (skater || team) fetchPlans();
+  }, [skater, team, token]);
 
   if (loading) return <div className="p-8 text-center">Loading plans...</div>;
 
@@ -41,7 +48,7 @@ export function YearlyPlansTab({ skater }) {
             <h3 className="text-lg font-semibold">Season Plans</h3>
             <p className="text-sm text-muted-foreground">Manage YTPs and Macrocycles</p>
         </div>
-        <CreateYearlyPlanModal skater={skater} onPlanCreated={fetchPlans} />
+        <CreateYearlyPlanModal skater={skater} team={team} onPlanCreated={fetchPlans} />
       </div>
 
       {/* Plan List */}
@@ -55,7 +62,6 @@ export function YearlyPlansTab({ skater }) {
             <Card 
                 key={plan.id} 
                 className="hover:border-brand-blue transition-all cursor-pointer group relative"
-                // --- 1. MAKE CARD CLICKABLE ---
                 onClick={() => window.location.hash = `#/plans/${plan.id}`}
             >
               <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -64,7 +70,6 @@ export function YearlyPlansTab({ skater }) {
                         {plan.discipline_name}
                     </CardTitle>
                     
-                    {/* --- SEASON INFO --- */}
                     {plan.season_info && (
                         <div className="flex items-center mt-1">
                             <p className="text-xs text-muted-foreground font-medium">
@@ -75,17 +80,12 @@ export function YearlyPlansTab({ skater }) {
                                     </span>
                                 )}
                             </p>
-                            
-                            {/* --- 2. PREVENT CLICK BUBBLING ON EDIT --- */}
                             <div onClick={(e) => e.stopPropagation()}>
                                 <EditSeasonModal season={plan.season_info} onUpdated={fetchPlans} />
                             </div>
-                            {/* ----------------------------------------- */}
                         </div>
                     )}
                 </div>
-                
-                {/* Arrow Visual (No link needed now) */}
                 <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity">
                     <ArrowRight className="h-5 w-5" />
                 </Button>
@@ -93,21 +93,17 @@ export function YearlyPlansTab({ skater }) {
               
               <CardContent>
                 <div className="space-y-3">
-                    {/* Primary Goal */}
                     <div className="flex items-center gap-2 text-sm">
                         <Trophy className="h-4 w-4 text-brand-orange" />
                         <span className="font-medium">Goal:</span>
                         <span className="text-gray-600">{plan.primary_season_goal}</span>
                     </div>
-                    
-                    {/* Peak Structure */}
                     <div className="flex items-center gap-2 text-sm">
                         <Calendar className="h-4 w-4 text-gray-500" />
                         <span className="font-medium">Structure:</span>
                         <span className="text-gray-600">{plan.peak_type}</span>
                     </div>
                     
-                    {/* Mini Timeline Visualization */}
                     <div className="mt-4 pt-4 border-t">
                         <p className="text-xs text-muted-foreground mb-2">
                             {plan.macrocycles?.length || 0} Macrocycles defined

@@ -10,35 +10,40 @@ import {
     ComposedChart, Bar, Legend 
 } from 'recharts';
 
-export function AnalyticsTab({ skater }) {
+export function AnalyticsTab({ skater, team }) {
   const { token } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // --- DYNAMIC ENDPOINT ---
+  const fetchUrl = team 
+    ? `/teams/${team.id}/stats/` 
+    : `/skaters/${skater.id}/stats/`;
+
   useEffect(() => {
-    if (skater) {
+    if (skater || team) {
         const fetchStats = async () => {
             setLoading(true);
             try {
-                const result = await apiRequest(`/skaters/${skater.id}/stats/`, 'GET', null, token);
+                const result = await apiRequest(fetchUrl, 'GET', null, token);
                 setData(result);
             } catch (err) {
-                console.error(err);
+                console.error("Failed to load analytics", err);
             } finally {
                 setLoading(false);
             }
         };
         fetchStats();
     }
-  }, [skater, token]);
+  }, [skater, team, token]);
 
   if (loading) return <div className="p-8 text-center">Loading analytics...</div>;
-  if (!data) return <div className="p-8 text-center">No data available.</div>;
+  if (!data) return <div className="p-8 text-center text-muted-foreground">No data available yet. Log some results to see stats!</div>;
 
   return (
     <div className="space-y-8">
         
-        {/* 1. KPI ROW */}
+        {/* 1. KPI ROW (Overview) */}
         <div>
             <h3 className="text-lg font-semibold mb-4 text-gray-900">Performance Overview</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -65,7 +70,7 @@ export function AnalyticsTab({ skater }) {
                     bg="bg-blue-50"
                 />
                 
-                {/* Goal Completion (Placeholder) */}
+                {/* Goal Completion (Placeholder for Phase 5) */}
                 <SingleStatSnapshot 
                     label="Goals Achieved"
                     value="--"
@@ -78,10 +83,10 @@ export function AnalyticsTab({ skater }) {
         </div>
 
         {/* 2. CHARTS ROW */}
-        {data.history && data.history.length > 1 && (
+        {data.history && data.history.length > 1 ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 
-                {/* A. TOTAL SCORE TREND */}
+                {/* A. TOTAL SCORE TREND (Line Chart) */}
                 <Card>
                     <CardHeader><CardTitle>Score Progression</CardTitle></CardHeader>
                     <CardContent className="h-[300px]">
@@ -111,7 +116,7 @@ export function AnalyticsTab({ skater }) {
                     </CardContent>
                 </Card>
 
-                {/* B. TECHNICAL EFFICIENCY (BV vs TES) */}
+                {/* B. TECHNICAL EFFICIENCY (Bar + Line) */}
                 <Card>
                     <CardHeader><CardTitle>Technical Efficiency</CardTitle></CardHeader>
                     <CardContent className="h-[300px]">
@@ -139,14 +144,16 @@ export function AnalyticsTab({ skater }) {
                     </CardContent>
                 </Card>
             </div>
+        ) : (
+            <div className="text-center p-8 border-2 border-dashed rounded-lg text-muted-foreground bg-slate-50">
+                 Log at least two competition results to see trend graphs.
+            </div>
         )}
 
-        {/* 3. SEGMENT BREAKDOWNS (Full Rows) */}
+        {/* 3. SEGMENT BREAKDOWNS (Stacked Rows) */}
         {data.segments && Object.keys(data.segments).length > 0 && (
             <div>
                 <h3 className="text-lg font-semibold mb-4 text-gray-900">Segment Analysis</h3>
-                
-                {/* CHANGED: Vertical Stack instead of Grid */}
                 <div className="space-y-8">
                     {Object.entries(data.segments).map(([segName, stats]) => (
                         <div key={segName} className="space-y-4">

@@ -9,7 +9,7 @@ import { ChevronLeft, ChevronRight, Calendar, Save, Layers } from 'lucide-react'
 import { format, addDays, subDays, startOfWeek, parseISO } from 'date-fns';
 import { DayPlanner } from '@/components/planning/DayPlanner';
 
-export function WeeklyPlanTab({ skater }) {
+export function WeeklyPlanTab({ skater, team }) {
   const { token } = useAuth();
   const [loading, setLoading] = useState(true);
   
@@ -24,15 +24,24 @@ export function WeeklyPlanTab({ skater }) {
   const fetchWeek = async (dateStr) => {
       setLoading(true);
       try {
-          const data = await apiRequest(`/skaters/${skater.id}/week-view/?date=${dateStr}`, 'GET', null, token);
+          // --- DYNAMIC URL SWITCHING ---
+          const url = team 
+            ? `/teams/${team.id}/week-view/?date=${dateStr}`
+            : `/skaters/${skater.id}/week-view/?date=${dateStr}`;
+          // -----------------------------
+
+          const data = await apiRequest(url, 'GET', null, token);
           setPlans(data.plans || []);
-      } catch (e) { console.error(e); }
-      finally { setLoading(false); }
+      } catch (e) { 
+          console.error("Failed to load week", e); 
+      } finally { 
+          setLoading(false); 
+      }
   };
 
   useEffect(() => {
-      if (skater) fetchWeek(currentMonday);
-  }, [skater, currentMonday, token]);
+      if (skater || team) fetchWeek(currentMonday);
+  }, [skater, team, currentMonday, token]);
 
   // --- NAVIGATION ---
   const changeWeek = (days) => {
@@ -44,9 +53,9 @@ export function WeeklyPlanTab({ skater }) {
   };
 
   // --- SAVE HANDLER ---
-  // We need to save ALL modified plans
   const handleSave = async () => {
       try {
+          // Save all plans in parallel
           await Promise.all(plans.map(p => {
               return apiRequest(`/weeks/${p.plan_data.id}/`, 'PATCH', {
                   theme: p.plan_data.theme,
@@ -54,7 +63,9 @@ export function WeeklyPlanTab({ skater }) {
               }, token);
           }));
           alert("Plans saved!");
-      } catch (e) { alert("Failed to save."); }
+      } catch (e) { 
+          alert("Failed to save."); 
+      }
   };
 
   // Helper to update local state for a specific plan
@@ -130,7 +141,7 @@ export function WeeklyPlanTab({ skater }) {
               {plans.map((planObj, pIdx) => (
                   <div key={planObj.plan_data.id} className="space-y-4">
                       
-                      {/* Plan Header */}
+                      {/* Plan Header Badge */}
                       <div className="flex items-center gap-2 pb-2 border-b border-slate-200">
                           <span className="bg-slate-800 text-white px-3 py-1 rounded text-sm font-bold uppercase tracking-wider">
                               {planObj.label}
@@ -178,8 +189,7 @@ export function WeeklyPlanTab({ skater }) {
                                           dayIndex={dayIdx}
                                           weekStart={currentMonday}
                                           data={planObj.plan_data.session_breakdown?.[dayIdx] || {}}
-                                          onChange={(idx, field, val) => updatePlanState(pIdx, null, val, idx)} // Special signature for day update
-                                          // We could pass cross-plan conflicts here later
+                                          onChange={(idx, field, val) => updatePlanState(pIdx, null, val, idx)} 
                                       />
                                   ))}
                               </div>

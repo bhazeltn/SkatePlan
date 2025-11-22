@@ -14,7 +14,7 @@ class AthleteSeason(models.Model):
     skater = models.ForeignKey(
         Skater, on_delete=models.CASCADE, related_name="athlete_seasons"
     )
-    season = models.CharField(max_length=10)  # e.g., "2025-2026"
+    season = models.CharField(max_length=50)  # e.g., "2025-2026"
 
     start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
@@ -87,9 +87,11 @@ class WeeklyPlan(models.Model):
     athlete_season = models.ForeignKey(
         AthleteSeason, on_delete=models.CASCADE, related_name="weekly_plans"
     )
-    week_start = models.DateField(unique=True)
-    theme = models.CharField(max_length=255, blank=True, null=True)
 
+    # CHANGED: Remove unique=True here
+    week_start = models.DateField()
+
+    theme = models.CharField(max_length=255, blank=True, null=True)
     planned_off_ice_activities = models.JSONField(default=list, blank=True)
     session_breakdown = models.JSONField(default=dict, blank=True)
 
@@ -98,6 +100,8 @@ class WeeklyPlan(models.Model):
 
     class Meta:
         ordering = ["-week_start"]
+        # ADDED: Composite Unique Constraint
+        unique_together = ("athlete_season", "week_start")
 
 
 class Goal(models.Model):

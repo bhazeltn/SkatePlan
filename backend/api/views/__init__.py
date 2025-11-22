@@ -40,6 +40,7 @@ from .logs import (
     SessionLogListCreateByTeamView,
     InjuryLogListCreateByTeamView,
     SynchroInjuryLogListCreateView,
+    SynchroSessionLogListCreateView,
 )
 from .competitions import (
     CompetitionListCreateView,
@@ -51,5 +52,11 @@ from .competitions import (
     ProgramDetailView,
     CompetitionResultListByTeamView,
     ProgramListCreateByTeamView,
+    SynchroCompetitionResultListCreateView,
 )
-from .dashboard import CoachDashboardStatsView, SkaterStatsView, TeamStatsView
+from .dashboard import (
+    CoachDashboardStatsView,
+    SkaterStatsView,
+    TeamStatsView,
+    SynchroStatsView,
+)

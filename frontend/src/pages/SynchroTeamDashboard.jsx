@@ -89,11 +89,11 @@ export default function SynchroTeamDashboard() {
         {activeTab === 'weekly' && <WeeklyPlanTab team={team} />}
         {activeTab === 'yearly' && <YearlyPlansTab team={team} isSynchro={true} />}
         {activeTab === 'goals' && <GoalsTab team={team} isSynchro={true} />}
-        {activeTab === 'programs' && <ProgramsTab team={team} />}
-        {activeTab === 'competitions' && <CompetitionsTab team={team} />}
-        {activeTab === 'logs' && <LogsTab team={team} />}
+        {activeTab === 'programs' && <ProgramsTab team={team} isSynchro={true}/>}
+        {activeTab === 'competitions' && <CompetitionsTab team={team} isSynchro={true}/>}
+        {activeTab === 'logs' && <LogsTab team={team} isSynchro={true} />}
         {activeTab === 'health' && <HealthTab team={team} isSynchro={true} />}
-        {activeTab === 'analytics' && <AnalyticsTab team={team} />}
+        {activeTab === 'analytics' && <AnalyticsTab team={team} isSynchro={true}/>}
       </div>
     </div>
   );

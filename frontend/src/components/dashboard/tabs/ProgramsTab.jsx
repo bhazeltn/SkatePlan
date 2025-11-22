@@ -6,32 +6,31 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ProgramModal } from '@/components/dashboard/ProgramModal';
 import { Music, User } from 'lucide-react';
 
-export function ProgramsTab({ skater, team }) {
+export function ProgramsTab({ skater, team, isSynchro }) {
   const { token } = useAuth();
   const [programs, setPrograms] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Dynamic URL
-  const fetchUrl = team 
-    ? `/teams/${team.id}/programs/` 
-    : `/skaters/${skater.id}/programs/`;
+  const fetchUrl = isSynchro 
+    ? `/synchro/${team.id}/programs/`
+    : (team ? `/teams/${team.id}/programs/` : `/skaters/${skater.id}/programs/`);
 
   const fetchPrograms = async () => {
       try {
           setLoading(true);
           const data = await apiRequest(fetchUrl, 'GET', null, token);
           setPrograms(data || []);
-      } catch (e) { console.error(e); } 
-      finally { setLoading(false); }
+      } catch (e) { 
+          console.error(e); 
+      } finally {
+          setLoading(false);
+      }
   };
 
-    useEffect(() => { if (skater || team) fetchPrograms(); }, [skater, team, token]);
+  useEffect(() => { if (skater || team) fetchPrograms(); }, [skater, team, token]);
 
-  // Sort: Active first, then by Season
   const sortedPrograms = [...programs].sort((a, b) => {
-      if (a.is_active === b.is_active) {
-          return b.season.localeCompare(a.season); 
-      }
+      if (a.is_active === b.is_active) return b.season.localeCompare(a.season);
       return a.is_active ? -1 : 1; 
   });
 
@@ -39,13 +38,18 @@ export function ProgramsTab({ skater, team }) {
 
   return (
     <div className="space-y-6">
-        
+      
       <div className="flex justify-between items-center">
         <div>
             <h3 className="text-lg font-semibold">Programs</h3>
             <p className="text-sm text-muted-foreground">Music, Choreography, and Layouts</p>
         </div>
-        <ProgramModal skater={skater} onSaved={fetchPrograms} />
+        <ProgramModal 
+            skater={skater} 
+            team={team} 
+            isSynchro={isSynchro}
+            onSaved={fetchPrograms} 
+        />
       </div>
 
       {programs.length === 0 ? (
@@ -55,13 +59,16 @@ export function ProgramsTab({ skater, team }) {
       ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {sortedPrograms.map(prog => (
+                  /* WRAP CARD IN MODAL TRIGGER */
                   <ProgramModal 
                     key={prog.id}
                     skater={skater} 
+                    team={team}
+                    isSynchro={isSynchro}
                     programToEdit={prog} 
                     onSaved={fetchPrograms} 
                     trigger={
-                      <Card className={`hover:border-brand-blue transition-colors cursor-pointer relative group h-full ${!prog.is_active ? 'opacity-60 bg-gray-50 border-dashed' : ''}`}>
+                      <Card className={`hover:border-brand-blue hover:shadow-md transition-all cursor-pointer relative group h-full ${!prog.is_active ? 'opacity-60 bg-gray-50 border-dashed' : ''}`}>
                           <CardContent className="p-5">
                               {!prog.is_active && (
                                   <div className="absolute top-4 right-4 px-2 py-0.5 bg-gray-200 text-gray-600 text-[10px] uppercase font-bold rounded">

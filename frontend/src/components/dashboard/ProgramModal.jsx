@@ -32,9 +32,7 @@ export function ProgramModal({ skater, team, isSynchro, programToEdit, onSaved, 
   const [costumePhoto, setCostumePhoto] = useState(null);
   const [hairPhoto, setHairPhoto] = useState(null);
 
-  // --- FILTERED ENTITIES (For Skater View) ---
-  // Only show individual disciplines (Singles, Solo Dance). 
-  // Hide Teams/Synchro because those must be managed on their respective dashboards.
+  // Filtered Entities for Skater View
   const individualEntities = skater?.planning_entities?.filter(e => 
       ['SinglesEntity', 'SoloDanceEntity'].includes(e.type)
   ) || [];
@@ -52,15 +50,12 @@ export function ProgramModal({ skater, team, isSynchro, programToEdit, onSaved, 
             setIsActive(programToEdit.is_active);
             setElements(programToEdit.planned_elements || []);
             
-            // Reset files
             setMusicFile(null); setDesignFile(null); setCostumePhoto(null); setHairPhoto(null);
         } else {
             // Create Mode
             if (team) {
-                // TEAM CONTEXT: Hardcode to this team
                 setSelectedEntityId(team.id);
             } else if (individualEntities.length > 0) {
-                // SKATER CONTEXT: Default to first individual entity
                 setSelectedEntityId(individualEntities[0].id);
             }
             
@@ -86,7 +81,6 @@ export function ProgramModal({ skater, team, isSynchro, programToEdit, onSaved, 
       setTotalBV(sum);
   }, [elements]);
 
-  // Element Handlers
   const addElementRow = () => { setElements([...elements, { type: 'JUMP', components: [{ name: '', id: null }], level: '', notes: '', base_value: '', is_second_half: false }]); };
   const updateElementRow = (index, newData) => { const updated = [...elements]; updated[index] = newData; setElements(updated); };
   const removeElementRow = (index) => { setElements(elements.filter((_, i) => i !== index)); };
@@ -95,14 +89,11 @@ export function ProgramModal({ skater, team, isSynchro, programToEdit, onSaved, 
     e.preventDefault();
     setLoading(true);
 
-    // --- DETERMINE ENTITY TYPE ---
+    // Determine Entity Type
     let entityType = null;
-    
     if (team) {
-        // If on Team Dashboard, it's always a Team entity
         entityType = isSynchro ? 'SynchroTeam' : 'Team';
     } else {
-        // If on Skater Dashboard, lookup the selected individual entity
         const entity = individualEntities.find(e => String(e.id) === String(selectedEntityId));
         entityType = entity ? entity.type : null;
     }
@@ -113,7 +104,6 @@ export function ProgramModal({ skater, team, isSynchro, programToEdit, onSaved, 
         return;
     }
 
-    // Build FormData
     const formData = new FormData();
     formData.append('title', title);
     formData.append('season', season);
@@ -135,12 +125,11 @@ export function ProgramModal({ skater, team, isSynchro, programToEdit, onSaved, 
       if (programToEdit) {
         await apiRequest(`/programs/${programToEdit.id}/`, 'PATCH', formData, token);
       } else if (isSynchro) {
-         // Use Synchro-specific endpoint if needed, or standard team logic
-         await apiRequest(`/synchro/${team.id}/programs/`, 'POST', formData, token); // Assuming we add this endpoint next if needed, or reuse team
+          await apiRequest(`/synchro/${team.id}/programs/`, 'POST', formData, token);
       } else if (team) {
-        await apiRequest(`/teams/${team.id}/programs/`, 'POST', formData, token);
+          await apiRequest(`/teams/${team.id}/programs/`, 'POST', formData, token);
       } else {
-        await apiRequest(`/skaters/${skater.id}/programs/`, 'POST', formData, token);
+          await apiRequest(`/skaters/${skater.id}/programs/`, 'POST', formData, token);
       }
       
       if (onSaved) onSaved();
@@ -163,6 +152,18 @@ export function ProgramModal({ skater, team, isSynchro, programToEdit, onSaved, 
       finally { setLoading(false); }
   };
 
+  // --- NEW: DELETE HANDLER ---
+  const handleDelete = async () => {
+      if (!confirm("Are you sure you want to DELETE this program? This cannot be undone.")) return;
+      setLoading(true);
+      try {
+          await apiRequest(`/programs/${programToEdit.id}/`, 'DELETE', null, token);
+          if (onSaved) onSaved();
+          setOpen(false);
+      } catch (e) { alert("Failed to delete program."); }
+      finally { setLoading(false); }
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -174,18 +175,13 @@ export function ProgramModal({ skater, team, isSynchro, programToEdit, onSaved, 
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
             
+            {/* Row 1: Discipline & Season */}
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                     <Label>Discipline</Label>
                     {team ? (
-                        // TEAM/SYNCHRO MODE: Read-only Input
-                        <Input 
-                            value={team.team_name} 
-                            disabled 
-                            className="bg-slate-50 text-slate-500" 
-                        />
+                        <Input value={team.team_name} disabled className="bg-slate-50 text-slate-500" />
                     ) : (
-                        // SKATER MODE: Filtered Dropdown (No Teams)
                         <select 
                             className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm"
                             value={selectedEntityId}
@@ -201,11 +197,13 @@ export function ProgramModal({ skater, team, isSynchro, programToEdit, onSaved, 
                 <div className="space-y-2"><Label>Season</Label><Input value={season} onChange={(e) => setSeason(e.target.value)} placeholder="e.g. 2025-2026" /></div>
             </div>
 
+            {/* Row 2: Title & Category */}
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>Program Name</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Star Wars" /></div>
                 <div className="space-y-2"><Label>Category</Label><select className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm" value={category} onChange={(e) => setCategory(e.target.value)}><option value="Free Skate">Free Skate</option><option value="Short Program">Short Program</option><option value="Rhythm Dance">Rhythm Dance</option><option value="Free Dance">Free Dance</option><option value="Artistic">Artistic</option><option value="Other">Other</option></select></div>
             </div>
 
+            {/* Metadata */}
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>Music Title</Label><div className="relative"><Music className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" /><Input className="pl-8" value={music} onChange={(e) => setMusic(e.target.value)} placeholder="e.g. Duel of the Fates" /></div></div>
                 <div className="space-y-2"><Label>Choreographer</Label><div className="relative"><User className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" /><Input className="pl-8" value={choreo} onChange={(e) => setChoreo(e.target.value)} placeholder="e.g. Lori Nichol" /></div></div>
@@ -222,6 +220,7 @@ export function ProgramModal({ skater, team, isSynchro, programToEdit, onSaved, 
                 </div>
             </div>
 
+            {/* Content Editor */}
             <div className="border-t pt-4 mt-2">
                 <div className="flex justify-between items-center mb-2">
                     <div className="flex items-center gap-4">
@@ -237,8 +236,21 @@ export function ProgramModal({ skater, team, isSynchro, programToEdit, onSaved, 
                 </div>
             </div>
 
+            {/* Footer Actions */}
             <div className="pt-4 flex justify-between items-center border-t">
-                {programToEdit && <Button type="button" variant="outline" onClick={handleArchive} disabled={loading} className="text-gray-500 hover:text-gray-700"><Archive className="h-4 w-4 mr-2" />{isActive ? 'Archive' : 'Restore'}</Button>}
+                {programToEdit ? (
+                    <div className="flex gap-2">
+                        {/* --- DELETE BUTTON --- */}
+                        <Button type="button" variant="destructive" onClick={handleDelete} disabled={loading}>Delete</Button>
+                        {/* --- ARCHIVE BUTTON --- */}
+                        <Button type="button" variant="outline" onClick={handleArchive} disabled={loading} className="text-gray-500 hover:text-gray-700">
+                            <Archive className="h-4 w-4 mr-2" />
+                            {isActive ? 'Archive' : 'Restore'}
+                        </Button>
+                    </div>
+                ) : (
+                    <div></div> // Spacer
+                )}
                 <Button type="submit" disabled={loading} className={!programToEdit ? "w-full" : ""}>Save Program</Button>
             </div>
         </form>

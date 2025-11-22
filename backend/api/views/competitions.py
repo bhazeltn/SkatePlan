@@ -210,3 +210,45 @@ class ProgramListCreateByTeamView(generics.ListCreateAPIView):
         team_id = self.kwargs["team_id"]
         ct = ContentType.objects.get_for_model(Team)
         serializer.save(content_type=ct, object_id=team_id)
+
+
+class SynchroCompetitionResultListCreateView(generics.ListCreateAPIView):
+    """
+    List/Create Results specifically for a SYNCHRO Team.
+    """
+
+    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    serializer_class = CompetitionResultSerializer
+
+    def get_queryset(self):
+        team_id = self.kwargs["team_id"]
+        ct = ContentType.objects.get_for_model(SynchroTeam)
+        return CompetitionResult.objects.filter(
+            content_type=ct, object_id=team_id
+        ).order_by("-competition__start_date")
+
+    def perform_create(self, serializer):
+        team_id = self.kwargs["team_id"]
+        ct = ContentType.objects.get_for_model(SynchroTeam)
+        serializer.save(content_type=ct, object_id=team_id)
+
+
+class SynchroCompetitionResultListCreateView(generics.ListCreateAPIView):
+    """
+    List/Create Results specifically for a SYNCHRO Team.
+    """
+
+    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    serializer_class = CompetitionResultSerializer
+
+    def get_queryset(self):
+        team_id = self.kwargs["team_id"]
+        ct = ContentType.objects.get_for_model(SynchroTeam)
+        return CompetitionResult.objects.filter(
+            content_type=ct, object_id=team_id
+        ).order_by("-competition__start_date")
+
+    def perform_create(self, serializer):
+        team_id = self.kwargs["team_id"]
+        ct = ContentType.objects.get_for_model(SynchroTeam)
+        serializer.save(content_type=ct, object_id=team_id)

@@ -130,9 +130,14 @@ export function LogResultModal({ skater, team, resultToEdit, onSaved, trigger })
 
       if (resultToEdit) {
           await apiRequest(`/results/${resultToEdit.id}/`, 'PATCH', formData, token);
+      } else if (isSynchro) {
+          // --- SYNCHRO SAVE ---
+          await apiRequest(`/synchro/${team.id}/results/`, 'POST', formData, token);
       } else if (team) {
+          // --- TEAM SAVE ---
           await apiRequest(`/teams/${team.id}/results/`, 'POST', formData, token);
       } else {
+          // --- SKATER SAVE ---
           await apiRequest(`/skaters/${skater.id}/results/`, 'POST', formData, token);
       }
       

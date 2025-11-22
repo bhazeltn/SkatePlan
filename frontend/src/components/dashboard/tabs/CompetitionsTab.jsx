@@ -6,15 +6,25 @@ import { LogResultModal } from '@/components/dashboard/LogResultModal';
 import { StatSnapshot } from '@/components/dashboard/StatSnapshot';
 import { Trophy, MapPin, Calendar, Award } from 'lucide-react';
 
-export function CompetitionsTab({ skater, team }) {
-  const { token } = useAuth();
+export function CompetitionsTab({ skater, team, isSynchro }) { // <--- Accept isSynchro
+  // ...
   const [results, setResults] = useState([]);
   const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
 
   // --- DYNAMIC ENDPOINTS ---
-  const resultsUrl = team ? `/teams/${team.id}/results/` : `/skaters/${skater.id}/results/`;
-  const statsUrl = team ? `/teams/${team.id}/stats/` : `/skaters/${skater.id}/stats/`;
+  let resultsUrl = '';
+  let statsUrl = '';
+
+  if (isSynchro) {
+      resultsUrl = `/synchro/${team.id}/results/`;
+      statsUrl = `/synchro/${team.id}/stats/`;
+  } else if (team) {
+      resultsUrl = `/teams/${team.id}/results/`;
+      statsUrl = `/teams/${team.id}/stats/`;
+  } else {
+      resultsUrl = `/skaters/${skater.id}/results/`;
+      statsUrl = `/skaters/${skater.id}/stats/`;
+  }
   // -------------------------
 
   const fetchData = async () => {

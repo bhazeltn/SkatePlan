@@ -10,16 +10,17 @@ import {
     ComposedChart, Bar, Legend 
 } from 'recharts';
 
-export function AnalyticsTab({ skater, team }) {
+export function AnalyticsTab({ skater, team, isSynchro }) {
   const { token } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // --- DYNAMIC ENDPOINT ---
-  const fetchUrl = team 
-    ? `/teams/${team.id}/stats/` 
-    : `/skaters/${skater.id}/stats/`;
-
+  let fetchUrl = '';
+  if (isSynchro) fetchUrl = `/synchro/${team.id}/stats/`;
+  else if (team) fetchUrl = `/teams/${team.id}/stats/`;
+  else fetchUrl = `/skaters/${skater.id}/stats/`;
+  
   useEffect(() => {
     if (skater || team) {
         const fetchStats = async () => {

@@ -4,7 +4,7 @@ import { useAuth } from '@/AuthContext';
 import { apiRequest } from '@/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { User, Calendar, MapPin, ArrowLeft, Settings } from 'lucide-react';
+import { User, Calendar, MapPin, ArrowLeft } from 'lucide-react';
 
 // Tabs
 import { WeeklyPlanTab } from '@/components/dashboard/tabs/WeeklyPlanTab';
@@ -17,16 +17,29 @@ import { LogsTab } from '@/components/dashboard/tabs/LogsTab';
 import { HealthTab } from '@/components/dashboard/tabs/HealthTab';
 import { AnalyticsTab } from '@/components/dashboard/tabs/AnalyticsTab';
 import { ProfileTab } from '@/components/dashboard/tabs/ProfileTab';
-import { GapAnalysisTab } from '@/components/dashboard/tabs/GapAnalysisTab'; // <--- Import
+import { GapAnalysisTab } from '@/components/dashboard/tabs/GapAnalysisTab';
 
 export default function AthleteSeasonDashboard() {
-  const { id } = useParams();
+  // --- FIX: ROBUST ID RETRIEVAL ---
+  const params = useParams();
+  // Try 'id' (standard) or 'skaterId' (common router alternative)
+  const id = params.id || params.skaterId;
+  // --------------------------------
+
   const { token } = useAuth();
   const [skater, setSkater] = useState(null);
   const [activeTab, setActiveTab] = useState('weekly');
   const [loading, setLoading] = useState(true);
 
   const fetchSkater = async () => {
+    // --- GUARD CLAUSE ---
+    // If ID is missing or literal "undefined" string, stop.
+    if (!id || id === 'undefined') {
+        console.error("Skater ID is missing or undefined:", id);
+        setLoading(false);
+        return;
+    }
+
     try {
       setLoading(true);
       const data = await apiRequest(`/skaters/${id}/`, 'GET', null, token);
@@ -48,7 +61,16 @@ export default function AthleteSeasonDashboard() {
   };
 
   if (loading) return <div className="p-8">Loading profile...</div>;
-  if (!skater) return <div className="p-8">Skater not found.</div>;
+  
+  if (!skater) {
+      return (
+          <div className="p-8 text-center">
+              <h3 className="text-lg font-bold text-red-500">Skater Not Found</h3>
+              <p className="text-gray-500">ID: {id}</p>
+              <a href="#/"><Button variant="outline" className="mt-4">Back to Dashboard</Button></a>
+          </div>
+      );
+  }
 
   const tabs = [
       'weekly', 'yearly', 'gap_analysis', 'goals', 'programs', 

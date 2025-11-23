@@ -1,5 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'; // <--- Standard Router
 import { useAuth } from './AuthContext';
+
+// Pages
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -9,73 +12,8 @@ import YearlyPlanEditor from './pages/YearlyPlanEditor';
 import TeamDashboard from './pages/TeamDashboard';
 import SynchroTeamDashboard from './pages/SynchroTeamDashboard';
 
-// Route Definitions
-const publicRoutes = {
-  '/': Login,
-  '/register': Register,
-};
-
-const privateRoutes = {
-  '/': Home,
-  '/settings': Settings,
-  '/skater/:id': AthleteSeasonDashboard,
-  '/team/:id': TeamDashboard,
-  '/synchro/:id': SynchroTeamDashboard,
-  '/plans/:id': YearlyPlanEditor,
-};
-
-// --- Custom Hook: Tracks the URL Hash ---
-const useHash = () => {
-  const [hash, setHash] = useState(() => window.location.hash || '#/');
-  
-  useEffect(() => {
-    const handleHashChange = () => {
-      setHash(window.location.hash || '#/');
-    };
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []);
-  
-  // Remove the '#' and return the path (e.g. "/plans/1")
-  return hash.substring(1) || '/'; 
-};
-
-// --- Router Logic: Finds the matching component ---
-const findRoute = (routes, currentPath) => {
-  // 1. Remove trailing slashes for consistency (e.g. "/plans/1/" -> "/plans/1")
-  const normalizedPath = currentPath.replace(/\/$/, '') || '/';
-
-  // 2. Check for Exact Match
-  if (routes[normalizedPath]) {
-    return routes[normalizedPath];
-  }
-
-  // 3. Check for Dynamic Match (e.g. "/plans/:id")
-  const dynamicKey = Object.keys(routes).find((routeKey) => {
-    // Skip exact routes
-    if (!routeKey.includes(':')) return false;
-
-    // Convert routeKey (e.g. "/plans/:id") into a Regex
-    // This replaces ":id" with a capture group "([^/]+)" which matches any string segment
-    const regexPattern = '^' + routeKey.replace(/:[a-zA-Z0-9]+/, '([^/]+)') + '$';
-    const regex = new RegExp(regexPattern);
-    
-    return regex.test(normalizedPath);
-  });
-
-  if (dynamicKey) {
-    return routes[dynamicKey];
-  }
-
-  // 4. No match found
-  console.log(`[Router] No match for path: "${currentPath}" (Normalized: "${normalizedPath}")`);
-  return null;
-};
-
-
 function App() {
   const { isAuthenticated, loading } = useAuth();
-  const path = useHash();
 
   if (loading) {
     return (
@@ -85,17 +23,37 @@ function App() {
     );
   }
 
-  // If authenticated, show private routes
-  if (isAuthenticated) {
-    const Component = findRoute(privateRoutes, path);
-    // If no route matched, fallback to Home (Dashboard)
-    return Component ? <Component /> : <Home />;
-  }
-
-  // If not authenticated, show public routes
-  const Component = findRoute(publicRoutes, path);
-  // If no route matched, fallback to Login
-  return Component ? <Component /> : <Login />;
+  return (
+    <HashRouter>
+      <Routes>
+        {/* --- PUBLIC ROUTES --- */}
+        {!isAuthenticated ? (
+          <>
+            <Route path="/" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            {/* Redirect any unknown public URL to Login */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </>
+        ) : (
+          /* --- PRIVATE ROUTES --- */
+          <>
+            <Route path="/" element={<Home />} />
+            <Route path="/settings" element={<Settings />} />
+            
+            {/* Dynamic ID Routes */}
+            {/* Note: The :id part will be accessible via useParams() in the page */}
+            <Route path="/skater/:id" element={<AthleteSeasonDashboard />} />
+            <Route path="/team/:id" element={<TeamDashboard />} />
+            <Route path="/synchro/:id" element={<SynchroTeamDashboard />} />
+            <Route path="/plans/:id" element={<YearlyPlanEditor />} />
+            
+            {/* Redirect any unknown private URL to Dashboard */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </>
+        )}
+      </Routes>
+    </HashRouter>
+  );
 }
 
 export default App;

@@ -16,11 +16,12 @@ import { HealthTab } from '@/components/dashboard/tabs/HealthTab';
 import { WeeklyPlanTab } from '@/components/dashboard/tabs/WeeklyPlanTab';
 import { SynchroRosterTab } from '@/components/dashboard/tabs/SynchroRosterTab';
 import { LogisticsTab } from '@/components/dashboard/tabs/LogisticsTab';
+import { GapAnalysisTab } from '@/components/dashboard/tabs/GapAnalysisTab'; // <--- Import
 
 export default function SynchroTeamDashboard() {
   const { token } = useAuth();
   const [team, setTeam] = useState(null);
-  const [activeTab, setActiveTab] = useState('roster'); // Default to Roster for Synchro
+  const [activeTab, setActiveTab] = useState('roster');
   const [loading, setLoading] = useState(true);
 
   const teamId = window.location.hash.split('/')[2];
@@ -36,12 +37,17 @@ export default function SynchroTeamDashboard() {
 
   useEffect(() => { fetchData(); }, [teamId, token]);
 
+  // Helper to format "gap_analysis" -> "Gap Analysis"
+  const formatTabLabel = (str) => {
+      return str.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+  };
+
   if (loading) return <div className="p-8">Loading team...</div>;
   if (!team) return <div className="p-8">Team not found.</div>;
 
   const tabs = [
-      'roster', 'weekly', 'yearly', 'goals', 'programs', 
-      'competitions', 'logs', 'health', 'logistics', 'analytics'
+      'roster', 'weekly', 'yearly', 'gap_analysis', 'goals', 'programs', 
+      'competitions', 'logistics', 'logs', 'health', 'analytics'
   ];
 
   return (
@@ -77,7 +83,7 @@ export default function SynchroTeamDashboard() {
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            {formatTabLabel(tab)}
           </button>
         ))}
       </div>
@@ -85,17 +91,16 @@ export default function SynchroTeamDashboard() {
       {/* Content */}
       <div className="min-h-[400px]">
         {activeTab === 'roster' && <SynchroRosterTab team={team} onUpdate={fetchData} />}
-        
-        {/* Reuse standard tabs (They handle 'team' prop generically) */}
         {activeTab === 'weekly' && <WeeklyPlanTab team={team} />}
         {activeTab === 'yearly' && <YearlyPlansTab team={team} isSynchro={true} />}
+        {activeTab === 'gap_analysis' && <GapAnalysisTab team={team} isSynchro={true} />}
         {activeTab === 'goals' && <GoalsTab team={team} isSynchro={true} />}
-        {activeTab === 'programs' && <ProgramsTab team={team} isSynchro={true}/>}
-        {activeTab === 'competitions' && <CompetitionsTab team={team} isSynchro={true}/>}
+        {activeTab === 'programs' && <ProgramsTab team={team} isSynchro={true} />}
+        {activeTab === 'competitions' && <CompetitionsTab team={team} isSynchro={true} />}
+        {activeTab === 'logistics' && <LogisticsTab team={team} isSynchro={true} />}
         {activeTab === 'logs' && <LogsTab team={team} isSynchro={true} />}
         {activeTab === 'health' && <HealthTab team={team} isSynchro={true} />}
-        {activeTab === 'logistics' && <LogisticsTab team={team} isSynchro={true} />}
-        {activeTab === 'analytics' && <AnalyticsTab team={team} isSynchro={true}/>}
+        {activeTab === 'analytics' && <AnalyticsTab team={team} isSynchro={true} />}
       </div>
     </div>
   );

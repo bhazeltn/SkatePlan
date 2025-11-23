@@ -32,6 +32,7 @@ from .planning import (
     GoalListByTeamView,
     SynchroGoalListCreateView,
     GoalDetailView,
+    GapAnalysisRetrieveUpdateView,
 )
 from .logs import (
     SessionLogListCreateView,

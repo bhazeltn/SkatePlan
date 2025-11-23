@@ -17,6 +17,7 @@ from api.models import (
     SoloDanceEntity,
     Team,
     SynchroTeam,
+    GapAnalysis,
 )
 from api.serializers import (
     AthleteSeasonSerializer,
@@ -24,6 +25,7 @@ from api.serializers import (
     MacrocycleSerializer,
     WeeklyPlanSerializer,
     GoalSerializer,
+    GapAnalysisSerializer,
 )
 from api.permissions import IsCoachUser
 
@@ -533,3 +535,40 @@ class GoalDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [permissions.IsAuthenticated, IsCoachUser]
     serializer_class = GoalSerializer
     queryset = Goal.objects.all()
+
+
+class GapAnalysisRetrieveUpdateView(generics.RetrieveUpdateAPIView):
+    """
+    Get or Update the Master Gap Analysis for a Skater or Team.
+    """
+
+    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    serializer_class = GapAnalysisSerializer
+
+    def get_object(self):
+        # Determine Entity
+        if "team_id" in self.kwargs:
+            # Synchro or Team
+            team_id = self.kwargs["team_id"]
+            # Check which type? We might need separate URLs or logic.
+            # Let's try Team first, then SynchroTeam if needed, or rely on URL structure.
+            # Actually, let's split logic or pass 'model_type' in kwargs?
+            # SIMPLER: Look at the URL pattern.
+
+            # If the URL includes 'synchro', it's SynchroTeam.
+            if "synchro" in self.request.path:
+                model_class = SynchroTeam
+            else:
+                model_class = Team
+
+            entity = model_class.objects.get(id=team_id)
+        else:
+            # Skater
+            skater_id = self.kwargs["skater_id"]
+            entity = Skater.objects.get(id=skater_id)
+
+        ct = ContentType.objects.get_for_model(entity)
+        obj, created = GapAnalysis.objects.get_or_create(
+            content_type=ct, object_id=entity.id
+        )
+        return obj

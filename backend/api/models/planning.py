@@ -83,10 +83,27 @@ class Macrocycle(models.Model):
     yearly_plan = models.ForeignKey(
         YearlyPlan, on_delete=models.CASCADE, related_name="macrocycles"
     )
-    phase_title = models.CharField(max_length=100)
+    phase_title = models.CharField(max_length=100)  # e.g. "General Prep"
     phase_start = models.DateField()
     phase_end = models.DateField()
+
+    # The "Headline" Goal
     phase_focus = models.TextField(blank=True, null=True)
+
+    # --- NEW: THE 4 PILLARS ---
+    technical_focus = models.TextField(
+        blank=True, null=True, help_text="Elements, Strategy"
+    )
+    component_focus = models.TextField(
+        blank=True, null=True, help_text="Artistic, Performance"
+    )
+    physical_focus = models.TextField(
+        blank=True, null=True, help_text="Strength, Conditioning"
+    )
+    mental_focus = models.TextField(
+        blank=True, null=True, help_text="Psychology, Lifestyle"
+    )
+    # --------------------------
 
     def __str__(self):
         return self.phase_title
@@ -164,3 +181,34 @@ class Goal(models.Model):
 
     class Meta:
         ordering = ["-updated_at"]
+
+
+class GapAnalysis(models.Model):
+    """
+    A continuous, living strategic document linked to an entity (Skater/Team).
+    Not tied to a specific season.
+    """
+
+    id = models.AutoField(primary_key=True)
+
+    # --- CHANGED: Add null=True to handle existing rows ---
+    content_type = models.ForeignKey(
+        ContentType, on_delete=models.CASCADE, null=True, blank=True
+    )
+    object_id = models.PositiveIntegerField(null=True, blank=True)
+    planning_entity = GenericForeignKey("content_type", "object_id")
+    # -----------------------------------------------------
+
+    # Structure: [{ id, category, benchmark, current, strategy }]
+    elements = models.JSONField(default=list, blank=True)
+
+    notes = models.TextField(blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Gap Analysis for {self.planning_entity}"
+
+    class Meta:
+        # Remove unique_together temporarily if it causes issues with nulls,
+        # or keep it if your DB supports unique nulls (Postgres does).
+        unique_together = ("content_type", "object_id")

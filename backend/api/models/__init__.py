@@ -12,7 +12,14 @@ from .skaters import (
     SynchroTeam,
     PlanningEntityAccess,
 )
-from .planning import AthleteSeason, YearlyPlan, Macrocycle, WeeklyPlan, Goal
+from .planning import (
+    AthleteSeason,
+    YearlyPlan,
+    Macrocycle,
+    WeeklyPlan,
+    Goal,
+    GapAnalysis,
+)
 from .logs import SessionLog, InjuryLog, MeetingLog
 from .competitions import (
     Competition,

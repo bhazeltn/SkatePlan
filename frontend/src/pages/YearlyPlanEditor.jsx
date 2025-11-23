@@ -7,8 +7,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea'; 
 import { MacrocycleModal } from '@/components/planning/MacrocycleModal';
-import { ArrowLeft, Calendar, CheckCircle2, Circle, Trash2, Pencil } from 'lucide-react';
 import { GoalModal } from '@/components/planning/GoalModal';
+import { GapAnalysisCard } from '@/components/planning/GapAnalysisCard'; 
+import { 
+    ArrowLeft, Calendar, CheckCircle2, Circle, Trash2, Pencil,
+    Zap, Palette, Dumbbell, Brain 
+} from 'lucide-react';
 
 // Helper for date format
 const formatDate = (d) => new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
@@ -66,19 +70,16 @@ export default function YearlyPlanEditor() {
     }
   }
 
-  // --- NEW: DELETE PLAN HANDLER ---
   const handleDeletePlan = async () => {
       if (!confirm("Are you sure you want to DELETE this entire plan? This cannot be undone.")) return;
-      
       try {
           await apiRequest(`/ytps/${planId}/`, 'DELETE', null, token);
-          // Redirect back to the correct dashboard (Skater/Team/Synchro)
+          // Redirect back to the correct dashboard using the smart URL
           window.location.hash = plan.dashboard_url || '#/';
       } catch (err) {
           alert("Failed to delete plan.");
       }
   };
-  // --------------------------------
 
   const getNextDay = (dateStr) => {
     if (!dateStr) return '';
@@ -119,7 +120,6 @@ export default function YearlyPlanEditor() {
         </div>
         
         <div className="flex gap-2">
-            {/* DELETE BUTTON */}
             <Button variant="destructive" onClick={handleDeletePlan}>
                 <Trash2 className="h-4 w-4 mr-2" /> Delete Plan
             </Button>
@@ -129,8 +129,10 @@ export default function YearlyPlanEditor() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        {/* LEFT COLUMN */}
+        {/* LEFT COLUMN: Strategy & Analysis */}
         <div className="lg:col-span-1 space-y-6">
+            
+            {/* 1. Basic Strategy */}
             <Card>
                 <CardHeader>
                     <CardTitle>Plan Strategy</CardTitle>
@@ -159,7 +161,11 @@ export default function YearlyPlanEditor() {
                     </div>
                 </CardContent>
             </Card>
+
+            {/* 2. Gap Analysis */}
+            <GapAnalysisCard planId={planId} />
             
+            {/* 3. Linked Goals */}
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                     <CardTitle className="text-lg">Season Goals</CardTitle>
@@ -212,7 +218,7 @@ export default function YearlyPlanEditor() {
             </Card>
         </div>
 
-        {/* RIGHT COLUMN: Timeline */}
+        {/* RIGHT COLUMN: Timeline (Macrocycles) */}
         <div className="lg:col-span-2 space-y-6">
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
@@ -232,36 +238,63 @@ export default function YearlyPlanEditor() {
                     ) : (
                         <div className="space-y-4">
                             {sortedCycles.map((cycle) => (
-                                <div key={cycle.id} className="flex items-start justify-between p-4 border rounded-lg bg-white hover:border-brand-blue transition-colors">
-                                    <div>
-                                        <h4 className="font-semibold text-lg">{cycle.phase_title}</h4>
-                                        <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                                            <Calendar className="h-3 w-3" />
-                                            <span>{cycle.phase_start} to {cycle.phase_end}</span>
+                                <div key={cycle.id} className="flex flex-col p-4 border rounded-lg bg-white hover:border-brand-blue transition-colors gap-3">
+                                    
+                                    {/* Phase Header */}
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <h4 className="font-semibold text-lg">{cycle.phase_title}</h4>
+                                            <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                                                <Calendar className="h-3 w-3" />
+                                                <span>{cycle.phase_start} to {cycle.phase_end}</span>
+                                            </div>
                                         </div>
-                                        {cycle.phase_focus && (
-                                            <p className="text-sm mt-2 text-gray-700 bg-slate-50 p-2 rounded">
-                                                <span className="font-medium">Focus:</span> {cycle.phase_focus}
-                                            </p>
-                                        )}
+                                        <div className="flex gap-2">
+                                            <MacrocycleModal 
+                                                planId={plan.id} 
+                                                macrocycle={cycle} 
+                                                onSaved={fetchPlan} 
+                                                trigger={<Button variant="outline" size="sm">Edit</Button>} 
+                                            />
+                                            <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-700" onClick={() => handleDeleteMacrocycle(cycle.id)}>
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
                                     </div>
-                                    <div className="flex gap-2">
-                                        <MacrocycleModal 
-                                            planId={plan.id} 
-                                            macrocycle={cycle} 
-                                            onSaved={fetchPlan} 
-                                            trigger={
-                                                <Button variant="outline" size="sm">Edit</Button>
-                                            }
-                                        />
-                                        <Button 
-                                            variant="ghost" 
-                                            size="icon" 
-                                            className="text-red-500 hover:text-red-700"
-                                            onClick={() => handleDeleteMacrocycle(cycle.id)}
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
+
+                                    {/* Primary Focus */}
+                                    {cycle.phase_focus && (
+                                        <div className="bg-slate-100 p-2 rounded text-sm font-medium text-slate-800">
+                                            {cycle.phase_focus}
+                                        </div>
+                                    )}
+
+                                    {/* 4 Pillars Grid */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
+                                        {cycle.technical_focus && (
+                                            <div className="text-xs p-2 bg-blue-50 rounded border border-blue-100">
+                                                <div className="flex items-center gap-1 font-bold text-blue-700 mb-1"><Zap className="h-3 w-3" /> Tech</div>
+                                                {cycle.technical_focus}
+                                            </div>
+                                        )}
+                                        {cycle.component_focus && (
+                                            <div className="text-xs p-2 bg-pink-50 rounded border border-pink-100">
+                                                <div className="flex items-center gap-1 font-bold text-pink-700 mb-1"><Palette className="h-3 w-3" /> Comp</div>
+                                                {cycle.component_focus}
+                                            </div>
+                                        )}
+                                        {cycle.physical_focus && (
+                                            <div className="text-xs p-2 bg-orange-50 rounded border border-orange-100">
+                                                <div className="flex items-center gap-1 font-bold text-orange-700 mb-1"><Dumbbell className="h-3 w-3" /> Phys</div>
+                                                {cycle.physical_focus}
+                                            </div>
+                                        )}
+                                        {cycle.mental_focus && (
+                                            <div className="text-xs p-2 bg-purple-50 rounded border border-purple-100">
+                                                <div className="flex items-center gap-1 font-bold text-purple-700 mb-1"><Brain className="h-3 w-3" /> Ment</div>
+                                                {cycle.mental_focus}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             ))}

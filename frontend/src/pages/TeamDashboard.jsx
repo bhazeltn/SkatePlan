@@ -12,15 +12,14 @@ import { ProgramsTab } from '@/components/dashboard/tabs/ProgramsTab';
 import { CompetitionsTab } from '@/components/dashboard/tabs/CompetitionsTab';
 import { LogsTab } from '@/components/dashboard/tabs/LogsTab';
 import { AnalyticsTab } from '@/components/dashboard/tabs/AnalyticsTab';
-// Note: Weekly, Tests, Health, Profile are special/aggregated for teams
-import { ProfileTab } from '@/components/dashboard/tabs/ProfileTab';
 import { HealthTab } from '@/components/dashboard/tabs/HealthTab';
 import { WeeklyPlanTab } from '@/components/dashboard/tabs/WeeklyPlanTab';
+import { GapAnalysisTab } from '@/components/dashboard/tabs/GapAnalysisTab'; // <--- Import
 
 export default function TeamDashboard() {
   const { token } = useAuth();
   const [team, setTeam] = useState(null);
-  const [activeTab, setActiveTab] = useState('profile'); // Default
+  const [activeTab, setActiveTab] = useState('profile');
   const [loading, setLoading] = useState(true);
 
   const teamId = window.location.hash.split('/')[2];
@@ -31,27 +30,27 @@ export default function TeamDashboard() {
         setLoading(true);
         const data = await apiRequest(`/teams/${teamId}/`, 'GET', null, token); 
         setTeam(data);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
+      } catch (err) { console.error(err); } 
+      finally { setLoading(false); }
     };
     fetchData();
   }, [teamId, token]);
 
+  // Helper to format "gap_analysis" -> "Gap Analysis"
+  const formatTabLabel = (str) => {
+      return str.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+  };
+
   if (loading) return <div className="p-8">Loading team...</div>;
   if (!team) return <div className="p-8">Team not found.</div>;
 
-  // The Full Tab List
   const tabs = [
-      'weekly', 'yearly', 'goals', 'programs', 
-      'competitions', 'logs', 'health', 'analytics', 'profile',
+      'profile', 'weekly', 'yearly', 'gap_analysis', 'goals', 'programs', 
+      'competitions', 'logs', 'health', 'analytics'
   ];
 
   return (
     <div className="p-8 min-h-screen bg-gray-50">
-      {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div className="flex items-center gap-4">
             <div className="h-16 w-16 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 border-2 border-white shadow-sm">
@@ -70,7 +69,6 @@ export default function TeamDashboard() {
         </a>
       </div>
 
-      {/* Tabs Navigation */}
       <div className="flex space-x-2 border-b mb-6 overflow-x-auto no-scrollbar">
         {tabs.map((tab) => (
           <button
@@ -82,15 +80,12 @@ export default function TeamDashboard() {
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            {formatTabLabel(tab)}
           </button>
         ))}
       </div>
 
-      {/* Tab Content */}
       <div className="min-h-[400px]">
-        
-        {/* 1. PROFILE */}
         {activeTab === 'profile' && (
           <Card>
             <CardHeader><CardTitle>Team Profile</CardTitle></CardHeader>
@@ -111,30 +106,15 @@ export default function TeamDashboard() {
           </Card>
         )}
 
-        {/* 2. WEEKLY */}
         {activeTab === 'weekly' && <WeeklyPlanTab team={team} />}
-
-        {/* 3. YEARLY */}
         {activeTab === 'yearly' && <YearlyPlansTab team={team} />}
-
-        {/* 4. GOALS */}
+        {activeTab === 'gap_analysis' && <GapAnalysisTab team={team} />}
         {activeTab === 'goals' && <GoalsTab team={team} />}
-
-        {/* 5. PROGRAMS */}
         {activeTab === 'programs' && <ProgramsTab team={team} />}
-
-        {/* 6. COMPETITIONS */}
         {activeTab === 'competitions' && <CompetitionsTab team={team} />}
-
-        {/* 7. LOGS */}
         {activeTab === 'logs' && <LogsTab team={team} />}
-
-        {/* 8. HEALTH (WIRED UP!) */}
         {activeTab === 'health' && <HealthTab team={team} />}
-
-        {/* 9. ANALYTICS */}
         {activeTab === 'analytics' && <AnalyticsTab team={team} />}
-
       </div>
     </div>
   );

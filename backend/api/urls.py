@@ -93,4 +93,20 @@ urlpatterns = [
     path("itinerary/<int:pk>/", views.ItineraryDetailView.as_view()),
     path("trips/<int:trip_id>/housing/", views.HousingListCreateView.as_view()),
     path("housing/<int:pk>/", views.HousingDetailView.as_view()),
+    path(
+        "ytps/<int:plan_id>/gap-analysis/",
+        views.GapAnalysisRetrieveUpdateView.as_view(),
+    ),
+    path(
+        "skaters/<int:skater_id>/gap-analysis/",
+        views.GapAnalysisRetrieveUpdateView.as_view(),
+    ),
+    path(
+        "teams/<int:team_id>/gap-analysis/",
+        views.GapAnalysisRetrieveUpdateView.as_view(),
+    ),
+    path(
+        "synchro/<int:team_id>/gap-analysis/",
+        views.GapAnalysisRetrieveUpdateView.as_view(),
+    ),
 ]

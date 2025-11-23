@@ -1,5 +1,12 @@
 from rest_framework import serializers
-from api.models import AthleteSeason, Macrocycle, YearlyPlan, WeeklyPlan, Goal
+from api.models import (
+    AthleteSeason,
+    Macrocycle,
+    YearlyPlan,
+    WeeklyPlan,
+    Goal,
+    GapAnalysis,
+)
 
 
 class AthleteSeasonSerializer(serializers.ModelSerializer):
@@ -11,7 +18,17 @@ class AthleteSeasonSerializer(serializers.ModelSerializer):
 class MacrocycleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Macrocycle
-        fields = ("id", "phase_title", "phase_start", "phase_end", "phase_focus")
+        fields = (
+            "id",
+            "phase_title",
+            "phase_start",
+            "phase_end",
+            "phase_focus",
+            "technical_focus",
+            "component_focus",
+            "physical_focus",
+            "mental_focus",
+        )
 
 
 class YearlyPlanSerializer(serializers.ModelSerializer):
@@ -141,3 +158,9 @@ class GoalSerializer(serializers.ModelSerializer):
             "progress_notes",
             "created_at",
         )
+
+
+class GapAnalysisSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GapAnalysis
+        fields = "__all__"

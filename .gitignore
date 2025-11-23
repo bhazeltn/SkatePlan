@@ -34,6 +34,10 @@ local_settings.py
 db.sqlite3
 db.sqlite3-journal
 
+# Media & Static (Do not commit user uploads)
+backend/media/
+backend/programs
+
 # React / Node
 node_modules/
 .npm
@@ -50,6 +54,3 @@ yarn-error.log*
 # Docker
 docker-compose.override.yml
 docker-compose.prod.yml
-
-#uploads
-backend/media/

@@ -2,74 +2,74 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/AuthContext';
 import { apiRequest } from '@/api';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea'; 
+import { DatePicker } from '@/components/ui/date-picker'; 
+import { Plus, Zap, Palette, Dumbbell, Brain } from 'lucide-react';
 
-export function MacrocycleModal({ planId, macrocycle, onSaved, trigger, defaultStartDate, defaultEndDate }) {
+export function MacrocycleModal({ planId, macrocycle, onSaved, defaultStartDate, defaultEndDate, trigger }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const { token } = useAuth();
 
+  // Basic Info
   const [title, setTitle] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [focus, setFocus] = useState('');
 
-  // Populate form logic
+  // The 4 Pillars
+  const [techFocus, setTechFocus] = useState('');
+  const [compFocus, setCompFocus] = useState('');
+  const [physFocus, setPhysFocus] = useState('');
+  const [mentFocus, setMentFocus] = useState('');
+
   useEffect(() => {
     if (open) {
-      if (macrocycle) {
-        // EDIT MODE: Load existing data
-        setTitle(macrocycle.phase_title || '');
-        setStartDate(macrocycle.phase_start || '');
-        setEndDate(macrocycle.phase_end || '');
-        setFocus(macrocycle.phase_focus || '');
-      } else {
-        // CREATE MODE: Load Smart Defaults
-        setTitle('');
-        setStartDate(defaultStartDate || '');
-        setEndDate(defaultEndDate || '');
-        setFocus('');
-      }
+        if (macrocycle) {
+            setTitle(macrocycle.phase_title);
+            setStartDate(macrocycle.phase_start);
+            setEndDate(macrocycle.phase_end);
+            setFocus(macrocycle.phase_focus || '');
+            setTechFocus(macrocycle.technical_focus || '');
+            setCompFocus(macrocycle.component_focus || '');
+            setPhysFocus(macrocycle.physical_focus || '');
+            setMentFocus(macrocycle.mental_focus || '');
+        } else {
+            setTitle('');
+            setStartDate(defaultStartDate || '');
+            setEndDate(defaultEndDate || '');
+            setFocus('');
+            setTechFocus(''); setCompFocus(''); setPhysFocus(''); setMentFocus('');
+        }
     }
   }, [open, macrocycle, defaultStartDate, defaultEndDate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    try {
-      const payload = {
+
+    const payload = {
         phase_title: title,
         phase_start: startDate,
         phase_end: endDate,
-        phase_focus: focus
-      };
+        phase_focus: focus,
+        technical_focus: techFocus,
+        component_focus: compFocus,
+        physical_focus: physFocus,
+        mental_focus: mentFocus
+    };
 
+    try {
       if (macrocycle) {
-        // Edit Mode
         await apiRequest(`/macrocycles/${macrocycle.id}/`, 'PATCH', payload, token);
       } else {
-        // Create Mode
         await apiRequest(`/ytps/${planId}/macrocycles/`, 'POST', payload, token);
       }
-      
-      onSaved();
+      if (onSaved) onSaved();
       setOpen(false);
-      
-      // Only reset if creating (optional, since useEffect handles reset on open)
-      if (!macrocycle) {
-          setTitle(''); setStartDate(''); setEndDate(''); setFocus('');
-      }
     } catch (err) {
       alert('Failed to save phase.');
     } finally {
@@ -80,40 +80,67 @@ export function MacrocycleModal({ planId, macrocycle, onSaved, trigger, defaultS
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {trigger || <Button size="sm">Add Phase</Button>}
+        {trigger || <Button size="sm" variant="outline"><Plus className="h-4 w-4 mr-2" /> Add Phase</Button>}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{macrocycle ? 'Edit Phase' : 'Add Season Phase'}</DialogTitle>
-          <DialogDescription>Define a block of training time (Macrocycle).</DialogDescription>
+          <DialogTitle>{macrocycle ? 'Edit Phase' : 'Add Phase'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label>Phase Name</Label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. General Prep" required />
-          </div>
+          
+          {/* Top Row: Name & Dates */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-                <Label>Start Date</Label>
-                <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required />
-            </div>
-            <div className="space-y-2">
-                <Label>End Date</Label>
-                <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} required />
-            </div>
+             <div className="space-y-2"><Label>Phase Name</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. General Prep" required /></div>
+             <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-2"><Label>Start</Label><DatePicker date={startDate} setDate={setStartDate} /></div>
+                <div className="space-y-2"><Label>End</Label><DatePicker date={endDate} setDate={setEndDate} /></div>
+             </div>
           </div>
+
           <div className="space-y-2">
-            <Label>Primary Focus</Label>
-            <Textarea 
-                value={focus} 
-                onChange={(e) => setFocus(e.target.value)}
-                placeholder="e.g. Volume, Skills Acquisition..."
-            />
+              <Label>Primary Objective</Label>
+              <Input value={focus} onChange={(e) => setFocus(e.target.value)} placeholder="Main goal for this period..." />
           </div>
+
+          {/* THE 4 PILLARS GRID */}
+          <div className="grid grid-cols-2 gap-4 pt-2 border-t">
+              
+              {/* Technical */}
+              <div className="space-y-2 p-3 bg-blue-50 rounded border border-blue-100">
+                  <Label className="text-xs font-bold text-blue-700 flex items-center gap-2">
+                      <Zap className="h-3 w-3" /> Technical / Tactical
+                  </Label>
+                  <Textarea className="min-h-[80px] text-xs bg-white" value={techFocus} onChange={(e) => setTechFocus(e.target.value)} placeholder="Skills to acquire/refine..." />
+              </div>
+
+              {/* Component */}
+              <div className="space-y-2 p-3 bg-pink-50 rounded border border-pink-100">
+                  <Label className="text-xs font-bold text-pink-700 flex items-center gap-2">
+                      <Palette className="h-3 w-3" /> Artistic / Components
+                  </Label>
+                  <Textarea className="min-h-[80px] text-xs bg-white" value={compFocus} onChange={(e) => setCompFocus(e.target.value)} placeholder="Choreo, performance..." />
+              </div>
+
+              {/* Physical */}
+              <div className="space-y-2 p-3 bg-orange-50 rounded border border-orange-100">
+                  <Label className="text-xs font-bold text-orange-700 flex items-center gap-2">
+                      <Dumbbell className="h-3 w-3" /> Physical Capacity
+                  </Label>
+                  <Textarea className="min-h-[80px] text-xs bg-white" value={physFocus} onChange={(e) => setPhysFocus(e.target.value)} placeholder="Strength, cardio..." />
+              </div>
+
+              {/* Mental */}
+              <div className="space-y-2 p-3 bg-purple-50 rounded border border-purple-100">
+                  <Label className="text-xs font-bold text-purple-700 flex items-center gap-2">
+                      <Brain className="h-3 w-3" /> Mental & Self
+                  </Label>
+                  <Textarea className="min-h-[80px] text-xs bg-white" value={mentFocus} onChange={(e) => setMentFocus(e.target.value)} placeholder="Psych, lifestyle..." />
+              </div>
+
+          </div>
+
           <DialogFooter>
-            <Button type="submit" disabled={loading}>
-              {loading ? 'Saving...' : 'Save Phase'}
-            </Button>
+            <Button type="submit" disabled={loading}>{loading ? 'Saving...' : 'Save Phase'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

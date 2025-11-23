@@ -18,6 +18,7 @@ from .planning import (
     YearlyPlanSerializer,
     WeeklyPlanSerializer,
     GoalSerializer,
+    GapAnalysisSerializer,
 )
 from .logs import SessionLogSerializer, InjuryLogSerializer
 from .competitions import (

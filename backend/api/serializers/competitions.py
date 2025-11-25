@@ -68,7 +68,7 @@ class ProgramAssetSerializer(serializers.ModelSerializer):
 
 
 class ProgramSerializer(serializers.ModelSerializer):
-    assets = ProgramAssetSerializer(many=True, read_only=True)  # <--- Nested list
+    assets = ProgramAssetSerializer(many=True, read_only=True)
 
     class Meta:
         model = Program
@@ -83,7 +83,7 @@ class ProgramSerializer(serializers.ModelSerializer):
             "est_base_value",
             "is_active",
             "music_file",
-            "assets",  # <--- Changed fields
+            "assets",
         )
 
     # --- FIX: Parse JSON strings from FormData ---

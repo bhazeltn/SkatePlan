@@ -3,7 +3,7 @@ import { useAuth } from '@/AuthContext';
 import { apiRequest } from '@/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, ArrowLeft } from 'lucide-react';
+import { Users, ArrowLeft, Trash2, AlertTriangle } from 'lucide-react';
 
 // Import Tabs
 import { YearlyPlansTab } from '@/components/dashboard/tabs/YearlyPlansTab';
@@ -14,7 +14,7 @@ import { LogsTab } from '@/components/dashboard/tabs/LogsTab';
 import { AnalyticsTab } from '@/components/dashboard/tabs/AnalyticsTab';
 import { HealthTab } from '@/components/dashboard/tabs/HealthTab';
 import { WeeklyPlanTab } from '@/components/dashboard/tabs/WeeklyPlanTab';
-import { GapAnalysisTab } from '@/components/dashboard/tabs/GapAnalysisTab'; // <--- Import
+import { GapAnalysisTab } from '@/components/dashboard/tabs/GapAnalysisTab';
 
 export default function TeamDashboard() {
   const { token } = useAuth();
@@ -30,13 +30,25 @@ export default function TeamDashboard() {
         setLoading(true);
         const data = await apiRequest(`/teams/${teamId}/`, 'GET', null, token); 
         setTeam(data);
-      } catch (err) { console.error(err); } 
-      finally { setLoading(false); }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
     };
     fetchData();
   }, [teamId, token]);
 
-  // Helper to format "gap_analysis" -> "Gap Analysis"
+  const handleDelete = async () => {
+      if (!confirm(`Are you sure you want to delete ${team.team_name}? This cannot be undone.`)) return;
+      try {
+          await apiRequest(`/teams/${teamId}/`, 'DELETE', null, token);
+          window.location.hash = '#/'; 
+      } catch (e) {
+          alert("Failed to delete team.");
+      }
+  };
+
   const formatTabLabel = (str) => {
       return str.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   };
@@ -51,6 +63,7 @@ export default function TeamDashboard() {
 
   return (
     <div className="p-8 min-h-screen bg-gray-50">
+      {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div className="flex items-center gap-4">
             <div className="h-16 w-16 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 border-2 border-white shadow-sm">
@@ -69,6 +82,7 @@ export default function TeamDashboard() {
         </a>
       </div>
 
+      {/* Tabs Navigation */}
       <div className="flex space-x-2 border-b mb-6 overflow-x-auto no-scrollbar">
         {tabs.map((tab) => (
           <button
@@ -85,12 +99,13 @@ export default function TeamDashboard() {
         ))}
       </div>
 
+      {/* Content */}
       <div className="min-h-[400px]">
         {activeTab === 'profile' && (
-          <Card>
-            <CardHeader><CardTitle>Team Profile</CardTitle></CardHeader>
-            <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-8">
+              <Card>
+                <CardHeader><CardTitle>Team Partners</CardTitle></CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="p-4 border rounded-lg bg-slate-50">
                         <label className="text-xs font-bold text-gray-500 uppercase">Partner A</label>
                         <p className="text-lg font-medium text-gray-900">{team.partner_a_details?.full_name}</p>
@@ -101,9 +116,25 @@ export default function TeamDashboard() {
                         <p className="text-lg font-medium text-gray-900">{team.partner_b_details?.full_name}</p>
                         <a href={`#/skater/${team.partner_b}`} className="text-xs text-brand-blue hover:underline mt-1 block">View Profile &rarr;</a>
                     </div>
-                </div>
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
+
+              {/* DANGER ZONE */}
+              <Card className="border-red-100">
+                  <CardHeader className="bg-red-50/50 border-b border-red-100">
+                      <CardTitle className="text-red-800 flex items-center gap-2">
+                          <AlertTriangle className="h-5 w-5" /> Danger Zone
+                      </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-6 flex justify-between items-center">
+                      <div className="text-sm text-gray-600">
+                          <p className="font-medium text-gray-900">Delete this team</p>
+                          <p>Once you delete a team, there is no going back. Please be certain.</p>
+                      </div>
+                      <Button variant="destructive" onClick={handleDelete}>Delete Team</Button>
+                  </CardContent>
+              </Card>
+          </div>
         )}
 
         {activeTab === 'weekly' && <WeeklyPlanTab team={team} />}

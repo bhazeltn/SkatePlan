@@ -60,10 +60,17 @@ class YearlyPlanSerializer(serializers.ModelSerializer):
         return None
 
     def get_skater_id(self, obj):
+        # --- FIX: Handle missing skater (Team/Synchro Plan) ---
+        # Try to get skater from seasons
         season = obj.athlete_seasons.first()
-        if season:
+        if season and season.skater:
             return season.skater.id
-        return None
+
+        # Fallback: If linked to entity via GenericFK
+        if hasattr(obj.planning_entity, "skater") and obj.planning_entity.skater:
+            return obj.planning_entity.skater.id
+
+        return None  # Return None for Teams
 
     def get_discipline_name(self, obj):
         if obj.planning_entity:

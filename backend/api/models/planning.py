@@ -6,14 +6,9 @@ from .skaters import Skater
 
 
 class AthleteSeason(models.Model):
-    """
-    An "umbrella" holding plans.
-    Can belong to a Skater, Team, or SynchroTeam.
-    """
-
     id = models.AutoField(primary_key=True)
 
-    # OLD: Link to Skater (Make optional now)
+    # --- CHANGED: Optional Skater + Generic Link ---
     skater = models.ForeignKey(
         Skater,
         on_delete=models.CASCADE,
@@ -21,13 +16,12 @@ class AthleteSeason(models.Model):
         null=True,
         blank=True,
     )
-
-    # NEW: Generic Link (For Teams/Synchro)
     content_type = models.ForeignKey(
         ContentType, on_delete=models.CASCADE, null=True, blank=True
     )
     object_id = models.PositiveIntegerField(null=True, blank=True)
     planning_entity = GenericForeignKey("content_type", "object_id")
+    # -----------------------------------------------
 
     season = models.CharField(max_length=50)
     start_date = models.DateField(null=True, blank=True)
@@ -43,7 +37,8 @@ class AthleteSeason(models.Model):
     )
 
     def __str__(self):
-        return f"{self.season} ({self.planning_entity or self.skater})"
+        entity = self.skater or self.planning_entity or "Unknown"
+        return f"{self.season} ({entity})"
 
     class Meta:
         ordering = ["-season"]
@@ -118,20 +113,26 @@ class WeeklyPlan(models.Model):
         AthleteSeason, on_delete=models.CASCADE, related_name="weekly_plans"
     )
 
-    # CHANGED: Remove unique=True here
+    # --- CRITICAL CHANGE: Remove unique=True ---
     week_start = models.DateField()
+    # -------------------------------------------
 
     theme = models.CharField(max_length=255, blank=True, null=True)
     planned_off_ice_activities = models.JSONField(default=list, blank=True)
     session_breakdown = models.JSONField(default=dict, blank=True)
 
     def __str__(self):
-        return f"Week of {self.week_start} for {self.athlete_season.skater.full_name}"
+        # Handle cases where skater is None (Team Season)
+        entity = (
+            self.athlete_season.skater or self.athlete_season.planning_entity or "Team"
+        )
+        return f"Week of {self.week_start} ({entity})"
 
     class Meta:
         ordering = ["-week_start"]
-        # ADDED: Composite Unique Constraint
+        # --- ADD COMPOSITE CONSTRAINT ---
         unique_together = ("athlete_season", "week_start")
+        # --------------------------------
 
 
 class Goal(models.Model):

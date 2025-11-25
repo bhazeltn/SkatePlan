@@ -55,10 +55,10 @@ export function CreateTeamModal({ onTeamCreated }) {
       setLoading(true);
       try {
           await apiRequest('/teams/create/', 'POST', {
-              team_name: teamName,
+            team_name: teamName,
               discipline,
-              partner_a_id: partnerA,
-              partner_b_id: partnerB,
+              partner_a: partnerA,
+              partner_b: partnerB,
               level
           }, token);
           

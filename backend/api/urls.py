@@ -7,7 +7,7 @@ urlpatterns = [
     path("auth/login/", views.LoginView.as_view(), name="login"),
     path("auth/profile/", views.UserProfileView.as_view(), name="profile"),
     # Skater URLs
-    path("skaters/create/", views.CreateSkaterView.as_view(), name="skater-create"),
+    path("skaters/", views.CreateSkaterView.as_view(), name="skater-create"),
     path("skaters/<int:pk>/", views.SkaterDetailView.as_view(), name="skater-detail"),
     path("roster/", views.RosterView.as_view(), name="roster-list"),
     path("federations/", views.FederationList.as_view(), name="federation-list"),
@@ -109,4 +109,5 @@ urlpatterns = [
         "synchro/<int:team_id>/gap-analysis/",
         views.GapAnalysisRetrieveUpdateView.as_view(),
     ),
+    path("synchro/<int:team_id>/week-view/", views.TeamMasterWeeklyPlanView.as_view()),
 ]

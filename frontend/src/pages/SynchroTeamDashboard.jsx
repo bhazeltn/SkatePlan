@@ -3,7 +3,7 @@ import { useAuth } from '@/AuthContext';
 import { apiRequest } from '@/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, ArrowLeft } from 'lucide-react';
+import { Users, ArrowLeft, AlertTriangle } from 'lucide-react';
 
 // Import Tabs
 import { YearlyPlansTab } from '@/components/dashboard/tabs/YearlyPlansTab';
@@ -16,7 +16,7 @@ import { HealthTab } from '@/components/dashboard/tabs/HealthTab';
 import { WeeklyPlanTab } from '@/components/dashboard/tabs/WeeklyPlanTab';
 import { SynchroRosterTab } from '@/components/dashboard/tabs/SynchroRosterTab';
 import { LogisticsTab } from '@/components/dashboard/tabs/LogisticsTab';
-import { GapAnalysisTab } from '@/components/dashboard/tabs/GapAnalysisTab'; // <--- Import
+import { GapAnalysisTab } from '@/components/dashboard/tabs/GapAnalysisTab';
 
 export default function SynchroTeamDashboard() {
   const { token } = useAuth();
@@ -37,7 +37,14 @@ export default function SynchroTeamDashboard() {
 
   useEffect(() => { fetchData(); }, [teamId, token]);
 
-  // Helper to format "gap_analysis" -> "Gap Analysis"
+  const handleDelete = async () => {
+      if (!confirm(`Are you sure you want to delete ${team.team_name}? This cannot be undone.`)) return;
+      try {
+          await apiRequest(`/synchro/${teamId}/`, 'DELETE', null, token);
+          window.location.hash = '#/'; 
+      } catch (e) { alert("Failed to delete team."); }
+  };
+
   const formatTabLabel = (str) => {
       return str.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   };
@@ -45,9 +52,10 @@ export default function SynchroTeamDashboard() {
   if (loading) return <div className="p-8">Loading team...</div>;
   if (!team) return <div className="p-8">Team not found.</div>;
 
+  // Added 'profile' at the end
   const tabs = [
       'roster', 'weekly', 'yearly', 'gap_analysis', 'goals', 'programs', 
-      'competitions', 'logistics', 'logs', 'health', 'analytics'
+      'competitions', 'logistics', 'logs', 'health', 'analytics', 'profile'
   ];
 
   return (
@@ -91,7 +99,9 @@ export default function SynchroTeamDashboard() {
       {/* Content */}
       <div className="min-h-[400px]">
         {activeTab === 'roster' && <SynchroRosterTab team={team} onUpdate={fetchData} />}
-        {activeTab === 'weekly' && <WeeklyPlanTab team={team} />}
+        
+        {/* Reuse standard tabs */}
+        {activeTab === 'weekly' && <WeeklyPlanTab team={team} isSynchro={true}  />}
         {activeTab === 'yearly' && <YearlyPlansTab team={team} isSynchro={true} />}
         {activeTab === 'gap_analysis' && <GapAnalysisTab team={team} isSynchro={true} />}
         {activeTab === 'goals' && <GoalsTab team={team} isSynchro={true} />}
@@ -101,6 +111,46 @@ export default function SynchroTeamDashboard() {
         {activeTab === 'logs' && <LogsTab team={team} isSynchro={true} />}
         {activeTab === 'health' && <HealthTab team={team} isSynchro={true} />}
         {activeTab === 'analytics' && <AnalyticsTab team={team} isSynchro={true} />}
+
+        {/* NEW PROFILE TAB */}
+        {activeTab === 'profile' && (
+            <div className="space-y-6">
+                 <Card>
+                    <CardHeader><CardTitle>Team Details</CardTitle></CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-xs font-bold text-gray-500 uppercase">Team Name</label>
+                                <p className="text-lg font-medium">{team.team_name}</p>
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-gray-500 uppercase">Level</label>
+                                <p className="text-lg font-medium">{team.level}</p>
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-gray-500 uppercase">Federation</label>
+                                <p className="text-lg font-medium">{team.federation?.name || 'N/A'}</p>
+                            </div>
+                        </div>
+                    </CardContent>
+                 </Card>
+
+                 <Card className="border-red-100">
+                    <CardHeader className="bg-red-50/50 border-b border-red-100">
+                        <CardTitle className="text-red-800 flex items-center gap-2">
+                            <AlertTriangle className="h-5 w-5" /> Danger Zone
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6 flex justify-between items-center">
+                        <div className="text-sm text-gray-600">
+                            <p className="font-medium text-gray-900">Delete this team</p>
+                            <p>This action cannot be undone.</p>
+                        </div>
+                        <Button variant="destructive" onClick={handleDelete}>Delete Team</Button>
+                    </CardContent>
+                </Card>
+            </div>
+        )}
       </div>
     </div>
   );

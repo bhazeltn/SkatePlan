@@ -66,11 +66,23 @@ class SoloDanceEntitySerializer(serializers.ModelSerializer):
         return "Solo Dance"
 
 
+# --- TEAM SERIALIZER (FIXED) ---
 class TeamSerializer(serializers.ModelSerializer):
     federation = FederationSerializer(read_only=True)
-    # Add nested representations (Read Only)
+
+    # Read-Only Nested Data (for display)
     partner_a_details = SimpleSkaterSerializer(source="partner_a", read_only=True)
     partner_b_details = SimpleSkaterSerializer(source="partner_b", read_only=True)
+
+    # Write-Only IDs (for creation)
+    # We use PrimaryKeyRelatedField to accept the ID "1" and convert it to a Skater object
+    partner_a = serializers.PrimaryKeyRelatedField(
+        queryset=Skater.objects.all(), write_only=True
+    )
+    partner_b = serializers.PrimaryKeyRelatedField(
+        queryset=Skater.objects.all(), write_only=True
+    )
+
     name = serializers.SerializerMethodField()
 
     class Meta:
@@ -94,7 +106,6 @@ class TeamSerializer(serializers.ModelSerializer):
 
 class SynchroTeamSerializer(serializers.ModelSerializer):
     federation = FederationSerializer(read_only=True)
-
     federation_id = serializers.PrimaryKeyRelatedField(
         queryset=Federation.objects.all(),
         source="federation",
@@ -103,10 +114,7 @@ class SynchroTeamSerializer(serializers.ModelSerializer):
         allow_null=True,
     )
 
-    # Return full skater objects for the roster list
     roster = SimpleSkaterSerializer(many=True, read_only=True)
-
-    # Allow writing IDs to update the roster
     roster_ids = serializers.PrimaryKeyRelatedField(
         queryset=Skater.objects.all(),
         source="roster",
@@ -220,11 +228,8 @@ class SkaterSerializer(serializers.ModelSerializer):
 
 class RosterSkaterSerializer(serializers.ModelSerializer):
     planning_entities = serializers.SerializerMethodField()
-
-    # --- FIXED: Include these fields ---
     federation = FederationSerializer(read_only=True)
     gender = serializers.CharField(source="get_gender_display", read_only=True)
-    # -----------------------------------
 
     class Meta:
         model = Skater

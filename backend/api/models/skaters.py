@@ -11,13 +11,10 @@ class Skater(models.Model):
     """
 
     id = models.AutoField(primary_key=True)
-    user_account = models.OneToOneField(
-        User,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="skater_profile",
+    user_account = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="skaters", null=True, blank=True
     )
+
     full_name = models.CharField(max_length=255)
     date_of_birth = models.DateField()
     federation = models.ForeignKey(

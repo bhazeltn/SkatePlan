@@ -3,50 +3,57 @@ import { useAuth } from '@/AuthContext';
 import { apiRequest } from '@/api';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Calendar, Pencil } from 'lucide-react';
-import { format, addDays, subDays, startOfWeek, parseISO } from 'date-fns';
+import { format, addDays, startOfWeek, parseISO } from 'date-fns';
 import { UnifiedDayCard } from './UnifiedDayCard';
 import { WeeklyEditModal } from './WeeklyEditModal';
 
 export function WeeklyPlanTab({ skater, team, isSynchro }) { // <--- Accept isSynchro
   const { token } = useAuth();
   const [loading, setLoading] = useState(true);
+  
   const [currentMonday, setCurrentMonday] = useState(
       startOfWeek(new Date(), { weekStartsOn: 1 }).toISOString().split('T')[0]
   );
+
   const [plans, setPlans] = useState([]); 
   const [isEditing, setIsEditing] = useState(false);
 
   const fetchWeek = async (dateStr) => {
       setLoading(true);
       try {
-          // --- FIX: DYNAMIC URL SWITCHING ---
+          // --- FIX: PRIORITY LOGIC ---
           let url = '';
-          if (isSynchro) {
+          if (isSynchro && team) {
+               // Synchro Team View
                url = `/synchro/${team.id}/week-view/?date=${dateStr}`;
           } else if (team) {
+               // Pairs/Dance Team View
                url = `/teams/${team.id}/week-view/?date=${dateStr}`;
-          } else {
+          } else if (skater) {
+               // Individual Skater View
                url = `/skaters/${skater.id}/week-view/?date=${dateStr}`;
+          } else {
+               console.error("WeeklyPlanTab: No context provided");
+               setLoading(false);
+               return;
           }
-          // ----------------------------------
+          // ---------------------------
 
           const data = await apiRequest(url, 'GET', null, token);
           setPlans(data.plans || []);
       } catch (e) { 
-          console.error("Failed to load week", e); 
+          console.error(e); 
       } finally { 
           setLoading(false); 
       }
   };
 
   useEffect(() => {
-      if (skater || team) fetchWeek(currentMonday);
+      fetchWeek(currentMonday);
   }, [skater, team, isSynchro, currentMonday, token]);
 
   const changeWeek = (days) => {
-      const newDate = days > 0 
-        ? addDays(parseISO(currentMonday), days) 
-        : subDays(parseISO(currentMonday), Math.abs(days));
+      const newDate = addDays(parseISO(currentMonday), days);
       setCurrentMonday(newDate.toISOString().split('T')[0]);
   };
 

@@ -70,12 +70,18 @@ class SoloDanceEntitySerializer(serializers.ModelSerializer):
 class TeamSerializer(serializers.ModelSerializer):
     federation = FederationSerializer(read_only=True)
 
-    # Read-Only Nested Data (for display)
+    # --- FIX: Add Writable Field ---
+    federation_id = serializers.PrimaryKeyRelatedField(
+        queryset=Federation.objects.all(),
+        source="federation",
+        write_only=True,
+        required=False,
+        allow_null=True,
+    )
+    # -------------------------------
+
     partner_a_details = SimpleSkaterSerializer(source="partner_a", read_only=True)
     partner_b_details = SimpleSkaterSerializer(source="partner_b", read_only=True)
-
-    # Write-Only IDs (for creation)
-    # We use PrimaryKeyRelatedField to accept the ID "1" and convert it to a Skater object
     partner_a = serializers.PrimaryKeyRelatedField(
         queryset=Skater.objects.all(), write_only=True
     )
@@ -94,6 +100,7 @@ class TeamSerializer(serializers.ModelSerializer):
             "discipline",
             "current_level",
             "federation",
+            "federation_id",  # <--- Add to fields
             "partner_a",
             "partner_b",
             "partner_a_details",
@@ -106,6 +113,8 @@ class TeamSerializer(serializers.ModelSerializer):
 
 class SynchroTeamSerializer(serializers.ModelSerializer):
     federation = FederationSerializer(read_only=True)
+
+    # --- FIX: Ensure this exists ---
     federation_id = serializers.PrimaryKeyRelatedField(
         queryset=Federation.objects.all(),
         source="federation",
@@ -113,6 +122,7 @@ class SynchroTeamSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True,
     )
+    # -------------------------------
 
     roster = SimpleSkaterSerializer(many=True, read_only=True)
     roster_ids = serializers.PrimaryKeyRelatedField(
@@ -130,7 +140,7 @@ class SynchroTeamSerializer(serializers.ModelSerializer):
             "team_name",
             "level",
             "federation",
-            "federation_id",
+            "federation_id",  # <--- Add to fields
             "roster",
             "roster_ids",
         )

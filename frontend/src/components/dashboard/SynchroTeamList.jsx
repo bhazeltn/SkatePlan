@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Users, ArrowRight, MapPin } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Users } from 'lucide-react';
+import { FederationFlag } from '@/components/ui/FederationFlag';
 
 export function SynchroTeamList({ teams }) {
   return (
@@ -9,39 +9,30 @@ export function SynchroTeamList({ teams }) {
       {teams.map((team) => (
         <Card 
             key={team.id} 
-            className="hover:border-brand-blue transition-all group cursor-pointer"
-            onClick={() => window.location.hash = `#/synchro/${team.id}`} // We will build this dashboard next session
+            className="hover:border-purple-500 transition-all group cursor-pointer"
+            onClick={() => window.location.hash = `#/synchro/${team.id}`}
         >
-          <CardContent className="p-5 flex items-start justify-between">
-            
-            <div className="flex items-start gap-3">
-              <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 shrink-0">
-                <Users className="h-5 w-5" />
-              </div>
+          <CardContent className="p-5 flex items-start gap-4">
+            <div className="h-12 w-12 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 shrink-0 border-2 border-white shadow-sm">
+                <Users className="h-6 w-6" />
+            </div>
 
-              <div>
-                <h3 className="font-bold text-gray-900">{team.team_name}</h3>
-                <div className="flex items-center gap-2 mt-0.5">
+            <div className="flex-1 min-w-0">
+                <div className="flex justify-between items-start">
+                    <h3 className="font-bold text-gray-900 truncate">{team.team_name}</h3>
+                    <FederationFlag federation={team.federation} />
+                </div>
+                
+                <div className="flex items-center gap-2 mt-1">
                     <span className="bg-purple-50 text-purple-700 px-2 py-0.5 rounded text-xs font-bold uppercase">
                         {team.level}
                     </span>
                 </div>
                 
-                {/* Federation & Roster Count */}
-                <div className="mt-3 flex flex-col gap-1 text-sm text-gray-600">
-                    <div className="flex items-center gap-2 text-xs">
-                        {team.federation && (
-                            <span className="flex items-center gap-1">
-                                {team.federation.flag_emoji} {team.federation.code}
-                            </span>
-                        )}
-                        <span className="text-gray-300">|</span>
-                        <span>{team.roster?.length || 0} Skaters</span>
-                    </div>
+                <div className="mt-3 text-xs text-gray-500">
+                    {team.roster?.length || 0} Skaters on Roster
                 </div>
-              </div>
             </div>
-
           </CardContent>
         </Card>
       ))}

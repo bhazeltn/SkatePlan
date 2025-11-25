@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Users } from 'lucide-react';
-// Removed ArrowRight and Button imports
+import { Users, MapPin } from 'lucide-react';
+import { FederationFlag } from '@/components/ui/FederationFlag';
 
 export function TeamList({ teams }) {
   return (
@@ -9,35 +9,36 @@ export function TeamList({ teams }) {
       {teams.map((team) => (
         <Card 
             key={team.id} 
-            className="hover:border-brand-blue transition-all group cursor-pointer"
+            className="hover:border-indigo-500 transition-all group cursor-pointer"
             onClick={() => window.location.hash = `#/team/${team.id}`}
         >
-          <CardContent className="p-5 flex items-start justify-between">
-            
-            <div className="flex items-start gap-3">
-              <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
-                <Users className="h-5 w-5" />
-              </div>
-
-              <div>
-                <h3 className="font-bold text-gray-900">{team.team_name}</h3>
-                <p className="text-xs text-gray-500 uppercase tracking-wide mt-0.5">
-                  {team.discipline} {team.current_level ? `• ${team.current_level}` : ''}
-                </p>
-                
-                <div className="mt-3 flex flex-col gap-1 text-sm text-gray-600">
-                    <div className="flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full bg-slate-300" />
-                        <span>{team.partner_a_details?.full_name || `ID: ${team.partner_a}`}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full bg-slate-300" />
-                        <span>{team.partner_b_details?.full_name || `ID: ${team.partner_b}`}</span>
-                    </div>
-                </div>
-              </div>
+          <CardContent className="p-5 flex items-start gap-4">
+            <div className="h-12 w-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 shrink-0 border-2 border-white shadow-sm">
+                <Users className="h-6 w-6" />
             </div>
 
+            <div className="flex-1 min-w-0">
+                <div className="flex justify-between items-start">
+                    <h3 className="font-bold text-gray-900 truncate">{team.team_name}</h3>
+                    <FederationFlag federation={team.federation} />
+                </div>
+                
+                <div className="flex flex-wrap gap-2 mt-1">
+                    <span className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded text-xs font-bold uppercase">
+                        {team.discipline === 'ICE_DANCE' ? 'Dance' : 'Pairs'}
+                    </span>
+                    {team.current_level && (
+                        <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-xs border">
+                            {team.current_level}
+                        </span>
+                    )}
+                </div>
+
+                <div className="mt-3 text-xs text-gray-500 flex flex-col gap-0.5">
+                    <span className="truncate">{team.partner_a_details?.full_name || 'Partner A'}</span>
+                    <span className="truncate">{team.partner_b_details?.full_name || 'Partner B'}</span>
+                </div>
+            </div>
           </CardContent>
         </Card>
       ))}

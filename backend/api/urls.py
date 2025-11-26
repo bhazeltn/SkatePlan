@@ -110,4 +110,6 @@ urlpatterns = [
         views.GapAnalysisRetrieveUpdateView.as_view(),
     ),
     path("synchro/<int:team_id>/week-view/", views.TeamMasterWeeklyPlanView.as_view()),
+    path("invitations/send/", views.SendInviteView.as_view()),
+    path("invitations/accept/<str:token>/", views.AcceptInviteView.as_view()),
 ]

@@ -11,6 +11,7 @@ import Settings from './pages/Settings';
 import YearlyPlanEditor from './pages/YearlyPlanEditor';
 import TeamDashboard from './pages/TeamDashboard';
 import SynchroTeamDashboard from './pages/SynchroTeamDashboard';
+import AcceptInvite from './pages/AcceptInvite';
 
 function App() {
   const { isAuthenticated, loading } = useAuth();
@@ -31,6 +32,10 @@ function App() {
           <>
             <Route path="/" element={<Login />} />
             <Route path="/register" element={<Register />} />
+
+            {/* NEW: Invite Acceptance Route */}
+            <Route path="/accept-invite/:token" element={<AcceptInvite />} />
+            
             {/* Redirect any unknown public URL to Login */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </>

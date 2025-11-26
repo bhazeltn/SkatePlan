@@ -5,6 +5,8 @@ from django.contrib.auth.models import (
     PermissionsMixin,
 )
 from django.utils import timezone
+from datetime import date, timedelta
+import uuid
 
 
 class UserManager(BaseUserManager):
@@ -58,3 +60,46 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
+
+
+class Invitation(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    email = models.EmailField()
+
+    # Who sent it?
+    sender = models.ForeignKey(
+        User, related_name="sent_invites", on_delete=models.CASCADE
+    )
+
+    # What access are we granting?
+    role = models.CharField(max_length=20, choices=User.Role.choices)
+
+    # TARGET: Who is this invite for?
+    # We use GenericForeignKey so we can invite someone to a Skater OR a Team
+    from django.contrib.contenttypes.fields import GenericForeignKey
+    from django.contrib.contenttypes.models import ContentType
+
+    content_type = models.ForeignKey(
+        ContentType, on_delete=models.CASCADE, null=True, blank=True
+    )
+    object_id = models.PositiveIntegerField(null=True, blank=True)
+    target_entity = GenericForeignKey("content_type", "object_id")
+
+    # Security
+    token = models.CharField(max_length=64, unique=True, default=uuid.uuid4)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    accepted_at = models.DateTimeField(null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        if not self.expires_at:
+            # Invites valid for 7 days
+            self.expires_at = timezone.now() + timedelta(days=7)
+        super().save(*args, **kwargs)
+
+    @property
+    def is_valid(self):
+        return self.accepted_at is None and self.expires_at > timezone.now()
+
+    def __str__(self):
+        return f"Invite {self.email} ({self.role})"

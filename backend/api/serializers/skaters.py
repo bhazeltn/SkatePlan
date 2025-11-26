@@ -7,6 +7,7 @@ from api.models import (
     Team,
     SynchroTeam,
     Federation,
+    PlanningEntityAccess,
 )
 from .core import FederationSerializer
 
@@ -29,6 +30,7 @@ class SimpleSkaterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Skater
+        # Removed 'planning_entities' from here to fix the error
         fields = (
             "id",
             "full_name",
@@ -66,11 +68,10 @@ class SoloDanceEntitySerializer(serializers.ModelSerializer):
         return "Solo Dance"
 
 
-# --- TEAM SERIALIZER (FIXED) ---
 class TeamSerializer(serializers.ModelSerializer):
     federation = FederationSerializer(read_only=True)
 
-    # --- FIX: Add Writable Field ---
+    # Writable Federation Field
     federation_id = serializers.PrimaryKeyRelatedField(
         queryset=Federation.objects.all(),
         source="federation",
@@ -78,10 +79,11 @@ class TeamSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True,
     )
-    # -------------------------------
 
     partner_a_details = SimpleSkaterSerializer(source="partner_a", read_only=True)
     partner_b_details = SimpleSkaterSerializer(source="partner_b", read_only=True)
+
+    # Write-Only IDs
     partner_a = serializers.PrimaryKeyRelatedField(
         queryset=Skater.objects.all(), write_only=True
     )
@@ -100,7 +102,7 @@ class TeamSerializer(serializers.ModelSerializer):
             "discipline",
             "current_level",
             "federation",
-            "federation_id",  # <--- Add to fields
+            "federation_id",
             "partner_a",
             "partner_b",
             "partner_a_details",
@@ -113,8 +115,6 @@ class TeamSerializer(serializers.ModelSerializer):
 
 class SynchroTeamSerializer(serializers.ModelSerializer):
     federation = FederationSerializer(read_only=True)
-
-    # --- FIX: Ensure this exists ---
     federation_id = serializers.PrimaryKeyRelatedField(
         queryset=Federation.objects.all(),
         source="federation",
@@ -122,7 +122,6 @@ class SynchroTeamSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True,
     )
-    # -------------------------------
 
     roster = SimpleSkaterSerializer(many=True, read_only=True)
     roster_ids = serializers.PrimaryKeyRelatedField(
@@ -140,7 +139,7 @@ class SynchroTeamSerializer(serializers.ModelSerializer):
             "team_name",
             "level",
             "federation",
-            "federation_id",  # <--- Add to fields
+            "federation_id",
             "roster",
             "roster_ids",
         )
@@ -201,6 +200,9 @@ class SkaterSerializer(serializers.ModelSerializer):
     federation = FederationSerializer(read_only=True)
     profile = AthleteProfileSerializer(read_only=True)
 
+    # New Field for Invite System
+    has_guardian = serializers.SerializerMethodField()
+
     class Meta:
         model = Skater
         fields = (
@@ -213,6 +215,8 @@ class SkaterSerializer(serializers.ModelSerializer):
             "is_active",
             "federation",
             "profile",
+            "user_account",
+            "has_guardian",
         )
 
     def get_planning_entities(self, obj):
@@ -234,6 +238,14 @@ class SkaterSerializer(serializers.ModelSerializer):
                 GenericPlanningEntitySerializer(entity, context=self.context).data
             )
         return entities
+
+    def get_has_guardian(self, obj):
+        from django.contrib.contenttypes.models import ContentType
+
+        ct = ContentType.objects.get_for_model(obj)
+        return PlanningEntityAccess.objects.filter(
+            content_type=ct, object_id=obj.id, access_level="GUARDIAN"
+        ).exists()
 
 
 class RosterSkaterSerializer(serializers.ModelSerializer):

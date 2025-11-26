@@ -2,6 +2,10 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
+# The URL of the frontend application (used for generating email links)
+# Defaults to localhost if the .env variable is missing
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -167,3 +171,10 @@ if os.getenv("USE_S3", "True") == "True":
     # For local dev, use localhost. For prod, this should be your public domain.
     AWS_S3_CUSTOM_DOMAIN = "localhost:9000/skateplan-media"
     AWS_QUERYSTRING_AUTH = False
+
+INSTALLED_APPS += ["anymail"]
+EMAIL_BACKEND = "anymail.backends.sendinblue.EmailBackend"
+ANYMAIL = {
+    "SENDINBLUE_API_KEY": os.getenv("BREVO_API_KEY"),
+}
+DEFAULT_FROM_EMAIL = "SkatePlan <skateplan@skatecoach.ca>"

@@ -1,189 +1,134 @@
-import React, { useState } from 'react';
-import { useAuth } from '@/AuthContext';
-import { apiRequest } from '@/api';
-import { Button } from '@/components/ui/button';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Button } from '@/components/ui/button';
 import { EditSkaterModal } from '@/components/dashboard/EditSkaterModal';
 import { EditDisciplineModal } from '@/components/dashboard/EditDisciplineModal';
-import { EditSafetyModal } from '@/components/dashboard/EditSafetyModal';
+import { InviteUserModal } from '@/components/dashboard/InviteUserModal';
+import { FederationFlag } from '@/components/ui/FederationFlag';
+import { AlertTriangle, Mail } from 'lucide-react';
+import { apiRequest } from '@/api';
+import { useAuth } from '@/AuthContext';
 
 export function ProfileTab({ skater, onUpdated }) {
   const { token } = useAuth();
-  const [deleteOpen, setDeleteOpen] = useState(false);
-
-  // --- HANDLERS (Moved from Dashboard) ---
-  const handleArchive = async () => {
-    try {
-      const newState = !skater.is_active;
-      await apiRequest(`/skaters/${skater.id}/`, 'PATCH', { is_active: newState }, token);
-      onUpdated(); // Refresh parent data
-    } catch (err) {
-      alert("Failed to update archive status.");
-    }
-  };
 
   const handleDelete = async () => {
-    try {
-      await apiRequest(`/skaters/${skater.id}/`, 'DELETE', null, token);
-      window.location.hash = '#/'; // Redirect to roster
-    } catch (err) {
-      alert("Failed to delete profile.");
-    }
+      if (!confirm("Delete this athlete profile? This cannot be undone.")) return;
+      try {
+          await apiRequest(`/skaters/${skater.id}/`, 'DELETE', null, token);
+          window.location.hash = '#/';
+      } catch (e) { alert("Failed."); }
   };
 
+  // --- AGE HELPER ---
+  const getAge = (dobString) => {
+      if (!dobString) return 18; 
+      const today = new Date();
+      const birthDate = new Date(dobString);
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const m = today.getMonth() - birthDate.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) { age--; }
+      return age;
+  };
+
+  const age = getAge(skater.date_of_birth);
+  const isYoungMinor = age < 13;
+  // ------------------
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Profile & Access</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-8">
+    <div className="space-y-6">
+      
+      {/* Main Info */}
+      <Card>
+        <CardHeader className="flex flex-row justify-between items-center">
+            <CardTitle>Athlete Details</CardTitle>
+            <div className="flex gap-2">
+                {/* 1. INVITE PARENT (Always Active) */}
+                <InviteUserModal 
+                    entityType="Skater" entityId={skater.id} entityName={skater.full_name}
+                    skaterDOB={skater.date_of_birth} hasGuardian={skater.has_guardian}
+                    defaultRole="PARENT"
+                    lockRole={true} 
+                    trigger={<Button size="sm" variant="outline">Invite Parent</Button>}
+                />
+
+                {/* 2. INVITE ATHLETE (Disabled if < 13) */}
+                <InviteUserModal 
+                    entityType="Skater" entityId={skater.id} entityName={skater.full_name}
+                    skaterDOB={skater.date_of_birth} hasGuardian={skater.has_guardian}
+                    defaultRole="ATHLETE"
+                    lockRole={true}
+                    trigger={
+                        <Button 
+                            size="sm" 
+                            variant="outline" 
+                            disabled={isYoungMinor} // <--- DISABLE HERE
+                            title={isYoungMinor ? "Direct access not available for athletes under 13." : ""}
+                        >
+                            Invite Athlete
+                        </Button>
+                    }
+                />
+                
+                <EditSkaterModal skater={skater} onSaved={onUpdated} />
+            </div>
+        </CardHeader>
         
-        {/* 1. Personal Information */}
-        <section>
-          <div className="flex justify-between items-center mb-4 border-b pb-2">
-              <h4 className="text-md font-semibold text-gray-900">Personal Information</h4>
-              <EditSkaterModal skater={skater} onSkaterUpdated={onUpdated} />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-             <div>
-                <label className="text-sm font-medium text-muted-foreground">Full Name</label>
-                <p className="text-lg font-medium">{skater.full_name}</p>
-             </div>
-             <div>
-                <label className="text-sm font-medium text-muted-foreground">Date of Birth</label>
-                <p className="text-lg">{skater.date_of_birth}</p>
-             </div>
-             <div>
-                <label className="text-sm font-medium text-muted-foreground">Gender</label>
-                <p className="text-lg">{skater.gender || 'Not set'}</p>
-             </div>
-             <div>
-                <label className="text-sm font-medium text-muted-foreground">Home Club/Rink</label>
-                <p className="text-lg">{skater.home_club || 'Not set'}</p>
-             </div>
-             <div>
-                <label className="text-sm font-medium text-muted-foreground">Federation</label>
-                <div className="flex items-center gap-2 mt-1">
-                  {skater.federation ? (
-                      <>
-                          <span className="text-2xl">{skater.federation.flag_emoji}</span>
-                          <p className="text-lg">{skater.federation.name}</p>
-                      </>
-                  ) : (
-                      <p className="text-lg text-muted-foreground">Not set</p>
-                  )}
-                </div>
-             </div>
-          </div>
-        </section>
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div><label className="text-xs font-bold text-gray-500 uppercase">Full Name</label><p className="text-lg">{skater.full_name}</p></div>
+            <div><label className="text-xs font-bold text-gray-500 uppercase">DOB</label><p className="text-lg">{skater.date_of_birth} <span className="text-gray-400 text-sm">({age}yo)</span></p></div>
+            <div>
+                <label className="text-xs font-bold text-gray-500 uppercase">Federation</label>
+                <div className="mt-1"><FederationFlag federation={skater.federation} /></div>
+            </div>
+            <div><label className="text-xs font-bold text-gray-500 uppercase">Home Club</label><p className="text-lg">{skater.home_club || '-'}</p></div>
+            
+            {/* Account Status */}
+            <div className="md:col-span-2 pt-4 border-t">
+                <label className="text-xs font-bold text-gray-500 uppercase">User Account</label>
+                {skater.user_account ? (
+                    <div className="flex items-center gap-2 mt-1">
+                        <span className="h-2 w-2 rounded-full bg-green-500" />
+                        <span className="text-sm font-medium text-gray-900">Active: {skater.user_account.email || "Linked"}</span>
+                    </div>
+                ) : (
+                    <div className="flex items-center gap-2 mt-1">
+                        <span className="h-2 w-2 rounded-full bg-gray-300" />
+                        <span className="text-sm text-gray-500 italic">
+                            {isYoungMinor ? "Minor Account (Parent Only)." : "No user account linked."}
+                        </span>
+                    </div>
+                )}
+            </div>
+        </CardContent>
+      </Card>
 
-        {/* 2. Safety & Contact */}
-        <section>
-          <div className="flex justify-between items-center mb-4 border-b pb-2">
-              <h4 className="text-md font-semibold text-gray-900">Safety & Contact</h4>
-              <EditSafetyModal skater={skater} onUpdated={onUpdated} />
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="p-4 bg-red-50 border border-red-100 rounded-md">
-                  <h5 className="text-sm font-semibold text-red-800 mb-2">Medical Notes</h5>
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap">
-                      {skater.profile?.relevant_medical_notes || "No notes recorded."}
-                  </p>
-              </div>
-              
-              <div className="space-y-3">
-                   <div>
-                      <label className="text-xs font-medium text-gray-500 uppercase">Emergency Contact</label>
-                      <p className="font-medium">
-                          {skater.profile?.emergency_contact_name || "--"} 
-                          <span className="text-gray-500 font-normal ml-2">
-                              {skater.profile?.emergency_contact_phone}
-                          </span>
-                      </p>
-                   </div>
-                   <div>
-                      <label className="text-xs font-medium text-gray-500 uppercase">Guardian</label>
-                      <p className="font-medium">
-                          {skater.profile?.guardian_name || "--"}
-                          <span className="text-gray-500 font-normal ml-2">
-                              {skater.profile?.guardian_email}
-                          </span>
-                      </p>
-                   </div>
-              </div>
-          </div>
-        </section>
-
-        {/* 3. Disciplines */}
-        <section>
-          <div className="flex justify-between items-center mb-4 border-b pb-2">
-            <h4 className="text-md font-semibold text-gray-900">Disciplines</h4>
-            <Button variant="outline" size="sm">Add Discipline +</Button>
-          </div>
-          
-          {skater.planning_entities && skater.planning_entities.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {skater.planning_entities.map((entity) => (
-                <div key={entity.id} className="p-4 border rounded-lg bg-gray-50 flex justify-between items-center">
-                  <div>
-                    <p className="font-semibold">{entity.name}</p>
-                    {entity.current_level && <p className="text-sm text-muted-foreground">{entity.current_level}</p>}
+      {/* Disciplines */}
+      <Card>
+          <CardHeader className="flex flex-row justify-between items-center">
+              <CardTitle>Disciplines & Levels</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+              {skater.planning_entities?.map(entity => (
+                  <div key={entity.id} className="flex justify-between items-center p-3 border rounded hover:bg-slate-50">
+                      <div>
+                          <span className="font-bold text-gray-900">{entity.name}</span>
+                          <span className="ml-2 text-sm text-gray-500">{entity.current_level}</span>
+                      </div>
+                      <EditDisciplineModal entity={entity} onSaved={onUpdated} />
                   </div>
-                  <EditDisciplineModal entity={entity} onUpdated={onUpdated} />
-                </div>
               ))}
-            </div>
-          ) : (
-            <div className="text-center p-6 border-2 border-dashed rounded-lg">
-              <p className="text-muted-foreground">No active disciplines.</p>
-            </div>
-          )}
-        </section>
+          </CardContent>
+      </Card>
 
-        {/* 4. Danger Zone */}
-        <section className="pt-4">
-          <h4 className="text-md font-semibold mb-4 text-red-600 border-b pb-2 border-red-100">Danger Zone</h4>
-          <div className="flex gap-4">
-             <Button 
-               variant="outline" 
-               className="text-gray-600"
-               onClick={handleArchive}
-             >
-               {skater.is_active ? 'Archive Athlete' : 'Unarchive Athlete'}
-             </Button>
-
-             <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="destructive">Delete Profile</Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Delete {skater.full_name}?</DialogTitle>
-                    <DialogDescription>
-                      This will permanently delete this athlete profile, all their plans, logs, and goals. 
-                      This action cannot be undone.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setDeleteOpen(false)}>Cancel</Button>
-                    <Button variant="destructive" onClick={handleDelete}>Confirm Delete</Button>
-                  </DialogFooter>
-                </DialogContent>
-             </Dialog>
-          </div>
-        </section>
-        
-      </CardContent>
-    </Card>
+      {/* Danger Zone */}
+      <Card className="border-red-100">
+          <CardHeader className="bg-red-50/50 border-b border-red-100"><CardTitle className="text-red-800 flex items-center gap-2"><AlertTriangle className="h-5 w-5" /> Danger Zone</CardTitle></CardHeader>
+          <CardContent className="p-6 flex justify-between items-center">
+              <div className="text-sm text-gray-600"><p className="font-medium text-gray-900">Delete Athlete</p><p>Permanently remove this profile and all data.</p></div>
+              <Button variant="destructive" onClick={handleDelete}>Delete Profile</Button>
+          </CardContent>
+      </Card>
+    </div>
   );
 }

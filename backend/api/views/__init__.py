@@ -74,3 +74,5 @@ from .logistics import (
     HousingListCreateView,
     HousingDetailView,
 )
+
+from .invitations import SendInviteView, AcceptInviteView

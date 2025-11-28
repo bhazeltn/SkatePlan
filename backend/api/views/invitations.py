@@ -108,6 +108,7 @@ class SendInviteView(APIView):
 class AcceptInviteView(APIView):
     permission_classes = [permissions.AllowAny]
 
+    # ... (keep validate_requirements and get method same) ...
     def validate_requirements(self, invite):
         if invite.role == "ATHLETE" and isinstance(invite.target_entity, Skater):
             skater = invite.target_entity
@@ -167,41 +168,50 @@ class AcceptInviteView(APIView):
             )
 
         with transaction.atomic():
+            # 1. MAP ROLES CORRECTLY
+            final_role = invite.role
+            if final_role == "PARENT":
+                final_role = User.Role.GUARDIAN
+            elif final_role == "ATHLETE":
+                final_role = User.Role.SKATER  # <--- FIX ADDED HERE
+
+            # 2. CREATE USER
             user = User.objects.create_user(
                 email=invite.email,
                 password=password,
                 full_name=full_name,
-                role=invite.role,
+                role=final_role,
             )
             entity = invite.target_entity
 
+            # 3. ASSIGN PERMISSIONS
+            # Use the original invite.role for logic checks to match the flow
             if invite.role == "ATHLETE" and hasattr(entity, "user_account"):
                 entity.user_account = user
                 entity.save()
 
-            # FIX: Explicitly handle 'GUARDIAN' role here
-            elif invite.role == "GUARDIAN" or invite.role == "PARENT":
+            elif final_role == User.Role.GUARDIAN or invite.role == "PARENT":
                 PlanningEntityAccess.objects.create(
                     user=user,
                     planning_entity=entity,
                     access_level=PlanningEntityAccess.AccessLevel.GUARDIAN,
                 )
 
-            elif invite.role == "COLLABORATOR":
+            elif final_role == "COLLABORATOR":
                 PlanningEntityAccess.objects.create(
                     user=user,
                     planning_entity=entity,
                     access_level=PlanningEntityAccess.AccessLevel.COLLABORATOR,
                 )
 
-            elif invite.role == "MANAGER":
+            elif final_role == "MANAGER":
                 PlanningEntityAccess.objects.create(
                     user=user,
                     planning_entity=entity,
                     access_level=PlanningEntityAccess.AccessLevel.MANAGER,
                 )
 
-            elif invite.role == "OBSERVER":
+            elif final_role == "OBSERVER":
                 PlanningEntityAccess.objects.create(
                     user=user,
                     planning_entity=entity,

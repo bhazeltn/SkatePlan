@@ -10,9 +10,6 @@ from api.models import (
     PlanningEntityAccess,
 )
 from .core import FederationSerializer
-from django.contrib.auth import get_user_model
-
-User = get_user_model()
 
 
 class AthleteProfileSerializer(serializers.ModelSerializer):
@@ -157,8 +154,10 @@ class GenericPlanningEntitySerializer(serializers.Serializer):
             data = TeamSerializer(instance, context=self.context).data
         elif isinstance(instance, SynchroTeam):
             data = SynchroTeamSerializer(instance, context=self.context).data
+
         if data is None:
             data = {"id": instance.id, "name": str(instance)}
+
         data["type"] = instance.__class__.__name__
         return data
 
@@ -200,10 +199,11 @@ class SkaterSerializer(serializers.ModelSerializer):
     profile = AthleteProfileSerializer(read_only=True)
     user_account_email = serializers.SerializerMethodField()
     guardians = serializers.SerializerMethodField()
-
-    # --- NEW FIELD ---
     synchro_teams = SimpleSynchroTeamSerializer(many=True, read_only=True)
-    # -----------------
+
+    # --- FIXED: Explicitly define the method field ---
+    has_guardian = serializers.SerializerMethodField()
+    # -------------------------------------------------
 
     class Meta:
         model = Skater
@@ -214,13 +214,14 @@ class SkaterSerializer(serializers.ModelSerializer):
             "gender",
             "home_club",
             "planning_entities",
-            "synchro_teams",  # <--- Added
+            "synchro_teams",
             "is_active",
             "federation",
             "profile",
             "user_account",
             "user_account_email",
             "guardians",
+            "has_guardian",
         )
 
     def get_planning_entities(self, obj):
@@ -250,7 +251,6 @@ class SkaterSerializer(serializers.ModelSerializer):
         from django.contrib.contenttypes.models import ContentType
 
         ct = ContentType.objects.get_for_model(obj)
-        # Find users with GUARDIAN access to this skater
         access_records = PlanningEntityAccess.objects.filter(
             content_type=ct, object_id=obj.id, access_level="GUARDIAN"
         ).select_related("user")
@@ -259,6 +259,9 @@ class SkaterSerializer(serializers.ModelSerializer):
             {"full_name": record.user.full_name, "email": record.user.email}
             for record in access_records
         ]
+
+    def get_has_guardian(self, obj):
+        return len(self.get_guardians(obj)) > 0
 
 
 class RosterSkaterSerializer(serializers.ModelSerializer):

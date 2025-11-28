@@ -7,20 +7,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea'; 
 import { DatePicker } from '@/components/ui/date-picker'; 
-import { Plus, Zap, Palette, Dumbbell, Brain } from 'lucide-react';
+import { Plus, Zap, Palette, Dumbbell, Brain, Lock } from 'lucide-react';
 
-export function MacrocycleModal({ planId, macrocycle, onSaved, defaultStartDate, defaultEndDate, trigger }) {
+export function MacrocycleModal({ planId, macrocycle, onSaved, defaultStartDate, defaultEndDate, trigger, readOnly }) { // <--- Added readOnly
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const { token } = useAuth();
 
-  // Basic Info
+  // ... (State init remains the same) ...
   const [title, setTitle] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [focus, setFocus] = useState('');
-
-  // The 4 Pillars
   const [techFocus, setTechFocus] = useState('');
   const [compFocus, setCompFocus] = useState('');
   const [physFocus, setPhysFocus] = useState('');
@@ -49,8 +47,10 @@ export function MacrocycleModal({ planId, macrocycle, onSaved, defaultStartDate,
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (readOnly) return; // Guard
+    
     setLoading(true);
-
+    // ... (Payload logic remains same)
     const payload = {
         phase_title: title,
         phase_start: startDate,
@@ -84,22 +84,25 @@ export function MacrocycleModal({ planId, macrocycle, onSaved, defaultStartDate,
       </DialogTrigger>
       <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{macrocycle ? 'Edit Phase' : 'Add Phase'}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+              {macrocycle ? 'Edit Phase' : 'Add Phase'}
+              {readOnly && <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded border border-amber-200 flex items-center gap-1"><Lock className="h-3 w-3"/> View Only</span>}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           
           {/* Top Row: Name & Dates */}
           <div className="grid grid-cols-2 gap-4">
-             <div className="space-y-2"><Label>Phase Name</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. General Prep" required /></div>
+             <div className="space-y-2"><Label>Phase Name</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. General Prep" required disabled={readOnly} /></div>
              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-2"><Label>Start</Label><DatePicker date={startDate} setDate={setStartDate} /></div>
-                <div className="space-y-2"><Label>End</Label><DatePicker date={endDate} setDate={setEndDate} /></div>
+                <div className="space-y-2"><Label>Start</Label><DatePicker date={startDate} setDate={setStartDate} disabled={readOnly} /></div>
+                <div className="space-y-2"><Label>End</Label><DatePicker date={endDate} setDate={setEndDate} disabled={readOnly} /></div>
              </div>
           </div>
 
           <div className="space-y-2">
               <Label>Primary Objective</Label>
-              <Input value={focus} onChange={(e) => setFocus(e.target.value)} placeholder="Main goal for this period..." />
+              <Input value={focus} onChange={(e) => setFocus(e.target.value)} placeholder="Main goal for this period..." disabled={readOnly} />
           </div>
 
           {/* THE 4 PILLARS GRID */}
@@ -110,7 +113,7 @@ export function MacrocycleModal({ planId, macrocycle, onSaved, defaultStartDate,
                   <Label className="text-xs font-bold text-blue-700 flex items-center gap-2">
                       <Zap className="h-3 w-3" /> Technical / Tactical
                   </Label>
-                  <Textarea className="min-h-[80px] text-xs bg-white" value={techFocus} onChange={(e) => setTechFocus(e.target.value)} placeholder="Skills to acquire/refine..." />
+                  <Textarea className="min-h-[80px] text-xs bg-white" value={techFocus} onChange={(e) => setTechFocus(e.target.value)} placeholder="Skills to acquire/refine..." disabled={readOnly} />
               </div>
 
               {/* Component */}
@@ -118,7 +121,7 @@ export function MacrocycleModal({ planId, macrocycle, onSaved, defaultStartDate,
                   <Label className="text-xs font-bold text-pink-700 flex items-center gap-2">
                       <Palette className="h-3 w-3" /> Artistic / Components
                   </Label>
-                  <Textarea className="min-h-[80px] text-xs bg-white" value={compFocus} onChange={(e) => setCompFocus(e.target.value)} placeholder="Choreo, performance..." />
+                  <Textarea className="min-h-[80px] text-xs bg-white" value={compFocus} onChange={(e) => setCompFocus(e.target.value)} placeholder="Choreo, performance..." disabled={readOnly} />
               </div>
 
               {/* Physical */}
@@ -126,7 +129,7 @@ export function MacrocycleModal({ planId, macrocycle, onSaved, defaultStartDate,
                   <Label className="text-xs font-bold text-orange-700 flex items-center gap-2">
                       <Dumbbell className="h-3 w-3" /> Physical Capacity
                   </Label>
-                  <Textarea className="min-h-[80px] text-xs bg-white" value={physFocus} onChange={(e) => setPhysFocus(e.target.value)} placeholder="Strength, cardio..." />
+                  <Textarea className="min-h-[80px] text-xs bg-white" value={physFocus} onChange={(e) => setPhysFocus(e.target.value)} placeholder="Strength, cardio..." disabled={readOnly} />
               </div>
 
               {/* Mental */}
@@ -134,14 +137,16 @@ export function MacrocycleModal({ planId, macrocycle, onSaved, defaultStartDate,
                   <Label className="text-xs font-bold text-purple-700 flex items-center gap-2">
                       <Brain className="h-3 w-3" /> Mental & Self
                   </Label>
-                  <Textarea className="min-h-[80px] text-xs bg-white" value={mentFocus} onChange={(e) => setMentFocus(e.target.value)} placeholder="Psych, lifestyle..." />
+                  <Textarea className="min-h-[80px] text-xs bg-white" value={mentFocus} onChange={(e) => setMentFocus(e.target.value)} placeholder="Psych, lifestyle..." disabled={readOnly} />
               </div>
 
           </div>
 
-          <DialogFooter>
-            <Button type="submit" disabled={loading}>{loading ? 'Saving...' : 'Save Phase'}</Button>
-          </DialogFooter>
+          {!readOnly && (
+              <DialogFooter>
+                <Button type="submit" disabled={loading}>{loading ? 'Saving...' : 'Save Phase'}</Button>
+              </DialogFooter>
+          )}
         </form>
       </DialogContent>
     </Dialog>

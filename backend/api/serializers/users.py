@@ -5,10 +5,20 @@ User = get_user_model()
 
 
 class UserSerializer(serializers.ModelSerializer):
+    skater_id = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ("email", "full_name", "role", "phone_number")
+        fields = ("email", "full_name", "role", "phone_number", "skater_id")
         read_only_fields = ("role",)
+
+    def get_skater_id(self, obj):
+        if obj.role == User.Role.SKATER:
+            # FIX: The model defines related_name='skaters'
+            # Since it's a ForeignKey, we access the manager and get the first record.
+            skater = obj.skaters.first()
+            return skater.id if skater else None
+        return None
 
 
 class RegisterSerializer(serializers.ModelSerializer):

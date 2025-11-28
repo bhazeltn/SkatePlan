@@ -11,19 +11,23 @@ import { GoalModal } from '@/components/planning/GoalModal';
 import { GapAnalysisCard } from '@/components/planning/GapAnalysisCard'; 
 import { 
     ArrowLeft, Calendar, CheckCircle2, Circle, Trash2, Pencil,
-    Zap, Palette, Dumbbell, Brain 
+    Zap, Palette, Dumbbell, Brain, Lock 
 } from 'lucide-react';
 
-// Helper for date format
 const formatDate = (d) => new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 
 export default function YearlyPlanEditor() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [plan, setPlan] = useState(null);
   const [loading, setLoading] = useState(true);
   const [goals, setGoals] = useState([]);
   
   const planId = window.location.hash.split('/')[2];
+  
+  // --- PERMISSIONS ---
+  const isCoach = user?.role === 'COACH' || user?.role === 'COLLABORATOR';
+  const readOnly = !isCoach;
+  // -------------------
 
   const fetchPlan = async () => {
     try {
@@ -74,7 +78,6 @@ export default function YearlyPlanEditor() {
       if (!confirm("Are you sure you want to DELETE this entire plan? This cannot be undone.")) return;
       try {
           await apiRequest(`/ytps/${planId}/`, 'DELETE', null, token);
-          // Redirect back to the correct dashboard using the smart URL
           window.location.hash = plan.dashboard_url || '#/';
       } catch (err) {
           alert("Failed to delete plan.");
@@ -114,17 +117,23 @@ export default function YearlyPlanEditor() {
                 </Button>
             </a>
             <div>
-                <h1 className="text-3xl font-bold text-gray-900">{plan.discipline_name} Plan</h1>
+                <div className="flex items-center gap-2">
+                    <h1 className="text-3xl font-bold text-gray-900">{plan.discipline_name} Plan</h1>
+                    {readOnly && <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded border border-amber-200 flex items-center gap-1"><Lock className="h-3 w-3"/> Read Only</span>}
+                </div>
                 <p className="text-muted-foreground">Yearly Training Plan Editor</p>
             </div>
         </div>
         
-        <div className="flex gap-2">
-            <Button variant="destructive" onClick={handleDeletePlan}>
-                <Trash2 className="h-4 w-4 mr-2" /> Delete Plan
-            </Button>
-            <Button onClick={handleUpdateDetails}>Save Changes</Button>
-        </div>
+        {/* HIDE ACTIONS IF READ ONLY */}
+        {!readOnly && (
+            <div className="flex gap-2">
+                <Button variant="destructive" onClick={handleDeletePlan}>
+                    <Trash2 className="h-4 w-4 mr-2" /> Delete Plan
+                </Button>
+                <Button onClick={handleUpdateDetails}>Save Changes</Button>
+            </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -144,6 +153,7 @@ export default function YearlyPlanEditor() {
                             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                             value={plan.peak_type || ''}
                             onChange={(e) => setPlan({...plan, peak_type: e.target.value})}
+                            disabled={readOnly} // <--- Disable
                         >
                             <option value="Single Peak">Single Peak</option>
                             <option value="Double Peak">Double Peak</option>
@@ -157,19 +167,25 @@ export default function YearlyPlanEditor() {
                             className="flex min-h-[100px]"
                             value={plan.primary_season_goal || ''}
                             onChange={(e) => setPlan({...plan, primary_season_goal: e.target.value})}
+                            disabled={readOnly} // <--- Disable
                         />
                     </div>
                 </CardContent>
             </Card>
 
-            {/* 2. Gap Analysis */}
-            <GapAnalysisCard planId={planId} />
+            {/* 2. Gap Analysis (HIDE for Non-Coach) */}
+            {isCoach && <GapAnalysisCard planId={planId} />}
             
             {/* 3. Linked Goals */}
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                     <CardTitle className="text-lg">Season Goals</CardTitle>
-                    <GoalModal planId={planId} onSaved={fetchGoals} />
+                    <GoalModal 
+                        planId={planId} 
+                        onSaved={fetchGoals} 
+                        permissions={{ role: user.role }} // Pass Basic Context
+                        trigger={readOnly ? null : <Button size="sm" variant="outline">Add Goal</Button>} 
+                    />
                 </CardHeader>
                 <CardContent>
                     {goals.length === 0 ? (
@@ -198,10 +214,12 @@ export default function YearlyPlanEditor() {
                                                     )}
                                                 </div>
                                             </div>
+                                            {/* Pass permissions so it locks if approved */}
                                             <GoalModal 
                                                 planId={planId} 
                                                 goal={goal} 
                                                 onSaved={fetchGoals}
+                                                permissions={{ role: user.role }}
                                                 trigger={
                                                     <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 group-hover:opacity-100">
                                                         <Pencil className="h-3 w-3" />
@@ -223,17 +241,19 @@ export default function YearlyPlanEditor() {
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle>Season Timeline</CardTitle>
-                    <MacrocycleModal 
-                        planId={plan.id} 
-                        onSaved={fetchPlan} 
-                        defaultStartDate={defaultStart}
-                        defaultEndDate={defaultEnd}
-                    />
+                    {!readOnly && (
+                        <MacrocycleModal 
+                            planId={plan.id} 
+                            onSaved={fetchPlan} 
+                            defaultStartDate={defaultStart}
+                            defaultEndDate={defaultEnd}
+                        />
+                    )}
                 </CardHeader>
                 <CardContent>
                     {sortedCycles.length === 0 ? (
                         <div className="text-center p-8 border-2 border-dashed rounded-lg text-muted-foreground">
-                            No phases defined yet. Click "Add Phase" to build your timeline.
+                            No phases defined yet.
                         </div>
                     ) : (
                         <div className="space-y-4">
@@ -253,23 +273,24 @@ export default function YearlyPlanEditor() {
                                             <MacrocycleModal 
                                                 planId={plan.id} 
                                                 macrocycle={cycle} 
+                                                readOnly={readOnly} // <--- Pass readOnly
                                                 onSaved={fetchPlan} 
-                                                trigger={<Button variant="outline" size="sm">Edit</Button>} 
+                                                trigger={<Button variant="outline" size="sm">View / Edit</Button>} 
                                             />
-                                            <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-700" onClick={() => handleDeleteMacrocycle(cycle.id)}>
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
+                                            {!readOnly && (
+                                                <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-700" onClick={() => handleDeleteMacrocycle(cycle.id)}>
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            )}
                                         </div>
                                     </div>
-
-                                    {/* Primary Focus */}
+                                    {/* ... (Grid Logic remains the same) ... */}
+                                    {/* (Keeping the display logic) */}
                                     {cycle.phase_focus && (
                                         <div className="bg-slate-100 p-2 rounded text-sm font-medium text-slate-800">
                                             {cycle.phase_focus}
                                         </div>
                                     )}
-
-                                    {/* 4 Pillars Grid */}
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
                                         {cycle.technical_focus && (
                                             <div className="text-xs p-2 bg-blue-50 rounded border border-blue-100">

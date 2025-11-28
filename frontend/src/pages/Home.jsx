@@ -12,19 +12,37 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { 
     Clock, Calendar, Activity, HeartPulse, CheckCircle2, FileWarning, 
-    ShieldCheck, ClipboardList, Settings, Plus
+    ShieldCheck, ClipboardList, Settings, Plus, Users, UserPlus
 } from 'lucide-react';
 import GuardianDashboard from './GuardianDashboard';
+import { Navigate } from 'react-router-dom'; // <--- Import Navigate
 
 export default function Home() {
   const { user, logout, token } = useAuth();
   
-  // --- NEW: ROLE CHECK ---
+  // --- 1. GUARDIAN ROUTING ---
   if (user?.role === 'GUARDIAN') {
       return <GuardianDashboard />;
   }
-  // -----------------------
 
+  // --- 2. SKATER ROUTING ---
+  if (user?.role === 'SKATER') {
+      if (user.skater_id) {
+          // Direct them to their specific dashboard
+          return <Navigate to={`/skater/${user.skater_id}`} replace />;
+      } else {
+          // Edge case: Skater account exists but isn't linked to a profile yet
+          return (
+              <div className="p-12 text-center">
+                  <h2 className="text-xl font-bold">Profile Not Found</h2>
+                  <p className="text-gray-600 mb-4">Your account is active, but it isn't linked to an athlete profile.</p>
+                  <Button variant="outline" onClick={logout}>Log Out</Button>
+              </div>
+          );
+      }
+  }
+
+  // --- 3. COACH DASHBOARD (Default) ---
   const [roster, setRoster] = useState([]);
   const [teams, setTeams] = useState([]);
   const [synchroTeams, setSynchroTeams] = useState([]);
@@ -71,19 +89,13 @@ export default function Home() {
             </PopoverTrigger>
             <PopoverContent align="end" className="w-56 p-2 flex flex-col gap-2 bg-white shadow-lg border rounded-md">
                  <AddSkaterModal onSkaterAdded={handleRefresh} trigger={
-                     <Button variant="ghost" className="w-full justify-start h-10 font-normal">
-                        <Plus className="h-4 w-4 mr-2 text-gray-500" /> Athlete
-                     </Button>
+                     <Button variant="ghost" className="w-full justify-start h-10 font-normal"><UserPlus className="h-4 w-4 mr-2 text-gray-500" /> Athlete</Button>
                  }/>
                  <CreateTeamModal onTeamCreated={handleRefresh} trigger={
-                     <Button variant="ghost" className="w-full justify-start h-10 font-normal">
-                        <Plus className="h-4 w-4 mr-2 text-indigo-500" /> Pair/Dance Team
-                     </Button>
+                     <Button variant="ghost" className="w-full justify-start h-10 font-normal"><Users className="h-4 w-4 mr-2 text-indigo-500" /> Pair/Dance Team</Button>
                  }/>
                  <CreateSynchroTeamModal onTeamCreated={handleRefresh} trigger={
-                     <Button variant="ghost" className="w-full justify-start h-10 font-normal">
-                        <Plus className="h-4 w-4 mr-2 text-purple-500" /> Synchro Team
-                     </Button>
+                     <Button variant="ghost" className="w-full justify-start h-10 font-normal"><Users className="h-4 w-4 mr-2 text-purple-500" /> Synchro Team</Button>
                  }/>
             </PopoverContent>
           </Popover>

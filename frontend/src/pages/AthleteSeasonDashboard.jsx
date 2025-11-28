@@ -4,7 +4,7 @@ import { useAuth } from '@/AuthContext';
 import { apiRequest } from '@/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { User, Calendar, MapPin, ArrowLeft } from 'lucide-react';
+import { User, Calendar, MapPin, ArrowLeft, LogOut, Settings } from 'lucide-react'; // <--- Added LogOut, Settings
 import { FederationFlag } from '@/components/ui/FederationFlag';
 
 // Tabs
@@ -24,7 +24,7 @@ import { LogisticsTab } from '@/components/dashboard/tabs/LogisticsTab';
 export default function AthleteSeasonDashboard() {
   const params = useParams();
   const id = params.id || params.skaterId;
-  const { token, user } = useAuth();
+  const { token, user, logout } = useAuth(); // <--- Added logout
   const [skater, setSkater] = useState(null);
   const [activeTab, setActiveTab] = useState('weekly');
   const [loading, setLoading] = useState(true);
@@ -40,13 +40,10 @@ export default function AthleteSeasonDashboard() {
       canEditGoals: true,
       canEditLogs: true,
       canEditHealth: true,
-      
-      // SPLIT COMPETITION/TEST PERMISSIONS
-      canCreateCompetitions: isCoach, // Only Coach adds events/tests
-      canEditCompetitions: true,      // Parents can edit results/tests
-      
+      canCreateCompetitions: isCoach,
+      canEditCompetitions: true,
       canEditProfile: isCoach,  
-      viewGapAnalysis: isCoach || isSkater, 
+      viewGapAnalysis: isCoach,
       readOnly: !isCoach,       
   };
   // ------------------------
@@ -75,16 +72,11 @@ export default function AthleteSeasonDashboard() {
   
   tabs.push('goals', 'programs', 'competitions');
 
-  // SHOW LOGISTICS IF: 
-  // 1. User is Parent/Skater (Coach sees this on Team Dashboard)
-  // 2. Skater is on at least one Synchro Team
   if (!isCoach && skater?.synchro_teams?.length > 0) {
-      // CHANGED: Specific label for clarity
       tabs.push('synchro_logistics');
   }
 
   tabs.push('tests', 'logs', 'health', 'analytics', 'profile');
-  // ------------------------
 
   return (
     <div className="p-8 min-h-screen bg-gray-50">
@@ -100,7 +92,28 @@ export default function AthleteSeasonDashboard() {
                 </div>
             </div>
         </div>
-        <a href="#/"><Button variant="outline"><ArrowLeft className="h-4 w-4 mr-2" /> Back to Dashboard</Button></a>
+        
+        {/* HEADER ACTIONS */}
+        <div className="flex gap-2">
+            {isSkater ? (
+                <>
+                    <a href="#/settings">
+                        <Button variant="secondary" size="icon">
+                            <Settings className="h-5 w-5 text-gray-600" />
+                        </Button>
+                    </a>
+                    <Button variant="outline" onClick={logout}>
+                        <LogOut className="h-4 w-4 mr-2" /> Log Out
+                    </Button>
+                </>
+            ) : (
+                <a href="#/">
+                    <Button variant="outline">
+                        <ArrowLeft className="h-4 w-4 mr-2" /> Back to Dashboard
+                    </Button>
+                </a>
+            )}
+        </div>
       </div>
 
       <div className="flex space-x-2 border-b mb-6 overflow-x-auto no-scrollbar">
@@ -116,10 +129,7 @@ export default function AthleteSeasonDashboard() {
         {activeTab === 'goals' && <GoalsTab skater={skater} permissions={permissions} />}
         {activeTab === 'programs' && <ProgramsTab skater={skater} readOnly={permissions.readOnly} />}
         {activeTab === 'competitions' && <CompetitionsTab skater={skater} permissions={permissions} readOnly={false} />}
-        
-        {/* Logistics Tab (Parent View) - UPDATED KEY */}
         {activeTab === 'synchro_logistics' && <LogisticsTab skater={skater} isSynchro={true} />}
-
         {activeTab === 'tests' && <TestsTab skater={skater} permissions={permissions} />}
         {activeTab === 'logs' && <LogsTab skater={skater} permissions={permissions} />}
         {activeTab === 'health' && <HealthTab skater={skater} permissions={permissions} />}

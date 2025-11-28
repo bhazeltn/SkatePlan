@@ -5,15 +5,18 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus } from 'lucide-react';
+import { FederationFlag } from '@/components/ui/FederationFlag';
 
-export function CreateTeamModal({ onTeamCreated }) {
+export function CreateTeamModal({ onTeamCreated, trigger }) {
   const [open, setOpen] = useState(false);
   const { token } = useAuth();
   const [loading, setLoading] = useState(false);
   
   // Data
   const [skaters, setSkaters] = useState([]);
+  const [federations, setFederations] = useState([]);
   
   // Form
   const [teamName, setTeamName] = useState('');
@@ -21,17 +24,22 @@ export function CreateTeamModal({ onTeamCreated }) {
   const [partnerA, setPartnerA] = useState('');
   const [partnerB, setPartnerB] = useState('');
   const [level, setLevel] = useState('');
+  const [federationId, setFederationId] = useState('');
 
-  // Load Roster on Open to populate dropdowns
+  // Load Data on Open
   useEffect(() => {
       if (open) {
-          const fetchRoster = async () => {
+          const fetchData = async () => {
               try {
-                  const data = await apiRequest('/roster/', 'GET', null, token);
-                  setSkaters(data || []);
+                  const [rosterData, fedData] = await Promise.all([
+                      apiRequest('/roster/', 'GET', null, token),
+                      apiRequest('/federations/', 'GET', null, token)
+                  ]);
+                  setSkaters(rosterData || []);
+                  setFederations(fedData || []);
               } catch (e) { console.error(e); }
           };
-          fetchRoster();
+          fetchData();
       }
   }, [open, token]);
 
@@ -55,18 +63,19 @@ export function CreateTeamModal({ onTeamCreated }) {
       setLoading(true);
       try {
           await apiRequest('/teams/create/', 'POST', {
-            team_name: teamName,
+              team_name: teamName,
               discipline,
               partner_a: partnerA,
               partner_b: partnerB,
-              level
+              level,
+              federation_id: federationId || null
           }, token);
           
           if (onTeamCreated) onTeamCreated();
           setOpen(false);
           
           // Reset
-          setPartnerA(''); setPartnerB(''); setTeamName(''); setLevel('');
+          setPartnerA(''); setPartnerB(''); setTeamName(''); setLevel(''); setFederationId('');
       } catch (e) {
           alert("Failed to create team. " + (e.message || ""));
       } finally {
@@ -77,12 +86,13 @@ export function CreateTeamModal({ onTeamCreated }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">
-            <Plus className="h-4 w-4 mr-2" /> 
-            Add Dance/Pair Team
-        </Button>
+        {trigger || (
+            <Button variant="outline">
+                <Plus className="h-4 w-4 mr-2" /> 
+                Add Dance/Pair Team
+            </Button>
+        )}
       </DialogTrigger>
-      {/* ... (Dialog Content same as before) ... */}
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
             <DialogTitle>Create Pairs / Dance Team</DialogTitle>
@@ -119,9 +129,29 @@ export function CreateTeamModal({ onTeamCreated }) {
                 <Input value={teamName} onChange={(e) => setTeamName(e.target.value)} placeholder="e.g. Smith & Jones" />
             </div>
             
-            <div className="space-y-2">
-                <Label>Current Level</Label>
-                <Input value={level} onChange={(e) => setLevel(e.target.value)} placeholder="e.g. Novice" />
+            <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <Label>Current Level</Label>
+                    <Input value={level} onChange={(e) => setLevel(e.target.value)} placeholder="e.g. Novice" />
+                </div>
+                <div className="space-y-2">
+                    <Label>Federation</Label>
+                    <Select value={federationId} onValueChange={setFederationId}>
+                        <SelectTrigger className="h-9">
+                            <SelectValue placeholder="Select..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {federations.map(fed => (
+                                <SelectItem key={fed.id} value={String(fed.id)}>
+                                    <div className="flex items-center gap-2">
+                                        <FederationFlag federation={fed} />
+                                        <span>{fed.name}</span>
+                                    </div>
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
             </div>
 
             <Button type="submit" className="w-full" disabled={loading}>Create Team</Button>

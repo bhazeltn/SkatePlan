@@ -13,9 +13,11 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { FederationFlag } from '@/components/ui/FederationFlag';
 import { Plus } from 'lucide-react';
 
-export function AddSkaterModal({ onSkaterAdded }) {
+export function AddSkaterModal({ onSkaterAdded, trigger }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const { token } = useAuth();
@@ -38,7 +40,8 @@ export function AddSkaterModal({ onSkaterAdded }) {
             try {
                 const data = await apiRequest('/federations/', 'GET', null, token);
                 setFederations(data || []);
-                if (data && data.length > 0) setFederationId(data[0].id);
+                // Don't auto-set to first to allow "Select..." placeholder
+                // if (data && data.length > 0) setFederationId(String(data[0].id));
             } catch (e) { console.error(e); }
         };
         fetchFeds();
@@ -63,7 +66,7 @@ export function AddSkaterModal({ onSkaterAdded }) {
       if (onSkaterAdded) onSkaterAdded();
       setOpen(false);
       
-      setFullName(''); setDob(''); setGender(''); setHomeClub(''); setLevel('');
+      setFullName(''); setDob(''); setGender(''); setHomeClub(''); setLevel(''); setFederationId('');
     } catch (err) {
       alert('Failed to add skater. Name/DOB collision?');
     } finally {
@@ -74,10 +77,12 @@ export function AddSkaterModal({ onSkaterAdded }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
-            <Plus className="h-4 w-4 mr-2" /> 
-            Add Skater
-        </Button>
+        {trigger || (
+            <Button>
+                <Plus className="h-4 w-4 mr-2" /> 
+                Add Skater
+            </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
@@ -111,10 +116,22 @@ export function AddSkaterModal({ onSkaterAdded }) {
                 </select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="fed">Federation</Label>
-                <select className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm" value={federationId} onChange={(e) => setFederationId(e.target.value)}>
-                    {federations.map(f => (<option key={f.id} value={f.id}>{f.flag_emoji} {f.name}</option>))}
-                </select>
+                <Label>Federation</Label>
+                <Select value={federationId} onValueChange={setFederationId}>
+                    <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Select..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {federations.map(f => (
+                            <SelectItem key={f.id} value={String(f.id)}>
+                                <div className="flex items-center gap-2">
+                                    <FederationFlag federation={f} />
+                                    <span>{f.name}</span>
+                                </div>
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
               </div>
           </div>
 

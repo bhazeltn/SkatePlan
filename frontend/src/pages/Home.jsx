@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { 
     Clock, Calendar, Activity, HeartPulse, CheckCircle2, FileWarning, 
-    ShieldCheck, ClipboardList, Settings, Plus, Users, UserPlus
+    ShieldCheck, ClipboardList, Settings, Plus
 } from 'lucide-react';
 
 export default function Home() {
@@ -63,13 +63,19 @@ export default function Home() {
             </PopoverTrigger>
             <PopoverContent align="end" className="w-56 p-2 flex flex-col gap-2 bg-white shadow-lg border rounded-md">
                  <AddSkaterModal onSkaterAdded={handleRefresh} trigger={
-                     <Button variant="ghost" className="w-full justify-start h-10 font-normal"><UserPlus className="h-4 w-4 mr-2 text-gray-500" /> Athlete</Button>
+                     <Button variant="ghost" className="w-full justify-start h-10 font-normal">
+                        <Plus className="h-4 w-4 mr-2 text-gray-500" /> Athlete
+                     </Button>
                  }/>
                  <CreateTeamModal onTeamCreated={handleRefresh} trigger={
-                     <Button variant="ghost" className="w-full justify-start h-10 font-normal"><Users className="h-4 w-4 mr-2 text-indigo-500" /> Pair/Dance Team</Button>
+                     <Button variant="ghost" className="w-full justify-start h-10 font-normal">
+                        <Plus className="h-4 w-4 mr-2 text-indigo-500" /> Pair/Dance Team
+                     </Button>
                  }/>
                  <CreateSynchroTeamModal onTeamCreated={handleRefresh} trigger={
-                     <Button variant="ghost" className="w-full justify-start h-10 font-normal"><Users className="h-4 w-4 mr-2 text-purple-500" /> Synchro Team</Button>
+                     <Button variant="ghost" className="w-full justify-start h-10 font-normal">
+                        <Plus className="h-4 w-4 mr-2 text-purple-500" /> Synchro Team
+                     </Button>
                  }/>
             </PopoverContent>
           </Popover>

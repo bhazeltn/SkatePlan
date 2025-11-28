@@ -5,9 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { FederationFlag } from '@/components/ui/FederationFlag';
 import { Plus } from 'lucide-react';
 
-export function CreateSynchroTeamModal({ onTeamCreated }) {
+export function CreateSynchroTeamModal({ onTeamCreated, trigger }) {
   const [open, setOpen] = useState(false);
   const { token } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -27,8 +29,7 @@ export function CreateSynchroTeamModal({ onTeamCreated }) {
               try {
                   const data = await apiRequest('/federations/', 'GET', null, token);
                   setFederations(data || []);
-                  // Default to Canada/USA if found, or first option
-                  if (data?.length > 0) setFederationId(data[0].id);
+                  if (data?.length > 0) setFederationId(String(data[0].id));
               } catch (e) { console.error(e); }
           };
           fetchFeds();
@@ -60,12 +61,13 @@ export function CreateSynchroTeamModal({ onTeamCreated }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">
-            <Plus className="h-4 w-4 mr-2" /> 
-            Add Synchro Team
-        </Button>
+        {trigger || (
+            <Button variant="outline">
+                <Plus className="h-4 w-4 mr-2" /> 
+                Add Synchro Team
+            </Button>
+        )}
       </DialogTrigger>
-      {/* ... (Dialog Content same as before) ... */}
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
             <DialogTitle>Create Synchro Team</DialogTitle>
@@ -81,9 +83,21 @@ export function CreateSynchroTeamModal({ onTeamCreated }) {
             </div>
             <div className="space-y-2">
                 <Label>Federation</Label>
-                <select className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm" value={federationId} onChange={(e) => setFederationId(e.target.value)}>
-                    {federations.map(fed => (<option key={fed.id} value={fed.id}>{fed.flag_emoji} {fed.name}</option>))}
-                </select>
+                <Select value={federationId} onValueChange={setFederationId}>
+                    <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Select..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {federations.map(fed => (
+                            <SelectItem key={fed.id} value={String(fed.id)}>
+                                <div className="flex items-center gap-2">
+                                    <FederationFlag federation={fed} />
+                                    <span>{fed.name}</span>
+                                </div>
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
             </div>
             <Button type="submit" className="w-full" disabled={loading}>{loading ? 'Creating...' : 'Create Team'}</Button>
         </form>

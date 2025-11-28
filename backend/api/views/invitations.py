@@ -55,8 +55,6 @@ class SendInviteView(APIView):
                     - ((today.month, today.day) < (dob.month, dob.day))
                 )
 
-                # 1. Hard Block: Under 13 (Young Minor)
-                # Must still be blocked at sending stage
                 if age < 13:
                     return Response(
                         {
@@ -64,11 +62,6 @@ class SendInviteView(APIView):
                         },
                         status=400,
                     )
-
-                # 2. Mature Minor (13-17)
-                # We ALLOW sending, but the AcceptView will enforce the parent requirement.
-                # This allows "Batch Sending" behavior.
-        # --------------------------------
 
         invite = Invitation.objects.create(
             email=email,
@@ -116,8 +109,6 @@ class AcceptInviteView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def validate_requirements(self, invite):
-        """Helper to enforce logic before showing form OR processing"""
-        # Logic for Mature Minors (13-17)
         if invite.role == "ATHLETE" and isinstance(invite.target_entity, Skater):
             skater = invite.target_entity
             if skater.date_of_birth:
@@ -130,7 +121,6 @@ class AcceptInviteView(APIView):
                 )
 
                 if 13 <= age < 18:
-                    # Check for Guardian
                     ct = ContentType.objects.get_for_model(Skater)
                     has_guardian = PlanningEntityAccess.objects.filter(
                         content_type=ct, object_id=skater.id, access_level="GUARDIAN"
@@ -145,13 +135,11 @@ class AcceptInviteView(APIView):
         if not invite.is_valid:
             return Response({"error": "Invitation expired or already used"}, status=400)
 
-        # --- CHECK DEPENDENCIES ---
         error_msg = self.validate_requirements(invite)
         if error_msg:
             return Response(
                 {"error": error_msg, "code": "DEPENDENCY_ERROR"}, status=400
             )
-        # --------------------------
 
         return Response(
             {
@@ -166,11 +154,9 @@ class AcceptInviteView(APIView):
         if not invite.is_valid:
             return Response({"error": "Invitation expired or already used"}, status=400)
 
-        # --- CHECK DEPENDENCIES (Double Check) ---
         error_msg = self.validate_requirements(invite)
         if error_msg:
             return Response({"error": error_msg}, status=400)
-        # -----------------------------------------
 
         password = request.data.get("password")
         full_name = request.data.get("full_name")
@@ -181,14 +167,12 @@ class AcceptInviteView(APIView):
             )
 
         with transaction.atomic():
-            is_coach_user = invite.role in ["COACH", "COLLABORATOR"]
+            # Fix: removed 'username' and 'is_coach' arguments
             user = User.objects.create_user(
-                username=invite.email,
                 email=invite.email,
                 password=password,
                 full_name=full_name,
                 role=invite.role,
-                is_coach=is_coach_user,
             )
             entity = invite.target_entity
 
@@ -231,6 +215,7 @@ class AcceptInviteView(APIView):
 
             auth_token, _ = Token.objects.get_or_create(user=user)
 
+            # Fix: Use user.pk instead of user.id
             return Response(
-                {"token": auth_token.key, "user_id": user.id, "role": user.role}
+                {"token": auth_token.key, "user_id": user.pk, "role": user.role}
             )

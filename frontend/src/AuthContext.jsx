@@ -6,24 +6,21 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(() => localStorage.getItem('skateplan-token'));
-  const [loading, setLoading] = useState(true); // Start loading on init
+  const [loading, setLoading] = useState(true); 
 
   useEffect(() => {
-    // When the token changes, store it in localStorage
     if (token) {
       localStorage.setItem('skateplan-token', token);
     } else {
       localStorage.removeItem('skateplan-token');
     }
 
-    // When the component mounts or token changes, try to fetch the user profile
     async function fetchUserProfile() {
       if (token) {
         try {
           const userData = await apiRequest('/auth/profile/', 'GET', null, token);
           setUser(userData);
         } catch (error) {
-          // Token is invalid or expired
           setToken(null);
           setUser(null);
         }
@@ -38,6 +35,12 @@ export function AuthProvider({ children }) {
     const data = await apiRequest('/auth/login/', 'POST', { email, password });
     setUser(data.user);
     setToken(data.token);
+  };
+
+  // NEW: Allows setting auth state directly (for Invite flow)
+  const setAuth = (newToken, userData) => {
+    setToken(newToken);
+    setUser(userData);
   };
 
   const register = async (email, password, fullName, phoneNumber) => {
@@ -61,6 +64,7 @@ export function AuthProvider({ children }) {
     token,
     loading,
     login,
+    setAuth, // Export this
     register,
     logout,
     isAuthenticated: !!user,

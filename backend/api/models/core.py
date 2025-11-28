@@ -4,8 +4,8 @@ from django.db import models
 class Federation(models.Model):
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=100, unique=True)
-    code = models.CharField(max_length=10, blank=True, null=True)
-    flag_emoji = models.CharField(max_length=10, blank=True, null=True)
+    code = models.CharField(max_length=10, blank=True, null=True)  # ISU Code (CAN)
+    iso_code = models.CharField(max_length=2, blank=True, null=True)  # ISO Code (ca)
 
     def __str__(self):
         return self.name

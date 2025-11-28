@@ -11,7 +11,7 @@ import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 export default function AcceptInvite() {
   const { token } = useParams();
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { setAuth } = useAuth(); // Use setAuth instead of login
 
   const [loading, setLoading] = useState(true);
   const [valid, setValid] = useState(false);
@@ -48,13 +48,14 @@ export default function AcceptInvite() {
         });
         
         if (data.token) {
-            login(data.token, { id: data.user_id, role: data.role });
-            // TODO: Build this dashboard next!
+            // FIX: Use setAuth to directly set state without another API call
+            setAuth(data.token, { id: data.user_id, role: data.role, email: inviteData.email, full_name: fullName });
+            
             if (data.role === 'ATHLETE') navigate('/my-dashboard');
             else navigate('/'); 
         }
     } catch (err) {
-        alert("Registration failed.");
+        alert("Registration failed: " + (err.message || "Unknown error"));
     } finally {
         setSubmitting(false);
     }

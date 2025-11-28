@@ -5,7 +5,7 @@ from api.models import Federation, SkatingElement
 class FederationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Federation
-        fields = ("id", "name", "code", "flag_emoji")
+        fields = ("id", "name", "code", "iso_code")
 
 
 class SkatingElementSerializer(serializers.ModelSerializer):

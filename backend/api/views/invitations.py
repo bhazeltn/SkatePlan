@@ -167,7 +167,6 @@ class AcceptInviteView(APIView):
             )
 
         with transaction.atomic():
-            # Fix: removed 'username' and 'is_coach' arguments
             user = User.objects.create_user(
                 email=invite.email,
                 password=password,
@@ -180,7 +179,8 @@ class AcceptInviteView(APIView):
                 entity.user_account = user
                 entity.save()
 
-            elif invite.role == "PARENT":
+            # FIX: Explicitly handle 'GUARDIAN' role here
+            elif invite.role == "GUARDIAN" or invite.role == "PARENT":
                 PlanningEntityAccess.objects.create(
                     user=user,
                     planning_entity=entity,
@@ -215,7 +215,6 @@ class AcceptInviteView(APIView):
 
             auth_token, _ = Token.objects.get_or_create(user=user)
 
-            # Fix: Use user.pk instead of user.id
             return Response(
                 {"token": auth_token.key, "user_id": user.pk, "role": user.role}
             )

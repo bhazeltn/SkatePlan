@@ -20,7 +20,6 @@ export function ProfileTab({ skater, onUpdated }) {
       } catch (e) { alert("Failed."); }
   };
 
-  // --- AGE HELPER ---
   const getAge = (dobString) => {
       if (!dobString) return 18; 
       const today = new Date();
@@ -33,7 +32,6 @@ export function ProfileTab({ skater, onUpdated }) {
 
   const age = getAge(skater.date_of_birth);
   const isYoungMinor = age < 13;
-  // ------------------
 
   return (
     <div className="space-y-6">
@@ -47,7 +45,7 @@ export function ProfileTab({ skater, onUpdated }) {
                 <InviteUserModal 
                     entityType="Skater" entityId={skater.id} entityName={skater.full_name}
                     skaterDOB={skater.date_of_birth} hasGuardian={skater.has_guardian}
-                    defaultRole="PARENT"
+                    defaultRole="GUARDIAN" // FIX: Updated from PARENT
                     lockRole={true} 
                     trigger={<Button size="sm" variant="outline">Invite Parent</Button>}
                 />
@@ -62,7 +60,7 @@ export function ProfileTab({ skater, onUpdated }) {
                         <Button 
                             size="sm" 
                             variant="outline" 
-                            disabled={isYoungMinor} // <--- DISABLE HERE
+                            disabled={isYoungMinor} 
                             title={isYoungMinor ? "Direct access not available for athletes under 13." : ""}
                         >
                             Invite Athlete

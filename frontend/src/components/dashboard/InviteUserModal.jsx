@@ -15,7 +15,8 @@ export function InviteUserModal({ entityType, entityId, entityName, trigger, ska
   const [success, setSuccess] = useState(false);
   
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState(defaultRole || 'PARENT');
+  // FIX 1: Default to GUARDIAN
+  const [role, setRole] = useState(defaultRole || 'GUARDIAN');
 
   useEffect(() => {
       if (open && defaultRole) setRole(defaultRole);
@@ -48,7 +49,8 @@ export function InviteUserModal({ entityType, entityId, entityName, trigger, ska
       
       setSuccess(true);
       setTimeout(() => {
-          setOpen(false); setSuccess(false); setEmail(''); setRole(defaultRole || 'PARENT');
+          // FIX 2: Reset to GUARDIAN
+          setOpen(false); setSuccess(false); setEmail(''); setRole(defaultRole || 'GUARDIAN');
       }, 2000);
     } catch (err) {
       alert(err.message || "Failed to send invitation.");
@@ -60,7 +62,8 @@ export function InviteUserModal({ entityType, entityId, entityName, trigger, ska
   const getRoles = () => {
       if (entityType === 'Skater') {
           const roles = [
-              { value: 'PARENT', label: 'Parent / Guardian (Schedule + Logs)' },
+              // FIX 3: Value is GUARDIAN
+              { value: 'GUARDIAN', label: 'Parent / Guardian (Schedule + Logs)' },
               { value: 'COLLABORATOR', label: 'Collaborating Coach' },
               { value: 'OBSERVER', label: 'Observer (Read Only)' }
           ];
@@ -102,7 +105,6 @@ export function InviteUserModal({ entityType, entityId, entityName, trigger, ska
                     </div>
                 )}
 
-                {/* UPDATED MATURE MINOR TEXT */}
                 {isMatureMinor && role === 'ATHLETE' && !hasGuardian && (
                     <div className="bg-blue-50 border border-blue-200 p-3 rounded text-blue-800 text-xs flex gap-2">
                         <Info className="h-4 w-4 shrink-0" />

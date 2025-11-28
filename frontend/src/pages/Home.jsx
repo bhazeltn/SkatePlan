@@ -14,9 +14,17 @@ import {
     Clock, Calendar, Activity, HeartPulse, CheckCircle2, FileWarning, 
     ShieldCheck, ClipboardList, Settings, Plus
 } from 'lucide-react';
+import GuardianDashboard from './GuardianDashboard';
 
 export default function Home() {
   const { user, logout, token } = useAuth();
+  
+  // --- NEW: ROLE CHECK ---
+  if (user?.role === 'GUARDIAN') {
+      return <GuardianDashboard />;
+  }
+  // -----------------------
+
   const [roster, setRoster] = useState([]);
   const [teams, setTeams] = useState([]);
   const [synchroTeams, setSynchroTeams] = useState([]);

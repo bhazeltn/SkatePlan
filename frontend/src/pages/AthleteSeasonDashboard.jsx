@@ -79,7 +79,8 @@ export default function AthleteSeasonDashboard() {
   // 1. User is Parent/Skater (Coach sees this on Team Dashboard)
   // 2. Skater is on at least one Synchro Team
   if (!isCoach && skater?.synchro_teams?.length > 0) {
-      tabs.push('logistics');
+      // CHANGED: Specific label for clarity
+      tabs.push('synchro_logistics');
   }
 
   tabs.push('tests', 'logs', 'health', 'analytics', 'profile');
@@ -116,8 +117,8 @@ export default function AthleteSeasonDashboard() {
         {activeTab === 'programs' && <ProgramsTab skater={skater} readOnly={permissions.readOnly} />}
         {activeTab === 'competitions' && <CompetitionsTab skater={skater} permissions={permissions} readOnly={false} />}
         
-        {/* Logistics Tab (Parent View) */}
-        {activeTab === 'logistics' && <LogisticsTab skater={skater} isSynchro={true} />}
+        {/* Logistics Tab (Parent View) - UPDATED KEY */}
+        {activeTab === 'synchro_logistics' && <LogisticsTab skater={skater} isSynchro={true} />}
 
         {activeTab === 'tests' && <TestsTab skater={skater} permissions={permissions} />}
         {activeTab === 'logs' && <LogsTab skater={skater} permissions={permissions} />}

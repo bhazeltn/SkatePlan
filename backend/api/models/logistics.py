@@ -28,25 +28,21 @@ class TeamTrip(models.Model):
     start_date = models.DateField()
     end_date = models.DateField()
 
-    # --- CHANGED: Structured Travel ---
-    # Stores list: [
-    #   { "type": "FLIGHT", "carrier": "AC", "number": "123", "dep": "...", "arr": "..." },
-    #   { "type": "TRAIN", "carrier": "Via", "number": "64", ... }
-    # ]
     travel_segments = models.JSONField(default=list, blank=True)
-    # ----------------------------------
+    guests = models.JSONField(default=list, blank=True)
 
     hotel_info = models.TextField(
         blank=True, null=True, help_text="Hotel name, address, booking block"
     )
-
-    # --- RENAMED: Destination Transport ---
     ground_transport_notes = models.TextField(
         blank=True,
         null=True,
         help_text="Transport at destination (e.g. Shuttle bus to rink)",
     )
-    # --------------------------------------
+
+    # --- NEW: Archive Flag ---
+    is_active = models.BooleanField(default=True)
+    # -------------------------
 
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -57,7 +53,6 @@ class TeamTrip(models.Model):
         ordering = ["-start_date"]
 
 
-# ... (ItineraryItem and HousingAssignment remain the same) ...
 class ItineraryItem(models.Model):
     id = models.AutoField(primary_key=True)
     trip = models.ForeignKey(
@@ -92,8 +87,16 @@ class HousingAssignment(models.Model):
         TeamTrip, on_delete=models.CASCADE, related_name="rooming_list"
     )
     room_number = models.CharField(max_length=50, blank=True, null=True)
-    occupants = models.ManyToManyField(Skater, related_name="trip_rooms")
+
+    # Skaters (Database Objects)
+    occupants = models.ManyToManyField(Skater, related_name="trip_rooms", blank=True)
+
+    # --- NEW: Guests (JSON Objects) ---
+    # Stores: [{ "id": "uuid", "name": "Coach Sarah", "role": "COACH" }]
+    guest_occupants = models.JSONField(default=list, blank=True)
+    # ----------------------------------
+
     notes = models.TextField(blank=True, null=True)
 
     def __str__(self):
-        return f"{self.room_number} ({self.occupants.count()})"
+        return f"{self.room_number}"

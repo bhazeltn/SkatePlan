@@ -33,6 +33,7 @@ urlpatterns = [
     path("skaters/<int:skater_id>/injuries/", views.InjuryLogListCreateView.as_view()),
     path("injuries/<int:pk>/", views.InjuryLogDetailView.as_view()),
     path("competitions/", views.CompetitionListCreateView.as_view()),
+    # Results & Tests
     path(
         "skaters/<int:skater_id>/results/",
         views.CompetitionResultListCreateView.as_view(),
@@ -45,6 +46,7 @@ urlpatterns = [
     path("skaters/<int:skater_id>/stats/", views.SkaterStatsView.as_view()),
     path("dashboard/stats/", views.CoachDashboardStatsView.as_view()),
     path("elements/", views.SkatingElementList.as_view()),
+    # Team URLs
     path("teams/", views.TeamListView.as_view()),
     path("teams/create/", views.CreateTeamView.as_view()),
     path("teams/<int:pk>/", views.TeamDetailView.as_view()),
@@ -61,6 +63,7 @@ urlpatterns = [
         "teams/<int:team_id>/injuries/", views.InjuryLogListCreateByTeamView.as_view()
     ),
     path("teams/<int:team_id>/week-view/", views.TeamMasterWeeklyPlanView.as_view()),
+    # Synchro URLs
     path("synchro/create/", views.CreateSynchroTeamView.as_view()),
     path("synchro/<int:pk>/", views.SynchroTeamDetailView.as_view()),
     path("synchro/", views.SynchroTeamListView.as_view()),
@@ -83,16 +86,20 @@ urlpatterns = [
         views.SynchroCompetitionResultListCreateView.as_view(),
     ),
     path("synchro/<int:team_id>/stats/", views.SynchroStatsView.as_view()),
+    # Assets
     path("programs/<int:program_id>/assets/", views.ProgramAssetCreateView.as_view()),
     path("assets/<int:pk>/", views.ProgramAssetDestroyView.as_view()),
-    # Synchro Logistics
-    path("synchro/<int:team_id>/trips/", views.SynchroTripListCreateView.as_view()),
-    # Shared Detail Views (Trip / Itinerary / Housing)
+    # Logistics
+    path(
+        "synchro/<int:team_id>/trips/", views.SynchroTripListCreateView.as_view()
+    ),  # <--- Fixed Line
+    path("skaters/<int:skater_id>/trips/", views.SkaterTripListView.as_view()),
     path("trips/<int:pk>/", views.TeamTripDetailView.as_view()),
     path("trips/<int:trip_id>/itinerary/", views.ItineraryListCreateView.as_view()),
     path("itinerary/<int:pk>/", views.ItineraryDetailView.as_view()),
     path("trips/<int:trip_id>/housing/", views.HousingListCreateView.as_view()),
     path("housing/<int:pk>/", views.HousingDetailView.as_view()),
+    # Gap Analysis
     path(
         "ytps/<int:plan_id>/gap-analysis/",
         views.GapAnalysisRetrieveUpdateView.as_view(),
@@ -110,6 +117,7 @@ urlpatterns = [
         views.GapAnalysisRetrieveUpdateView.as_view(),
     ),
     path("synchro/<int:team_id>/week-view/", views.TeamMasterWeeklyPlanView.as_view()),
+    # Invites
     path("invitations/send/", views.SendInviteView.as_view()),
     path("invitations/accept/<str:token>/", views.AcceptInviteView.as_view()),
 ]

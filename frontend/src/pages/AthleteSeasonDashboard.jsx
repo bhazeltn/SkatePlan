@@ -19,6 +19,7 @@ import { HealthTab } from '@/components/dashboard/tabs/HealthTab';
 import { AnalyticsTab } from '@/components/dashboard/tabs/AnalyticsTab';
 import { ProfileTab } from '@/components/dashboard/tabs/ProfileTab';
 import { GapAnalysisTab } from '@/components/dashboard/tabs/GapAnalysisTab';
+import { LogisticsTab } from '@/components/dashboard/tabs/LogisticsTab';
 
 export default function AthleteSeasonDashboard() {
   const params = useParams();
@@ -67,9 +68,22 @@ export default function AthleteSeasonDashboard() {
   if (loading) return <div className="p-8">Loading...</div>;
   if (!skater) return <div className="p-8">Not found or access denied.</div>;
 
+  // --- DYNAMIC TAB LIST ---
   const tabs = ['weekly', 'yearly'];
+  
   if (permissions.viewGapAnalysis) tabs.push('gap_analysis');
-  tabs.push('goals', 'programs', 'competitions', 'tests', 'logs', 'health', 'analytics', 'profile');
+  
+  tabs.push('goals', 'programs', 'competitions');
+
+  // SHOW LOGISTICS IF: 
+  // 1. User is Parent/Skater (Coach sees this on Team Dashboard)
+  // 2. Skater is on at least one Synchro Team
+  if (!isCoach && skater?.synchro_teams?.length > 0) {
+      tabs.push('logistics');
+  }
+
+  tabs.push('tests', 'logs', 'health', 'analytics', 'profile');
+  // ------------------------
 
   return (
     <div className="p-8 min-h-screen bg-gray-50">
@@ -100,13 +114,14 @@ export default function AthleteSeasonDashboard() {
         {activeTab === 'gap_analysis' && <GapAnalysisTab skater={skater} />}
         {activeTab === 'goals' && <GoalsTab skater={skater} permissions={permissions} />}
         {activeTab === 'programs' && <ProgramsTab skater={skater} readOnly={permissions.readOnly} />}
-        {activeTab === 'competitions' && <CompetitionsTab skater={skater} permissions={permissions} />}
+        {activeTab === 'competitions' && <CompetitionsTab skater={skater} permissions={permissions} readOnly={false} />}
         
-        {/* FIX: Pass permissions prop here */}
+        {/* Logistics Tab (Parent View) */}
+        {activeTab === 'logistics' && <LogisticsTab skater={skater} isSynchro={true} />}
+
         {activeTab === 'tests' && <TestsTab skater={skater} permissions={permissions} />}
-        
         {activeTab === 'logs' && <LogsTab skater={skater} permissions={permissions} />}
-        {activeTab === 'health' && <HealthTab skater={skater} />}
+        {activeTab === 'health' && <HealthTab skater={skater} permissions={permissions} />}
         {activeTab === 'analytics' && <AnalyticsTab skater={skater} />}
         {activeTab === 'profile' && <ProfileTab skater={skater} onUpdated={fetchSkater} readOnly={permissions.readOnly} />}
       </div>

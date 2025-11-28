@@ -68,6 +68,7 @@ from .dashboard import (
 
 from .logistics import (
     SynchroTripListCreateView,
+    SkaterTripListView,  # <--- ADDED
     TeamTripDetailView,
     ItineraryListCreateView,
     ItineraryDetailView,

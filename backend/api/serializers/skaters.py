@@ -44,6 +44,12 @@ class SimpleSkaterSerializer(serializers.ModelSerializer):
         )
 
 
+class SimpleSynchroTeamSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SynchroTeam
+        fields = ("id", "team_name", "level")
+
+
 class SinglesEntitySerializer(serializers.ModelSerializer):
     skater = SimpleSkaterSerializer(read_only=True)
     federation = FederationSerializer(read_only=True)
@@ -192,10 +198,12 @@ class SkaterSerializer(serializers.ModelSerializer):
     gender = serializers.CharField(source="get_gender_display", read_only=True)
     federation = FederationSerializer(read_only=True)
     profile = AthleteProfileSerializer(read_only=True)
-
-    # Custom Fields for Account Management
     user_account_email = serializers.SerializerMethodField()
     guardians = serializers.SerializerMethodField()
+
+    # --- NEW FIELD ---
+    synchro_teams = SimpleSynchroTeamSerializer(many=True, read_only=True)
+    # -----------------
 
     class Meta:
         model = Skater
@@ -206,6 +214,7 @@ class SkaterSerializer(serializers.ModelSerializer):
             "gender",
             "home_club",
             "planning_entities",
+            "synchro_teams",  # <--- Added
             "is_active",
             "federation",
             "profile",

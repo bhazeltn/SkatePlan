@@ -10,6 +10,9 @@ from api.models import (
     PlanningEntityAccess,
 )
 from .core import FederationSerializer
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 class AthleteProfileSerializer(serializers.ModelSerializer):
@@ -30,7 +33,6 @@ class SimpleSkaterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Skater
-        # Removed 'planning_entities' from here to fix the error
         fields = (
             "id",
             "full_name",
@@ -70,8 +72,6 @@ class SoloDanceEntitySerializer(serializers.ModelSerializer):
 
 class TeamSerializer(serializers.ModelSerializer):
     federation = FederationSerializer(read_only=True)
-
-    # Writable Federation Field
     federation_id = serializers.PrimaryKeyRelatedField(
         queryset=Federation.objects.all(),
         source="federation",
@@ -79,18 +79,14 @@ class TeamSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True,
     )
-
     partner_a_details = SimpleSkaterSerializer(source="partner_a", read_only=True)
     partner_b_details = SimpleSkaterSerializer(source="partner_b", read_only=True)
-
-    # Write-Only IDs
     partner_a = serializers.PrimaryKeyRelatedField(
         queryset=Skater.objects.all(), write_only=True
     )
     partner_b = serializers.PrimaryKeyRelatedField(
         queryset=Skater.objects.all(), write_only=True
     )
-
     name = serializers.SerializerMethodField()
 
     class Meta:
@@ -122,7 +118,6 @@ class SynchroTeamSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True,
     )
-
     roster = SimpleSkaterSerializer(many=True, read_only=True)
     roster_ids = serializers.PrimaryKeyRelatedField(
         queryset=Skater.objects.all(),
@@ -156,10 +151,8 @@ class GenericPlanningEntitySerializer(serializers.Serializer):
             data = TeamSerializer(instance, context=self.context).data
         elif isinstance(instance, SynchroTeam):
             data = SynchroTeamSerializer(instance, context=self.context).data
-
         if data is None:
             data = {"id": instance.id, "name": str(instance)}
-
         data["type"] = instance.__class__.__name__
         return data
 
@@ -200,8 +193,9 @@ class SkaterSerializer(serializers.ModelSerializer):
     federation = FederationSerializer(read_only=True)
     profile = AthleteProfileSerializer(read_only=True)
 
-    # New Field for Invite System
-    has_guardian = serializers.SerializerMethodField()
+    # Custom Fields for Account Management
+    user_account_email = serializers.SerializerMethodField()
+    guardians = serializers.SerializerMethodField()
 
     class Meta:
         model = Skater
@@ -216,7 +210,8 @@ class SkaterSerializer(serializers.ModelSerializer):
             "federation",
             "profile",
             "user_account",
-            "has_guardian",
+            "user_account_email",
+            "guardians",
         )
 
     def get_planning_entities(self, obj):
@@ -239,13 +234,22 @@ class SkaterSerializer(serializers.ModelSerializer):
             )
         return entities
 
-    def get_has_guardian(self, obj):
+    def get_user_account_email(self, obj):
+        return obj.user_account.email if obj.user_account else None
+
+    def get_guardians(self, obj):
         from django.contrib.contenttypes.models import ContentType
 
         ct = ContentType.objects.get_for_model(obj)
-        return PlanningEntityAccess.objects.filter(
+        # Find users with GUARDIAN access to this skater
+        access_records = PlanningEntityAccess.objects.filter(
             content_type=ct, object_id=obj.id, access_level="GUARDIAN"
-        ).exists()
+        ).select_related("user")
+
+        return [
+            {"full_name": record.user.full_name, "email": record.user.email}
+            for record in access_records
+        ]
 
 
 class RosterSkaterSerializer(serializers.ModelSerializer):

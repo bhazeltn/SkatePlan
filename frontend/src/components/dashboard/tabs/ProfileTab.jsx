@@ -5,7 +5,7 @@ import { EditSkaterModal } from '@/components/dashboard/EditSkaterModal';
 import { EditDisciplineModal } from '@/components/dashboard/EditDisciplineModal';
 import { InviteUserModal } from '@/components/dashboard/InviteUserModal';
 import { FederationFlag } from '@/components/ui/FederationFlag';
-import { AlertTriangle, Mail } from 'lucide-react';
+import { AlertTriangle, Shield, User, Mail } from 'lucide-react';
 import { apiRequest } from '@/api';
 import { useAuth } from '@/AuthContext';
 
@@ -32,72 +32,97 @@ export function ProfileTab({ skater, onUpdated }) {
 
   const age = getAge(skater.date_of_birth);
   const isYoungMinor = age < 13;
+  const hasGuardian = skater.guardians && skater.guardians.length > 0;
 
   return (
     <div className="space-y-6">
       
       {/* Main Info */}
       <Card>
-        <CardHeader className="flex flex-row justify-between items-center">
+        <CardHeader className="flex flex-row justify-between items-center pb-4 border-b">
             <CardTitle>Athlete Details</CardTitle>
-            <div className="flex gap-2">
-                {/* 1. INVITE PARENT (Always Active) */}
-                <InviteUserModal 
-                    entityType="Skater" entityId={skater.id} entityName={skater.full_name}
-                    skaterDOB={skater.date_of_birth} hasGuardian={skater.has_guardian}
-                    defaultRole="GUARDIAN" // FIX: Updated from PARENT
-                    lockRole={true} 
-                    trigger={<Button size="sm" variant="outline">Invite Parent</Button>}
-                />
-
-                {/* 2. INVITE ATHLETE (Disabled if < 13) */}
-                <InviteUserModal 
-                    entityType="Skater" entityId={skater.id} entityName={skater.full_name}
-                    skaterDOB={skater.date_of_birth} hasGuardian={skater.has_guardian}
-                    defaultRole="ATHLETE"
-                    lockRole={true}
-                    trigger={
-                        <Button 
-                            size="sm" 
-                            variant="outline" 
-                            disabled={isYoungMinor} 
-                            title={isYoungMinor ? "Direct access not available for athletes under 13." : ""}
-                        >
-                            Invite Athlete
-                        </Button>
-                    }
-                />
-                
-                <EditSkaterModal skater={skater} onSaved={onUpdated} />
-            </div>
+            <EditSkaterModal skater={skater} onSkaterUpdated={onUpdated} />
         </CardHeader>
         
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div><label className="text-xs font-bold text-gray-500 uppercase">Full Name</label><p className="text-lg">{skater.full_name}</p></div>
-            <div><label className="text-xs font-bold text-gray-500 uppercase">DOB</label><p className="text-lg">{skater.date_of_birth} <span className="text-gray-400 text-sm">({age}yo)</span></p></div>
-            <div>
-                <label className="text-xs font-bold text-gray-500 uppercase">Federation</label>
-                <div className="mt-1"><FederationFlag federation={skater.federation} /></div>
+        <CardContent className="pt-6 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div><label className="text-xs font-bold text-gray-500 uppercase">Full Name</label><p className="text-lg">{skater.full_name}</p></div>
+                <div><label className="text-xs font-bold text-gray-500 uppercase">DOB</label><p className="text-lg">{skater.date_of_birth} <span className="text-gray-400 text-sm">({age}yo)</span></p></div>
+                <div>
+                    <label className="text-xs font-bold text-gray-500 uppercase">Federation</label>
+                    <div className="mt-1"><FederationFlag federation={skater.federation} /></div>
+                </div>
+                <div><label className="text-xs font-bold text-gray-500 uppercase">Home Club</label><p className="text-lg">{skater.home_club || '-'}</p></div>
             </div>
-            <div><label className="text-xs font-bold text-gray-500 uppercase">Home Club</label><p className="text-lg">{skater.home_club || '-'}</p></div>
-            
-            {/* Account Status */}
-            <div className="md:col-span-2 pt-4 border-t">
-                <label className="text-xs font-bold text-gray-500 uppercase">User Account</label>
-                {skater.user_account ? (
-                    <div className="flex items-center gap-2 mt-1">
-                        <span className="h-2 w-2 rounded-full bg-green-500" />
-                        <span className="text-sm font-medium text-gray-900">Active: {skater.user_account.email || "Linked"}</span>
+
+            {/* ACCOUNT CONNECTIONS (Compact & Grouped) */}
+            <div className="bg-slate-50 rounded-lg border border-slate-200 overflow-hidden">
+                <div className="px-4 py-2 bg-slate-100 border-b border-slate-200 flex justify-between items-center">
+                    <h4 className="text-xs font-bold text-gray-700 uppercase">Linked Accounts</h4>
+                </div>
+                
+                <div className="p-4 space-y-4">
+                    
+                    {/* 1. Athlete Row */}
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-8">
+                        <div className="w-32 flex items-center gap-2 text-sm font-medium text-gray-900">
+                            <User className="h-4 w-4 text-blue-500" /> Athlete
+                        </div>
+                        <div className="flex-1">
+                            {isYoungMinor ? (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                                    Restricted (Under 13)
+                                </span>
+                            ) : skater.user_account_email ? (
+                                <span className="font-mono text-sm text-gray-700">{skater.user_account_email}</span>
+                            ) : (
+                                <div className="flex items-center gap-4">
+                                    <span className="text-sm text-gray-400 italic">Not Linked</span>
+                                    <InviteUserModal 
+                                        entityType="Skater" entityId={skater.id} entityName={skater.full_name}
+                                        skaterDOB={skater.date_of_birth} hasGuardian={hasGuardian}
+                                        defaultRole="ATHLETE"
+                                        lockRole={true}
+                                        trigger={<Button size="sm" variant="link" className="h-auto p-0">Invite</Button>}
+                                    />
+                                </div>
+                            )}
+                        </div>
                     </div>
-                ) : (
-                    <div className="flex items-center gap-2 mt-1">
-                        <span className="h-2 w-2 rounded-full bg-gray-300" />
-                        <span className="text-sm text-gray-500 italic">
-                            {isYoungMinor ? "Minor Account (Parent Only)." : "No user account linked."}
-                        </span>
+
+                    {/* 2. Guardian Row */}
+                    <div className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-8">
+                        <div className="w-32 flex items-center gap-2 text-sm font-medium text-gray-900 mt-1">
+                            <Shield className="h-4 w-4 text-purple-500" /> Guardian(s)
+                        </div>
+                        <div className="flex-1 space-y-2">
+                            {hasGuardian ? (
+                                skater.guardians.map((g, i) => (
+                                    <div key={i} className="flex items-center gap-2 text-sm">
+                                        <span className="font-medium text-gray-900">{g.full_name}</span>
+                                        <span className="text-gray-400">&bull;</span>
+                                        <span className="font-mono text-gray-600">{g.email}</span>
+                                    </div>
+                                ))
+                            ) : (
+                                <span className="text-sm text-gray-400 italic">None linked</span>
+                            )}
+                            
+                            <div className="pt-1">
+                                <InviteUserModal 
+                                    entityType="Skater" entityId={skater.id} entityName={skater.full_name}
+                                    skaterDOB={skater.date_of_birth} hasGuardian={hasGuardian}
+                                    defaultRole="GUARDIAN"
+                                    lockRole={true} 
+                                    trigger={<Button size="sm" variant="outline" className="h-7 text-xs"><Mail className="h-3 w-3 mr-1.5" /> Invite Guardian</Button>}
+                                />
+                            </div>
+                        </div>
                     </div>
-                )}
+
+                </div>
             </div>
+
         </CardContent>
       </Card>
 
@@ -113,7 +138,7 @@ export function ProfileTab({ skater, onUpdated }) {
                           <span className="font-bold text-gray-900">{entity.name}</span>
                           <span className="ml-2 text-sm text-gray-500">{entity.current_level}</span>
                       </div>
-                      <EditDisciplineModal entity={entity} onSaved={onUpdated} />
+                      <EditDisciplineModal entity={entity} onUpdated={onUpdated} />
                   </div>
               ))}
           </CardContent>

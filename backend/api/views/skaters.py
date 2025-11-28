@@ -22,7 +22,7 @@ from api.serializers import (
     TeamSerializer,
     SynchroTeamSerializer,
 )
-from api.permissions import IsCoachUser
+from api.permissions import IsCoachUser, IsCoachOrOwner
 
 # ... (CreateSkaterView and SkaterDetailView remain unchanged) ...
 
@@ -141,7 +141,8 @@ class SkaterDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 
 class SkaterDetailView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    # CHANGED: Allow Guardians/Skaters to view
+    permission_classes = [permissions.IsAuthenticated, IsCoachOrOwner]
     serializer_class = SkaterSerializer
     queryset = Skater.objects.all()
 

@@ -7,12 +7,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { DatePicker } from '@/components/ui/date-picker';
-import { Search, Plus, MapPin, Trash2, ChevronDown, ChevronUp, Video, FileText, Paperclip } from 'lucide-react';
+import { Search, Plus, MapPin, Trash2, ChevronDown, ChevronUp, Video, FileText, Paperclip, Lock } from 'lucide-react';
 import { Country, State, City } from 'country-state-city';
 import { ProtocolEditor } from './ProtocolEditor';
 
-export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved, trigger }) {
-  // ... (Existing State) ...
+export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved, trigger, readOnly, permissions }) { // <--- permissions
   const [open, setOpen] = useState(false);
   const { token } = useAuth();
   
@@ -20,7 +19,7 @@ export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved,
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Search & Create State
+  // ... (State hooks remain same) ...
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [selectedComp, setSelectedComp] = useState(resultToEdit?.competition || null);
@@ -31,7 +30,6 @@ export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved,
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
 
-  // Result State
   const [selectedEntityId, setSelectedEntityId] = useState(
       resultToEdit?.object_id || team?.id || skater?.planning_entities?.[0]?.id || ''
   );
@@ -42,17 +40,16 @@ export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved,
   const [overallScore, setOverallScore] = useState(resultToEdit?.total_score || '');
   const [notes, setNotes] = useState(resultToEdit?.notes || '');
   const [segments, setSegments] = useState(resultToEdit?.segment_scores || []);
-
-  // Toggles
   const [expandedPCS, setExpandedPCS] = useState(null);
   const [expandedProtocol, setExpandedProtocol] = useState(null);
 
-  // Files
   const [detailSheet, setDetailSheet] = useState(null);
-  const [currentDetailSheet, setCurrentDetailSheet] = useState(null); // <--- New
+  const [currentDetailSheet, setCurrentDetailSheet] = useState(null); 
   const [videoUrl, setVideoUrl] = useState('');
 
-  // Init / Reset
+  // PERMISSION CHECK
+  const isCoach = permissions?.role === 'COACH' || permissions?.role === 'COLLABORATOR';
+
   useEffect(() => {
       if (open) {
           if (resultToEdit) {
@@ -67,7 +64,7 @@ export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved,
               setSegments(resultToEdit.segment_scores || []);
               setVideoUrl(resultToEdit.video_url || '');
               
-              setCurrentDetailSheet(resultToEdit.detail_sheet); // Load existing
+              setCurrentDetailSheet(resultToEdit.detail_sheet); 
               setDetailSheet(null); 
           } else {
               setStep('SEARCH');
@@ -82,7 +79,7 @@ export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved,
       }
   }, [open, resultToEdit, skater, team]);
 
-  // ... (Auto Calc Effect) ...
+  // ... (Effect and Handlers remain same) ...
   useEffect(() => {
       if (segments.length > 0 && status === 'COMPLETED') {
           const total = segments.reduce((sum, seg) => sum + (parseFloat(seg.score) || 0), 0);
@@ -90,7 +87,6 @@ export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved,
       }
   }, [segments, status]);
 
-  // ... (Search/Create/Segment Handlers same as before) ...
   const handleSearch = async () => { setLoading(true); setError(null); try { const data = await apiRequest(`/competitions/?search=${searchTerm}`, 'GET', null, token); setSearchResults(data || []); } catch(e) { console.error(e); } finally { setLoading(false); } };
   const handleCreate = async () => { setLoading(true); setError(null); try { const data = await apiRequest('/competitions/', 'POST', { title: newTitle, country: countryCode, province_state: stateCode, city: cityName, start_date: start, end_date: end }, token); setSelectedComp(data); setStep('LOG'); } catch (e) { setError("Failed/Duplicate"); } finally { setLoading(false); } };
   const addSegment = () => { setSegments([...segments, { id: Date.now(), name: 'Short Program', score: '', tes: '', pcs: '', pcs_composition: '', pcs_presentation: '', pcs_skills: '', deductions: '', bonus: '', placement: '', protocol: [] }]); };
@@ -100,7 +96,6 @@ export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved,
   const toggleProtocol = (id) => setExpandedProtocol(expandedProtocol === id ? null : id);
   const updateProtocol = (id, newProto) => { const updated = segments.map(s => s.id === id ? { ...s, protocol: newProto } : s); setSegments(updated); };
 
-  // --- SAVE LOGIC ---
   const saveResult = async () => {
       const formData = new FormData();
       formData.append('competition_id', selectedComp.id);
@@ -112,8 +107,8 @@ export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved,
       if (detailSheet) formData.append('detail_sheet', detailSheet);
 
       if (status === 'COMPLETED') {
-          formData.append('placement', placement);
-          formData.append('total_score', overallScore);
+          if (placement) formData.append('placement', placement);
+          if (overallScore) formData.append('total_score', overallScore);
           formData.append('segment_scores', JSON.stringify(segments));
       }
 
@@ -131,6 +126,7 @@ export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved,
   };
 
   const handleSave = async () => {
+      if (readOnly) return;
       setLoading(true);
       try { await saveResult(); setOpen(false); } 
       catch (e) { console.error(e); alert("Failed to save: " + (e.message || "Unknown error")); } 
@@ -138,6 +134,7 @@ export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved,
   };
 
   const handleSaveAndAdd = async () => {
+      if (readOnly) return;
       setLoading(true);
       try {
           await saveResult();
@@ -148,22 +145,19 @@ export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved,
       finally { setLoading(false); }
   };
 
-  // --- NEW: DELETE FILE HANDLER ---
   const handleDeleteSheet = async () => {
       if (!confirm("Remove protocol sheet?")) return;
       setLoading(true);
       try {
           const formData = new FormData();
-          formData.append('detail_sheet', ''); // Clear file
+          formData.append('detail_sheet', ''); 
           await apiRequest(`/results/${resultToEdit.id}/`, 'PATCH', formData, token);
-          
           setCurrentDetailSheet(null);
           if (onSaved) onSaved();
       } catch (e) { alert("Failed to remove file."); }
       finally { setLoading(false); }
   };
 
-  // --- HELPER: FILE PREVIEW WITH DELETE ---
   const FilePreview = ({ url }) => {
       if (!url) return null;
       const filename = url.split('/').pop().split('?')[0];
@@ -171,18 +165,15 @@ export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved,
           <div className="flex items-center justify-between mb-2 text-xs bg-blue-50 p-2 rounded border border-blue-100">
               <div className="flex items-center gap-2 overflow-hidden">
                   <Paperclip className="h-3 w-3 text-blue-600 flex-shrink-0" />
-                  <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-700 hover:underline truncate" title={filename}>
-                      {filename}
-                  </a>
+                  <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-700 hover:underline truncate" title={filename}>{filename}</a>
               </div>
-              <Button type="button" variant="ghost" size="sm" className="h-5 w-5 p-0 text-red-400 hover:text-red-600" onClick={handleDeleteSheet}>
-                  <Trash2 className="h-3 w-3" />
-              </Button>
+              {!readOnly && (
+                  <Button type="button" variant="ghost" size="sm" className="h-5 w-5 p-0 text-red-400 hover:text-red-600" onClick={handleDeleteSheet}><Trash2 className="h-3 w-3" /></Button>
+              )}
           </div>
       );
   };
 
-  // ... (renderLocationSelectors same as before) ...
   const renderLocationSelectors = () => {
       const countries = Country.getAllCountries(); const states = State.getStatesOfCountry(countryCode); const cities = City.getCitiesOfState(countryCode, stateCode);
       return (
@@ -202,47 +193,49 @@ export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved,
 
           <div className="grid grid-cols-2 gap-4">
               {!team ? (
-                  <div className="space-y-2"><Label>Discipline</Label><select className="flex h-9 w-full rounded-md border border-input bg-white px-3 py-1 text-sm" value={selectedEntityId} onChange={(e) => setSelectedEntityId(e.target.value)}>{skater?.planning_entities?.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}</select></div>
+                  <div className="space-y-2"><Label>Discipline</Label><select className="flex h-9 w-full rounded-md border border-input bg-white px-3 py-1 text-sm" value={selectedEntityId} onChange={(e) => setSelectedEntityId(e.target.value)} disabled={readOnly}>{skater?.planning_entities?.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}</select></div>
               ) : (
                   <div className="space-y-2"><Label>Team</Label><Input value={team.team_name} disabled className="bg-slate-50" /></div>
               )}
-              <div className="space-y-2"><Label>Status</Label><select className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm font-medium" value={status} onChange={(e) => setStatus(e.target.value)}><option value="PLANNED">Planned</option><option value="REGISTERED">Registered</option><option value="COMPLETED">Completed</option></select></div>
+              <div className="space-y-2"><Label>Status</Label><select className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm font-medium" value={status} onChange={(e) => setStatus(e.target.value)} disabled={readOnly}><option value="PLANNED">Planned</option><option value="REGISTERED">Registered</option><option value="COMPLETED">Completed</option></select></div>
           </div>
 
-          <div className="space-y-2"><Label>Event Level / Category</Label><Input value={level} onChange={(e) => setLevel(e.target.value)} placeholder="e.g. Junior Women" /></div>
+          <div className="space-y-2"><Label>Event Level / Category</Label><Input value={level} onChange={(e) => setLevel(e.target.value)} placeholder="e.g. Junior Women" disabled={readOnly} /></div>
 
           {status === 'COMPLETED' && (
               <>
                   <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2"><Label>Placement</Label><Input type="number" value={placement} onChange={(e) => setPlacement(e.target.value)} placeholder="#" /></div>
-                      <div className="space-y-2"><Label>Total Score</Label><Input type="number" step="0.01" value={overallScore} onChange={(e) => setOverallScore(e.target.value)} disabled={segments.length > 0} className={segments.length > 0 ? "bg-slate-100 text-slate-500 cursor-not-allowed" : ""} /></div>
+                      <div className="space-y-2"><Label>Placement</Label><Input type="number" value={placement} onChange={(e) => setPlacement(e.target.value)} placeholder="#" disabled={readOnly} /></div>
+                      <div className="space-y-2"><Label>Total Score</Label><Input type="number" step="0.01" value={overallScore} onChange={(e) => setOverallScore(e.target.value)} disabled={readOnly} className={segments.length > 0 ? "bg-slate-100 text-slate-500 cursor-not-allowed" : ""} /></div>
                   </div>
 
                   <div className="border-t pt-4 mt-2">
-                      <div className="flex justify-between items-center mb-3"><Label className="text-gray-900 font-bold">Segments</Label><Button type="button" size="sm" variant="outline" onClick={addSegment}><Plus className="h-3 w-3 mr-1" /> Add Segment</Button></div>
+                      <div className="flex justify-between items-center mb-3">
+                          <Label className="text-gray-900 font-bold">Segments</Label>
+                          {!readOnly && <Button type="button" size="sm" variant="outline" onClick={addSegment}><Plus className="h-3 w-3 mr-1" /> Add Segment</Button>}
+                      </div>
                       <div className="space-y-3">
                           {segments.map((seg) => (
                               <div key={seg.id} className="p-3 border rounded-md bg-slate-50 relative">
-                                  <Button type="button" variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6 text-gray-400 hover:text-red-500" onClick={() => removeSegment(seg.id)}><Trash2 className="h-3 w-3" /></Button>
+                                  {!readOnly && <Button type="button" variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6 text-gray-400 hover:text-red-500" onClick={() => removeSegment(seg.id)}><Trash2 className="h-3 w-3" /></Button>}
                                   <div className="grid grid-cols-2 gap-2 mb-2 pr-6">
-                                      <div className="col-span-2 sm:col-span-1"><Label className="text-xs">Segment</Label><select className="flex h-8 w-full rounded-md border border-input bg-white px-2 text-xs" value={seg.name} onChange={(e) => updateSegment(seg.id, 'name', e.target.value)}><option value="Short Program">Short Program</option><option value="Free Skate">Free Skate</option><option value="Pattern Dance">Pattern Dance</option><option value="Rhythm Dance">Rhythm Dance</option><option value="Free Dance">Free Dance</option></select></div>
-                                      <div><Label className="text-xs">Place</Label><Input className="h-8 bg-white" type="number" value={seg.placement} onChange={(e) => updateSegment(seg.id, 'placement', e.target.value)} placeholder="#" /></div>
+                                      <div className="col-span-2 sm:col-span-1"><Label className="text-xs">Segment</Label><select className="flex h-8 w-full rounded-md border border-input bg-white px-2 text-xs" value={seg.name} onChange={(e) => updateSegment(seg.id, 'name', e.target.value)} disabled={readOnly}><option value="Short Program">Short Program</option><option value="Free Skate">Free Skate</option><option value="Pattern Dance">Pattern Dance</option><option value="Rhythm Dance">Rhythm Dance</option><option value="Free Dance">Free Dance</option></select></div>
+                                      <div><Label className="text-xs">Place</Label><Input className="h-8 bg-white" type="number" value={seg.placement} onChange={(e) => updateSegment(seg.id, 'placement', e.target.value)} placeholder="#" disabled={readOnly} /></div>
                                   </div>
+                                  {/* ... (Segment fields same as before) ... */}
                                   <div className="grid grid-cols-6 gap-2">
-                                      <div className="col-span-2"><Label className="text-xs text-gray-500">Total</Label><Input className="h-8 bg-white font-bold" type="number" step="0.01" value={seg.score} onChange={(e) => updateSegment(seg.id, 'score', e.target.value)} /></div>
-                                      <div><Label className="text-xs text-gray-500">TES</Label><Input className="h-8 bg-white" type="number" step="0.01" value={seg.tes} onChange={(e) => updateSegment(seg.id, 'tes', e.target.value)} /></div>
-                                      <div><Label className="text-xs text-gray-500">PCS</Label><Input className="h-8 bg-white" type="number" step="0.01" value={seg.pcs} onChange={(e) => updateSegment(seg.id, 'pcs', e.target.value)} /></div>
-                                      <div><Label className="text-xs text-red-500">Ded</Label><Input className="h-8 bg-white text-red-600" type="number" step="0.01" value={seg.deductions} onChange={(e) => updateSegment(seg.id, 'deductions', e.target.value)} /></div>
-                                      <div><Label className="text-xs text-green-600">Bon</Label><Input className="h-8 bg-white text-green-600" type="number" step="0.01" value={seg.bonus} onChange={(e) => updateSegment(seg.id, 'bonus', e.target.value)} /></div>
+                                      <div className="col-span-2"><Label className="text-xs text-gray-500">Total</Label><Input className="h-8 bg-white font-bold" type="number" step="0.01" value={seg.score} onChange={(e) => updateSegment(seg.id, 'score', e.target.value)} disabled={readOnly} /></div>
+                                      <div><Label className="text-xs text-gray-500">TES</Label><Input className="h-8 bg-white" type="number" step="0.01" value={seg.tes} onChange={(e) => updateSegment(seg.id, 'tes', e.target.value)} disabled={readOnly} /></div>
+                                      <div><Label className="text-xs text-gray-500">PCS</Label><Input className="h-8 bg-white" type="number" step="0.01" value={seg.pcs} onChange={(e) => updateSegment(seg.id, 'pcs', e.target.value)} disabled={readOnly} /></div>
+                                      <div><Label className="text-xs text-red-500">Ded</Label><Input className="h-8 bg-white text-red-600" type="number" step="0.01" value={seg.deductions} onChange={(e) => updateSegment(seg.id, 'deductions', e.target.value)} disabled={readOnly} /></div>
+                                      <div><Label className="text-xs text-green-600">Bon</Label><Input className="h-8 bg-white text-green-600" type="number" step="0.01" value={seg.bonus} onChange={(e) => updateSegment(seg.id, 'bonus', e.target.value)} disabled={readOnly} /></div>
                                   </div>
                                   
-                                  {/* --- PCS DETAILS TOGGLE --- */}
                                   <div className="mt-2">
                                       <Button type="button" variant="ghost" size="sm" className="h-5 text-[10px] text-slate-500" onClick={() => togglePCS(seg.id)}>{expandedPCS === seg.id ? "Hide PCS Details" : "Show PCS Details"}</Button>
-                                      {expandedPCS === seg.id && (<div className="grid grid-cols-3 gap-2 mt-1 p-2 bg-slate-100 rounded border border-slate-200 animate-in fade-in slide-in-from-top-1"><div className="col-span-1"><Label className="text-[10px]">Comp</Label><Input className="h-7 text-xs" type="number" step="0.01" value={seg.pcs_composition} onChange={(e)=>updateSegment(seg.id, 'pcs_composition', e.target.value)} /></div><div className="col-span-1"><Label className="text-[10px]">Pres</Label><Input className="h-7 text-xs" type="number" step="0.01" value={seg.pcs_presentation} onChange={(e)=>updateSegment(seg.id, 'pcs_presentation', e.target.value)} /></div><div className="col-span-1"><Label className="text-[10px]">Skills</Label><Input className="h-7 text-xs" type="number" step="0.01" value={seg.pcs_skills} onChange={(e)=>updateSegment(seg.id, 'pcs_skills', e.target.value)} /></div></div>)}
+                                      {expandedPCS === seg.id && (<div className="grid grid-cols-3 gap-2 mt-1 p-2 bg-slate-100 rounded border border-slate-200 animate-in fade-in slide-in-from-top-1"><div className="col-span-1"><Label className="text-[10px]">Comp</Label><Input className="h-7 text-xs" type="number" step="0.01" value={seg.pcs_composition} onChange={(e)=>updateSegment(seg.id, 'pcs_composition', e.target.value)} disabled={readOnly} /></div><div className="col-span-1"><Label className="text-[10px]">Pres</Label><Input className="h-7 text-xs" type="number" step="0.01" value={seg.pcs_presentation} onChange={(e)=>updateSegment(seg.id, 'pcs_presentation', e.target.value)} disabled={readOnly} /></div><div className="col-span-1"><Label className="text-[10px]">Skills</Label><Input className="h-7 text-xs" type="number" step="0.01" value={seg.pcs_skills} onChange={(e)=>updateSegment(seg.id, 'pcs_skills', e.target.value)} disabled={readOnly} /></div></div>)}
                                   </div>
-
-                                  {/* --- PROTOCOL TOGGLE --- */}
+                                  {/* ... (Protocol toggle same as before) ... */}
                                   <div className="mt-2 pt-2 border-t border-slate-200">
                                       <Button type="button" variant="ghost" size="sm" className="w-full h-6 text-xs flex justify-between text-slate-500 hover:text-slate-800 hover:bg-slate-100" onClick={() => toggleProtocol(seg.id)}>
                                           <span>Detailed Protocol / Elements</span>
@@ -265,16 +258,16 @@ export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved,
               <div className="space-y-2">
                   <Label>Protocol / Detail Sheet</Label>
                   <FilePreview url={currentDetailSheet} />
-                  <Input type="file" className="text-xs h-9" onChange={(e) => setDetailSheet(e.target.files[0])} />
+                  {!readOnly && <Input type="file" className="text-xs h-9" onChange={(e) => setDetailSheet(e.target.files[0])} />}
               </div>
-              <div className="space-y-2"><Label>Video URL</Label><div className="relative"><Video className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" /><Input className="pl-8" value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} placeholder="https://..." /></div></div>
+              <div className="space-y-2"><Label>Video URL</Label><div className="relative"><Video className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" /><Input className="pl-8" value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} placeholder="https://..." disabled={readOnly} /></div></div>
           </div>
 
-          <div className="space-y-2 mt-2"><Label>Notes</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes..." /></div>
+          <div className="space-y-2 mt-2"><Label>Notes</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes..." disabled={readOnly} /></div>
           <div className="flex justify-between pt-2">
-              {!resultToEdit && <Button variant="ghost" onClick={() => { setStep('SEARCH'); setSelectedComp(null); }}>Back</Button>}
-              {!resultToEdit && <Button variant="secondary" onClick={handleSaveAndAdd} disabled={loading} className="w-2/3"><Plus className="h-4 w-4 mr-2" /> Save & Add Another</Button>}
-              {resultToEdit && <Button onClick={handleSave} disabled={loading} className="w-full">Save Changes</Button>}
+              {!resultToEdit && !readOnly && <Button variant="ghost" onClick={() => { setStep('SEARCH'); setSelectedComp(null); }}>Back</Button>}
+              {!resultToEdit && !readOnly && <Button variant="secondary" onClick={handleSaveAndAdd} disabled={loading} className="w-2/3"><Plus className="h-4 w-4 mr-2" /> Save & Add Another</Button>}
+              {resultToEdit && !readOnly && <Button onClick={handleSave} disabled={loading} className="w-full">Save Changes</Button>}
           </div>
       </div>
   );
@@ -282,14 +275,26 @@ export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved,
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{trigger || <Button>Manage Events</Button>}</DialogTrigger>
-      <DialogContent className="sm:max-w-[600px]"><DialogHeader><DialogTitle>{step === 'SEARCH' ? 'Find Competition' : step === 'CREATE' ? 'New Event' : (status === 'COMPLETED' ? 'Log Result' : 'Plan Event')}</DialogTitle></DialogHeader>
-        {step === 'SEARCH' && (
-            <div className="space-y-4"><div className="flex gap-2"><Input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Search..." /><Button onClick={handleSearch} disabled={loading}><Search className="h-4 w-4" /></Button></div><div className="max-h-[200px] overflow-y-auto space-y-2 border rounded p-2">{searchResults.map(comp => (<div key={comp.id} className="flex justify-between p-2 hover:bg-slate-50 rounded items-center border-b last:border-0"><div className="text-sm"><div className="font-bold">{comp.title}</div><div className="text-xs text-gray-500">{comp.city}, {comp.province_state}</div></div><Button size="sm" variant="outline" onClick={() => { setSelectedComp(comp); setStep('LOG'); }}>Select</Button></div>))}</div><div className="pt-2"><Button variant="secondary" className="w-full" onClick={() => setStep('CREATE')}><Plus className="h-4 w-4 mr-2" /> Create New Competition</Button></div></div>
+      <DialogContent className="sm:max-w-[600px]">
+        <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+                {step === 'SEARCH' ? 'Find Competition' : step === 'CREATE' ? 'New Event' : (status === 'COMPLETED' ? 'Log Result' : 'Plan Event')}
+                {readOnly && <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded border border-amber-200 flex items-center gap-1"><Lock className="h-3 w-3"/> View Only</span>}
+            </DialogTitle>
+        </DialogHeader>
+        
+        {step === 'SEARCH' && !readOnly && (
+            <div className="space-y-4"><div className="flex gap-2"><Input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Search..." /><Button onClick={handleSearch} disabled={loading}><Search className="h-4 w-4" /></Button></div><div className="max-h-[200px] overflow-y-auto space-y-2 border rounded p-2">{searchResults.map(comp => (<div key={comp.id} className="flex justify-between p-2 hover:bg-slate-50 rounded items-center border-b last:border-0"><div className="text-sm"><div className="font-bold">{comp.title}</div><div className="text-xs text-gray-500">{comp.city}, {comp.province_state}</div></div><Button size="sm" variant="outline" onClick={() => { setSelectedComp(comp); setStep('LOG'); }}>Select</Button></div>))}</div>
+            {/* HIDE CREATE BUTTON FOR NON-COACHES */}
+            {isCoach && (
+                <div className="pt-2"><Button variant="secondary" className="w-full" onClick={() => setStep('CREATE')}><Plus className="h-4 w-4 mr-2" /> Create New Competition</Button></div>
+            )}
+            </div>
         )}
-        {step === 'CREATE' && (
+        {step === 'CREATE' && !readOnly && (
             <div className="space-y-4"><div className="space-y-2"><Label>Name</Label><Input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} /></div>{renderLocationSelectors()}<div className="grid grid-cols-2 gap-2"><div><Label>Start</Label><DatePicker date={start} setDate={setStart} /></div><div><Label>End</Label><DatePicker date={end} setDate={setEnd} /></div></div><div className="flex justify-between pt-2"><Button variant="ghost" onClick={() => setStep('SEARCH')}>Back</Button><Button onClick={handleCreate} disabled={loading}>Create</Button></div></div>
         )}
-        {step === 'LOG' && renderLogStep()}
+        {(step === 'LOG' || readOnly) && renderLogStep()}
       </DialogContent>
     </Dialog>
   );

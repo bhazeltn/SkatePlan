@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ProgramModal } from '@/components/dashboard/ProgramModal';
 import { Music, User } from 'lucide-react';
 
-export function ProgramsTab({ skater, team, isSynchro }) {
+export function ProgramsTab({ skater, team, isSynchro, readOnly }) { // <--- Added readOnly
   const { token } = useAuth();
   const [programs, setPrograms] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -44,12 +44,16 @@ export function ProgramsTab({ skater, team, isSynchro }) {
             <h3 className="text-lg font-semibold">Programs</h3>
             <p className="text-sm text-muted-foreground">Music, Choreography, and Layouts</p>
         </div>
-        <ProgramModal 
-            skater={skater} 
-            team={team} 
-            isSynchro={isSynchro}
-            onSaved={fetchPrograms} 
-        />
+        
+        {/* HIDE ADD BUTTON IF READ ONLY */}
+        {!readOnly && (
+            <ProgramModal 
+                skater={skater} 
+                team={team} 
+                isSynchro={isSynchro}
+                onSaved={fetchPrograms} 
+            />
+        )}
       </div>
 
       {programs.length === 0 ? (
@@ -59,13 +63,14 @@ export function ProgramsTab({ skater, team, isSynchro }) {
       ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {sortedPrograms.map(prog => (
-                  /* WRAP CARD IN MODAL TRIGGER */
+                  /* PASS READONLY TO MODAL */
                   <ProgramModal 
                     key={prog.id}
                     skater={skater} 
                     team={team}
                     isSynchro={isSynchro}
                     programToEdit={prog} 
+                    readOnly={readOnly} // <--- Pass it down
                     onSaved={fetchPrograms} 
                     trigger={
                       <Card className={`hover:border-brand-blue hover:shadow-md transition-all cursor-pointer relative group h-full ${!prog.is_active ? 'opacity-60 bg-gray-50 border-dashed' : ''}`}>

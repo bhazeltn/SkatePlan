@@ -2,26 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/AuthContext';
 import { apiRequest } from '@/api';
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { LogSessionModal } from '@/components/dashboard/LogSessionModal';
-import { Calendar, Star, Zap } from 'lucide-react';
+import { Activity, Clock, User } from 'lucide-react';
 
-function TravelSummary({ segments }) {
-    if (!segments || segments.length === 0) return <span className="text-gray-400 italic">No travel booked</span>;
-    
-    return (
-        <div className="space-y-2">
-            {segments.map((seg, i) => (
-                <div key={i} className="flex items-center gap-2 text-sm text-gray-800 bg-white p-1.5 rounded border">
-                    <span className="font-bold text-xs bg-slate-100 px-1.5 py-0.5 rounded">{seg.type}</span>
-                    <span className="font-medium">{seg.carrier} {seg.number}</span>
-                    {seg.dep_time && <span className="text-xs text-gray-500">({seg.dep_time} - {seg.arr_time})</span>}
-                </div>
-            ))}
-        </div>
-    );
-}
-
-export function LogsTab({ skater, team, isSynchro }) {
+export function LogsTab({ skater, team, isSynchro, permissions }) {
   const { token } = useAuth();
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -32,78 +17,97 @@ export function LogsTab({ skater, team, isSynchro }) {
   else fetchUrl = `/skaters/${skater.id}/logs/`;
 
   const fetchLogs = async () => {
-    if (!fetchUrl) return;
     try {
       setLoading(true);
       const data = await apiRequest(fetchUrl, 'GET', null, token);
       setLogs(data || []);
-    } catch (err) { console.error("Failed to load logs", err); } 
+    } catch (err) { console.error(err); } 
     finally { setLoading(false); }
   };
 
-  useEffect(() => { if (skater || team) fetchLogs(); }, [skater, team, isSynchro, token]);
+  useEffect(() => { if (skater || team) fetchLogs(); }, [skater, team, token]);
 
-  if (loading) return <div className="p-8 text-center">Loading history...</div>;
+  const canCreate = permissions?.canEditLogs;
+
+  if (loading) return <div className="p-8 text-center">Loading logs...</div>;
 
   return (
     <div className="space-y-6">
+      
       <div className="flex justify-between items-center">
         <div>
             <h3 className="text-lg font-semibold">Training Logs</h3>
-            <p className="text-sm text-muted-foreground">History of all sessions</p>
+            <p className="text-sm text-muted-foreground">Session ratings and notes</p>
         </div>
-        <LogSessionModal skater={skater} team={team} isSynchro={isSynchro} onLogCreated={fetchLogs} />
+        {canCreate && (
+            <LogSessionModal 
+                skater={skater} 
+                team={team} 
+                isSynchro={isSynchro}
+                onLogCreated={fetchLogs} 
+                permissions={permissions}
+            />
+        )}
       </div>
 
-      <div className="space-y-4">
-          {logs.length === 0 ? (
-             <div className="text-center p-12 border-2 border-dashed rounded-lg text-muted-foreground">No logs recorded yet.</div>
-          ) : (
-             logs.map((log) => (
-                 /* --- WRAP CARD IN MODAL --- */
-                 <LogSessionModal 
-                     key={log.id}
-                     skater={skater} 
-                     team={team} 
-                     isSynchro={isSynchro}
-                     logToEdit={log} // <--- Pass existing data
-                     onLogCreated={fetchLogs}
-                     trigger={
-                         <Card className="hover:border-brand-blue transition-colors cursor-pointer">
-                             <CardContent className="p-4">
-                                <div className="flex flex-col md:flex-row justify-between gap-4">
-                                    <div className="min-w-[200px] space-y-2">
-                                        <div className="flex items-center gap-2 font-semibold text-gray-900">
-                                            <Calendar className="h-4 w-4 text-brand-blue" />
-                                            {new Date(log.session_date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
-                                        </div>
-                                        <div className="flex gap-0.5">
-                                            {[1, 2, 3, 4, 5].map((star) => (<Star key={star} className={`h-4 w-4 ${star <= (log.session_rating || 0) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-200'}`} />))}
-                                        </div>
-                                        <span className="text-xs bg-slate-100 px-2 py-0.5 rounded text-slate-600">{log.discipline_name}</span>
-                                    </div>
-                                    <div className="min-w-[180px] p-2 bg-slate-50 rounded border text-sm flex flex-col gap-2">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-xs font-semibold text-gray-500 uppercase">Energy</span>
-                                            <div className="flex gap-0.5">{[1, 2, 3, 4, 5].map((val) => (<Zap key={val} className={`h-3 w-3 ${val <= (log.energy_stamina || 0) ? 'fill-blue-400 text-blue-400' : 'text-gray-300'}`} />))}</div>
-                                        </div>
-                                        <div className="flex items-center gap-2 border-t border-slate-200 pt-2 mt-1">
-                                            <span className="text-xl">{log.sentiment_emoji || "🙂"}</span>
-                                            <span className="text-xs text-gray-600 italic leading-tight">{log.wellbeing_mental_focus_notes || "No focus notes"}</span>
-                                        </div>
-                                    </div>
-                                    <div className="flex-1 text-sm text-gray-700 border-l pl-4">
-                                        <span className="font-semibold text-gray-900 block mb-1">Notes:</span>
-                                        <p className="whitespace-pre-wrap text-slate-600">{log.coach_notes || "No notes."}</p>
-                                    </div>
-                                </div>
-                             </CardContent>
-                         </Card>
-                     }
-                 />
-             ))
-          )}
-      </div>
+      {logs.length === 0 ? (
+          <div className="text-center p-12 border-2 border-dashed rounded-lg text-muted-foreground bg-slate-50">
+              No sessions logged yet.
+          </div>
+      ) : (
+          <div className="space-y-4">
+              {logs.map(log => (
+                  <LogSessionModal 
+                      key={log.id}
+                      skater={skater}
+                      team={team}
+                      isSynchro={isSynchro}
+                      logToEdit={log}
+                      permissions={permissions}
+                      onLogCreated={fetchLogs}
+                      trigger={
+                          <Card className="cursor-pointer hover:border-brand-blue hover:shadow-sm transition-all group">
+                              <CardContent className="p-4 flex gap-4">
+                                  {/* QUALITY RATING BADGE */}
+                                  <div className={`flex flex-col items-center justify-center w-16 h-16 rounded-lg border shrink-0 ${log.session_rating >= 4 ? 'bg-green-50 border-green-200 text-green-700' : log.session_rating <= 2 ? 'bg-red-50 border-red-200 text-red-700' : 'bg-slate-50 border-slate-200 text-slate-700'}`}>
+                                      <span className="text-2xl font-bold mb-0.5">{log.session_rating}</span>
+                                      <span className="text-[8px] uppercase font-bold text-center leading-3">Quality<br/>Rating</span>
+                                  </div>
+
+                                  {/* CONTENT */}
+                                  <div className="flex-1 min-w-0">
+                                      <div className="flex justify-between items-start">
+                                          <div>
+                                              <h4 className="font-bold text-gray-900 flex items-center gap-2">
+                                                  {new Date(log.session_date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                                                  <span className="text-xs font-normal text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{log.discipline_name}</span>
+                                              </h4>
+                                              <div className="flex items-center gap-4 mt-1 text-xs text-gray-500">
+                                                  <span className="flex items-center gap-1"><User className="h-3 w-3" /> Logged by: {log.author_name}</span>
+                                                  <span className="flex items-center gap-1"><Activity className="h-3 w-3" /> Energy: {log.energy_stamina}/5</span>
+                                                  <span>Mood: {log.sentiment_emoji}</span>
+                                              </div>
+                                          </div>
+                                      </div>
+                                      
+                                      {/* PREVIEW NOTES */}
+                                      <div className="mt-3 text-sm text-gray-600 line-clamp-2">
+                                          {log.coach_notes ? (
+                                              <span className="text-blue-700 font-medium">Coach: {log.coach_notes}</span>
+                                          ) : log.skater_notes ? (
+                                              <span className="text-green-700 font-medium">Skater: {log.skater_notes}</span>
+                                          ) : (
+                                              <span className="italic text-gray-400">No notes recorded.</span>
+                                          )}
+                                      </div>
+                                  </div>
+                              </CardContent>
+                          </Card>
+                      }
+                  />
+              ))}
+          </div>
+      )}
     </div>
   );
 }

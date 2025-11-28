@@ -7,11 +7,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { DatePicker } from '@/components/ui/date-picker';
-import { Plus, ChevronLeft, Video, FileText, Trash2 } from 'lucide-react'; // Added Trash2
+import { Plus, ChevronLeft, Video, FileText, Trash2 } from 'lucide-react';
 
 const DEFAULT_TYPES = ['Skills', 'Freeskate', 'Dance', 'Artistic'];
 
-export function LogTestModal({ skater, testToEdit, onSaved, trigger }) {
+export function LogTestModal({ skater, testToEdit, onSaved, trigger, canDelete }) { // <--- Added canDelete
   const [open, setOpen] = useState(false);
   const { token } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -98,7 +98,6 @@ export function LogTestModal({ skater, testToEdit, onSaved, trigger }) {
       finally { setLoading(false); }
   }
 
-  // --- NEW: DELETE FILE HANDLER ---
   const handleDeleteSheet = async () => {
       if (!confirm("Remove test sheet?")) return;
       setLoading(true);
@@ -113,7 +112,6 @@ export function LogTestModal({ skater, testToEdit, onSaved, trigger }) {
       finally { setLoading(false); }
   };
 
-  // --- UPDATED HELPER ---
   const FilePreview = ({ url }) => {
       if (!url) return null;
       const filename = url.split('/').pop().split('?')[0];
@@ -188,7 +186,14 @@ export function LogTestModal({ skater, testToEdit, onSaved, trigger }) {
             </div>
 
             <div className="space-y-2"><Label>Notes / Feedback</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Evaluator feedback..." /></div>
-            <div className="flex justify-between pt-2">{testToEdit && <Button variant="destructive" onClick={handleDelete} disabled={loading}>Delete</Button>}<Button onClick={handleSave} disabled={loading} className={!testToEdit ? "w-full" : ""}>Save Record</Button></div>
+            
+            {/* FOOTER */}
+            <div className="flex justify-between pt-2">
+                {testToEdit && canDelete && ( // <--- Only show if allowed
+                    <Button variant="destructive" onClick={handleDelete} disabled={loading}>Delete</Button>
+                )}
+                <Button onClick={handleSave} disabled={loading} className={!testToEdit || !canDelete ? "w-full" : ""}>Save Record</Button>
+            </div>
         </div>
       </DialogContent>
     </Dialog>

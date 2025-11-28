@@ -1,19 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/AuthContext';
 import { apiRequest } from '@/api';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { InjuryModal } from '@/components/dashboard/InjuryModal';
-import { AlertTriangle, CheckCircle2, Activity, Calendar } from 'lucide-react';
+import { HeartPulse, Activity, AlertTriangle } from 'lucide-react';
 
-
-export function HealthTab({ skater, team, isSynchro }) {
+export function HealthTab({ skater, team, isSynchro, permissions }) {
   const { token } = useAuth();
   const [injuries, setInjuries] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // --- DYNAMIC ENDPOINT ---
-  // If 'team' is present, fetch team injuries. Otherwise fetch skater injuries.
   let fetchUrl = '';
   if (isSynchro) fetchUrl = `/synchro/${team.id}/injuries/`;
   else if (team) fetchUrl = `/teams/${team.id}/injuries/`;
@@ -24,19 +21,12 @@ export function HealthTab({ skater, team, isSynchro }) {
       setLoading(true);
       const data = await apiRequest(fetchUrl, 'GET', null, token);
       setInjuries(data || []);
-    } catch (err) {
-      console.error("Failed to load injuries", err);
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { console.error(err); } 
+    finally { setLoading(false); }
   };
 
-  useEffect(() => {
-    if (skater || team) fetchInjuries();
-  }, [skater, team, token]);
+  useEffect(() => { if (skater || team) fetchInjuries(); }, [skater, team, token]);
 
-  // Group by status
-  // "Active" and "Recovering" are considered active issues
   const activeInjuries = injuries.filter(i => i.recovery_status !== 'Resolved');
   const history = injuries.filter(i => i.recovery_status === 'Resolved');
 
@@ -45,50 +35,44 @@ export function HealthTab({ skater, team, isSynchro }) {
   return (
     <div className="space-y-8">
       
-      {/* Header */}
       <div className="flex justify-between items-center">
         <div>
             <h3 className="text-lg font-semibold">Health & Injuries</h3>
-            <p className="text-sm text-muted-foreground">Track recovery and return-to-sport status</p>
+            <p className="text-sm text-muted-foreground">Track recovery and physical status</p>
         </div>
         <InjuryModal 
             skater={skater} 
-            team={team}
+            team={team} 
             isSynchro={isSynchro}
             onSaved={fetchInjuries} 
-            trigger={
-                <Button variant="destructive">
-                    <AlertTriangle className="h-4 w-4 mr-2" />
-                    Report New Injury
-                </Button>
-            }
+            permissions={permissions}
         />
       </div>
 
-      {/* Active Issues Card (Red Flag) */}
+      {/* ACTIVE */}
       <div className="space-y-4">
-        <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Active Issues</h4>
-        
-        {activeInjuries.length === 0 ? (
-            <div className="flex items-center gap-2 p-4 bg-green-50 border border-green-100 rounded-lg text-green-700">
-                <CheckCircle2 className="h-5 w-5" /> No active injuries reported.
-            </div>
-        ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {activeInjuries.map(injury => (
-                    <InjuryCard key={injury.id} injury={injury} onUpdate={fetchInjuries} />
-                ))}
-            </div>
-        )}
+          <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Active Issues</h4>
+          {activeInjuries.length === 0 ? (
+              <div className="flex items-center gap-2 p-4 bg-green-50 text-green-800 rounded border border-green-200">
+                  <HeartPulse className="h-5 w-5" />
+                  <span className="font-medium">No active injuries reported.</span>
+              </div>
+          ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {activeInjuries.map(injury => (
+                      <InjuryCard key={injury.id} injury={injury} onUpdate={fetchInjuries} permissions={permissions} skater={skater} />
+                  ))}
+              </div>
+          )}
       </div>
 
-      {/* History Card */}
+      {/* HISTORY */}
       {history.length > 0 && (
           <div className="space-y-4">
-            <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">History</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 opacity-75">
+            <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Resolved History</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 opacity-80">
                 {history.map(injury => (
-                    <InjuryCard key={injury.id} injury={injury} onUpdate={fetchInjuries} />
+                    <InjuryCard key={injury.id} injury={injury} onUpdate={fetchInjuries} permissions={permissions} skater={skater} />
                 ))}
             </div>
           </div>
@@ -97,53 +81,43 @@ export function HealthTab({ skater, team, isSynchro }) {
   );
 }
 
-function InjuryCard({ injury, onUpdate }) {
-    const formatDate = (d) => new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+function InjuryCard({ injury, onUpdate, permissions, skater }) {
+    // Helper for Severity Color
+    const getSeverityColor = (sev) => {
+        if (sev === 'Severe') return 'text-red-700 bg-red-50 border-red-200';
+        if (sev === 'Moderate') return 'text-amber-700 bg-amber-50 border-amber-200';
+        return 'text-green-700 bg-green-50 border-green-200';
+    };
 
     return (
         <InjuryModal 
-            injury={injury} 
+            injuryToEdit={injury} 
+            skater={skater}
             onSaved={onUpdate}
+            permissions={permissions}
             trigger={
-                <Card className="cursor-pointer hover:shadow-md hover:border-brand-blue transition-all h-full group">
-                    <CardContent className="p-4 flex items-start gap-3">
-                        {/* ... (Status Icon Logic Same as Before) ... */}
-                        <div className={`p-2 rounded-full shrink-0 ${injury.recovery_status === 'Resolved' ? 'bg-slate-100 text-slate-500' : 'bg-red-100 text-red-600'}`}>
-                            <Activity className="h-5 w-5" />
+                <Card className={`cursor-pointer hover:shadow-md transition-all ${injury.recovery_status === 'Active' ? 'border-l-4 border-l-red-500' : 'border-l-4 border-l-green-500'}`}>
+                    <CardContent className="p-4">
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <h4 className="font-bold text-gray-900">{injury.injury_type}</h4>
+                                <div className="flex items-center gap-2 mt-1">
+                                    <span className="text-sm text-gray-600">{injury.body_area}</span>
+                                    {/* SEVERITY BADGE */}
+                                    {injury.severity && (
+                                        <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium uppercase ${getSeverityColor(injury.severity)}`}>
+                                            {injury.severity}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                            <span className={`px-2 py-0.5 text-xs font-bold rounded uppercase ${injury.recovery_status === 'Active' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                                {injury.recovery_status}
+                            </span>
                         </div>
-                        
-                        <div className="flex-1 min-w-0">
-                            <div className="flex justify-between items-start">
-                                <h4 className="font-bold text-gray-900 truncate">{injury.injury_type}</h4>
-                                {/* --- NEW: Display Skater Name --- */}
-                                <span className="text-xs font-medium bg-slate-50 px-2 py-1 rounded text-gray-600 border border-slate-200">
-                                    {injury.skater_name}
-                                </span>
-                                {/* ------------------------------- */}
-                            </div>
-                            
-                            <div className="flex flex-wrap gap-2 text-xs mt-1 items-center">
-                                <span className="font-medium text-gray-600 bg-slate-100 px-1.5 py-0.5 rounded">
-                                    {injury.body_area && injury.body_area.length > 0 ? injury.body_area.join(", ") : "General"}
-                                </span>
-                                <span className={`px-1.5 py-0.5 rounded font-medium ${
-                                    injury.severity === 'Severe' || injury.severity === 'Critical' 
-                                    ? 'bg-red-100 text-red-700' 
-                                    : 'bg-slate-100 text-slate-600'
-                                }`}>
-                                    {injury.severity}
-                                </span>
-                            </div>
-
-                            <div className="text-xs text-gray-400 mt-2 flex items-center gap-1">
-                                <Calendar className="h-3 w-3" /> Onset: {formatDate(injury.date_of_onset)}
-                            </div>
-                            
-                            {injury.recovery_notes && (
-                                <p className="text-sm text-gray-600 mt-2 border-l-2 pl-2 italic line-clamp-2">
-                                    "{injury.recovery_notes}"
-                                </p>
-                            )}
+                        <div className="mt-3 text-xs text-gray-400 flex gap-4 border-t pt-2">
+                            <span>Onset: {injury.date_of_onset}</span>
+                            {injury.return_to_sport_date && <span>Return: {injury.return_to_sport_date}</span>}
                         </div>
                     </CardContent>
                 </Card>

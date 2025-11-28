@@ -27,27 +27,29 @@ from api.serializers import (
     GoalSerializer,
     GapAnalysisSerializer,
 )
-from api.permissions import IsCoachUser
+from api.permissions import IsCoachUser, IsCoachOrOwner
 
 
 # --- SEASONS ---
 class AthleteSeasonList(generics.ListAPIView):
-    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    permission_classes = [permissions.IsAuthenticated, IsCoachOrOwner]
     serializer_class = AthleteSeasonSerializer
 
     def get_queryset(self):
+        # For ListViews, standard permission classes don't filter the queryset automatically.
+        # Ideally we filter here, but IsCoachOrOwner allows access to the *View*.
         return AthleteSeason.objects.filter(skater_id=self.kwargs["skater_id"])
 
 
 class AthleteSeasonDetailView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    permission_classes = [permissions.IsAuthenticated, IsCoachOrOwner]
     serializer_class = AthleteSeasonSerializer
     queryset = AthleteSeason.objects.all()
 
 
 # --- YEARLY PLANS ---
 class YearlyPlanListCreateView(generics.ListCreateAPIView):
-    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    permission_classes = [permissions.IsAuthenticated, IsCoachOrOwner]
     serializer_class = YearlyPlanSerializer
 
     def get_queryset(self):
@@ -80,7 +82,6 @@ class YearlyPlanListCreateView(generics.ListCreateAPIView):
                 if not season_name:
                     raise ValidationError("New season must have a name.")
 
-                # --- FIX: Smart Create ---
                 target_season, created = AthleteSeason.objects.get_or_create(
                     skater=skater,
                     season=season_name,
@@ -90,9 +91,7 @@ class YearlyPlanListCreateView(generics.ListCreateAPIView):
                         "primary_coach": self.request.user,
                     },
                 )
-                # -------------------------
             else:
-                # Fallback to most recent active season
                 target_season = AthleteSeason.objects.filter(
                     skater=skater, is_active=True
                 ).last()
@@ -187,14 +186,13 @@ class SynchroYearlyPlanListCreateView(generics.ListCreateAPIView):
 
 
 class YearlyPlanDetailView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    permission_classes = [permissions.IsAuthenticated, IsCoachOrOwner]
     serializer_class = YearlyPlanSerializer
     queryset = YearlyPlan.objects.all()
 
 
-# ... (Rest of file: Macrocycle, WeeklyPlan, Goals, etc. - ensure Master Views use get_or_create too) ...
 class MacrocycleListCreateView(generics.ListCreateAPIView):
-    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    permission_classes = [permissions.IsAuthenticated, IsCoachOrOwner]
     serializer_class = MacrocycleSerializer
 
     def get_queryset(self):
@@ -206,13 +204,13 @@ class MacrocycleListCreateView(generics.ListCreateAPIView):
 
 
 class MacrocycleDetailView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    permission_classes = [permissions.IsAuthenticated, IsCoachOrOwner]
     serializer_class = MacrocycleSerializer
     queryset = Macrocycle.objects.all()
 
 
 class WeeklyPlanListView(generics.ListAPIView):
-    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    permission_classes = [permissions.IsAuthenticated, IsCoachOrOwner]
     serializer_class = WeeklyPlanSerializer
 
     def get_queryset(self):
@@ -222,22 +220,26 @@ class WeeklyPlanListView(generics.ListAPIView):
 
 
 class WeeklyPlanDetailView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    permission_classes = [permissions.IsAuthenticated, IsCoachOrOwner]
     serializer_class = WeeklyPlanSerializer
     queryset = WeeklyPlan.objects.all()
 
 
-# --- MASTER VIEWS (Safe Version) ---
+# --- MASTER VIEWS ---
 class MasterWeeklyPlanView(APIView):
     """
     The Aggregator: Finds ALL active seasons (Individual + Team) for a skater.
     Auto-generates weekly records to ensure the grid is never empty.
     """
 
-    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    permission_classes = [permissions.IsAuthenticated, IsCoachOrOwner]
 
     def get(self, request, skater_id):
         skater = Skater.objects.get(id=skater_id)
+
+        # Manual Check for non-standard views
+        self.check_object_permissions(request, skater)
+
         date_str = request.query_params.get("date")
 
         if not date_str:
@@ -320,7 +322,6 @@ class TeamMasterWeeklyPlanView(APIView):
     def get(self, request, team_id):
         debug = []
 
-        # --- FIX: ROBUST DETECTION ---
         # Check if this is a Synchro request based on URL structure
         is_synchro = "synchro" in request.path
         debug.append(f"Request for Team ID: {team_id} (Synchro Mode: {is_synchro})")
@@ -341,7 +342,6 @@ class TeamMasterWeeklyPlanView(APIView):
                 debug.append(f"Found Pair Team: {target_entity.team_name}")
             except Team.DoesNotExist:
                 return Response({"error": "Team not found"}, status=404)
-        # -----------------------------
 
         date_str = request.query_params.get("date")
         if not date_str:
@@ -401,10 +401,8 @@ class TeamMasterWeeklyPlanView(APIView):
         return Response({"week_start": target_date, "plans": data, "debug": debug})
 
 
-# ... (Goal/Gap Analysis views remain same) ...
-# (Copy Goal/Gap views from your previous file or request full file if needed)
 class GapAnalysisRetrieveUpdateView(generics.RetrieveUpdateAPIView):
-    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    permission_classes = [permissions.IsAuthenticated, IsCoachOrOwner]
     serializer_class = GapAnalysisSerializer
 
     def get_object(self):
@@ -417,13 +415,17 @@ class GapAnalysisRetrieveUpdateView(generics.RetrieveUpdateAPIView):
         else:
             skater_id = self.kwargs["skater_id"]
             entity = Skater.objects.get(id=skater_id)
+
+        # Manual Permission Check
+        self.check_object_permissions(self.request, entity)
+
         ct = ContentType.objects.get_for_model(entity)
         obj, _ = GapAnalysis.objects.get_or_create(content_type=ct, object_id=entity.id)
         return obj
 
 
 class GoalListCreateByPlanView(generics.ListCreateAPIView):
-    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    permission_classes = [permissions.IsAuthenticated, IsCoachOrOwner]
     serializer_class = GoalSerializer
 
     def get_queryset(self):
@@ -434,18 +436,26 @@ class GoalListCreateByPlanView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         plan = YearlyPlan.objects.get(id=self.kwargs["plan_id"])
+
+        status_val = Goal.GoalStatus.APPROVED
+        if self.request.user.role in ["SKATER", "GUARDIAN"]:
+            status_val = Goal.GoalStatus.PENDING_APPROVAL
+
         serializer.save(
             content_type=plan.content_type,
             object_id=plan.object_id,
-            current_status=Goal.GoalStatus.APPROVED,
+            current_status=status_val,
+            created_by=self.request.user,  # Save Creator
+            updated_by=self.request.user,
         )
 
 
 class GoalListBySkaterView(generics.ListCreateAPIView):
-    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    permission_classes = [permissions.IsAuthenticated, IsCoachOrOwner]
     serializer_class = GoalSerializer
 
     def get_queryset(self):
+        # (Keep existing query logic)
         skater = Skater.objects.get(id=self.kwargs["skater_id"])
         query = Q()
         singles = skater.singles_entities.all()
@@ -478,18 +488,50 @@ class GoalListBySkaterView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         skater = Skater.objects.get(id=self.kwargs["skater_id"])
-        entity = skater.singles_entities.first()
+
+        # --- CHANGED: Look for specific entity ID from frontend ---
+        entity_id = self.request.data.get("planning_entity_id")
+        entity = None
+
+        # Build list of all valid entities for this skater
+        all_entities = (
+            list(skater.singles_entities.all())
+            + list(skater.solodance_entities.all())
+            + list(skater.teams_as_partner_a.all())
+            + list(skater.teams_as_partner_b.all())
+            + list(skater.synchro_teams.all())
+        )
+
+        if entity_id:
+            # Find the matching object
+            entity = next(
+                (e for e in all_entities if str(e.id) == str(entity_id)), None
+            )
+
+        # Fallback to first if not specified
+        if not entity:
+            entity = all_entities[0] if all_entities else None
+
         if not entity:
             raise ValidationError("No active discipline found.")
+
         content_type = ContentType.objects.get_for_model(entity)
+
+        status_val = Goal.GoalStatus.APPROVED
+        if self.request.user.role in ["SKATER", "GUARDIAN"]:
+            status_val = Goal.GoalStatus.PENDING_APPROVAL
+
         serializer.save(
             content_type=content_type,
             object_id=entity.id,
-            current_status=Goal.GoalStatus.APPROVED,
+            current_status=status_val,
+            created_by=self.request.user,  # Save Creator
+            updated_by=self.request.user,
         )
 
 
 class GoalListByTeamView(generics.ListCreateAPIView):
+    # ... (Keep existing logic, just add user saving) ...
     permission_classes = [permissions.IsAuthenticated, IsCoachUser]
     serializer_class = GoalSerializer
 
@@ -504,11 +546,16 @@ class GoalListByTeamView(generics.ListCreateAPIView):
         team_id = self.kwargs["team_id"]
         ct = ContentType.objects.get_for_model(Team)
         serializer.save(
-            content_type=ct, object_id=team_id, current_status=Goal.GoalStatus.APPROVED
+            content_type=ct,
+            object_id=team_id,
+            current_status=Goal.GoalStatus.APPROVED,
+            created_by=self.request.user,
+            updated_by=self.request.user,
         )
 
 
 class SynchroGoalListCreateView(generics.ListCreateAPIView):
+    # ... (Keep existing logic, just add user saving) ...
     permission_classes = [permissions.IsAuthenticated, IsCoachUser]
     serializer_class = GoalSerializer
 
@@ -523,11 +570,18 @@ class SynchroGoalListCreateView(generics.ListCreateAPIView):
         team_id = self.kwargs["team_id"]
         ct = ContentType.objects.get_for_model(SynchroTeam)
         serializer.save(
-            content_type=ct, object_id=team_id, current_status=Goal.GoalStatus.APPROVED
+            content_type=ct,
+            object_id=team_id,
+            current_status=Goal.GoalStatus.APPROVED,
+            created_by=self.request.user,
+            updated_by=self.request.user,
         )
 
 
 class GoalDetailView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    permission_classes = [permissions.IsAuthenticated, IsCoachOrOwner]
     serializer_class = GoalSerializer
     queryset = Goal.objects.all()
+
+    def perform_update(self, serializer):
+        serializer.save(updated_by=self.request.user)

@@ -15,20 +15,43 @@ from api.models import (
     SynchroTeam,
 )
 from api.serializers import SessionLogSerializer, InjuryLogSerializer
-from api.permissions import IsCoachUser
+from api.permissions import IsCoachUser, IsCoachOrOwner
 
 # --- SESSION LOGS ---
 
 
 class SessionLogListCreateView(generics.ListCreateAPIView):
-    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    permission_classes = [permissions.IsAuthenticated, IsCoachOrOwner]
     serializer_class = SessionLogSerializer
 
     def get_queryset(self):
         skater_id = self.kwargs["skater_id"]
-        return SessionLog.objects.filter(athlete_season__skater_id=skater_id).order_by(
-            "-session_date"
-        )
+        skater = Skater.objects.get(id=skater_id)
+
+        # 1. Individual Seasons
+        season_query = Q(skater=skater)
+
+        # 2. Team Seasons (Pairs/Dance)
+        teams = Team.objects.filter(Q(partner_a=skater) | Q(partner_b=skater))
+        if teams.exists():
+            ct_team = ContentType.objects.get_for_model(Team)
+            season_query |= Q(
+                content_type=ct_team, object_id__in=teams.values_list("id", flat=True)
+            )
+
+        # 3. Synchro Seasons
+        synchro = skater.synchro_teams.all()
+        if synchro.exists():
+            ct_synchro = ContentType.objects.get_for_model(SynchroTeam)
+            season_query |= Q(
+                content_type=ct_synchro,
+                object_id__in=synchro.values_list("id", flat=True),
+            )
+
+        # Fetch logs for ANY of these seasons
+        return SessionLog.objects.filter(
+            athlete_season__in=AthleteSeason.objects.filter(season_query)
+        ).order_by("-session_date")
 
     def perform_create(self, serializer):
         skater_id = self.kwargs["skater_id"]
@@ -39,12 +62,11 @@ class SessionLogListCreateView(generics.ListCreateAPIView):
             skater=skater, is_active=True
         ).last()
         if not active_season:
-            # Auto-create fallback season
             today = date.today()
             start_year = today.year if today.month >= 7 else today.year - 1
             season_name = f"{start_year}-{start_year + 1}"
             active_season = AthleteSeason.objects.create(
-                skater=skater, season=season_name, primary_coach=self.request.user
+                skater=skater, season=season_name, primary_coach=None
             )
 
         entity_id = self.request.data.get("planning_entity_id")
@@ -58,10 +80,9 @@ class SessionLogListCreateView(generics.ListCreateAPIView):
         }
         model_class = model_map.get(entity_type)
 
-        # Fallback if entity not provided
         if not model_class:
+            # Fallback to first available singles entity
             model_class = SinglesEntity
-            # Try to find a default entity
             entity = skater.singles_entities.first()
             if entity:
                 entity_id = entity.id
@@ -70,6 +91,7 @@ class SessionLogListCreateView(generics.ListCreateAPIView):
             raise ValidationError(f"Invalid or missing planning entity.")
 
         content_type = ContentType.objects.get_for_model(model_class)
+
         serializer.save(
             author=self.request.user,
             athlete_season=active_season,
@@ -85,34 +107,29 @@ class SessionLogListCreateByTeamView(generics.ListCreateAPIView):
     def get_queryset(self):
         team_id = self.kwargs["team_id"]
         ct = ContentType.objects.get_for_model(Team)
-        return SessionLog.objects.filter(content_type=ct, object_id=team_id).order_by(
-            "-session_date"
-        )
+        # Find seasons for this team
+        return SessionLog.objects.filter(
+            athlete_season__content_type=ct, athlete_season__object_id=team_id
+        ).order_by("-session_date")
 
     def perform_create(self, serializer):
         team_id = self.kwargs["team_id"]
         team = Team.objects.get(id=team_id)
         ct = ContentType.objects.get_for_model(Team)
 
-        # Find or Create Team Season
+        # Find active season for team
         active_season = AthleteSeason.objects.filter(
-            content_type=ct, object_id=team.id, is_active=True
+            content_type=ct, object_id=team_id, is_active=True
         ).last()
+
         if not active_season:
-            today = date.today()
-            start_year = today.year if today.month >= 7 else today.year - 1
-            active_season = AthleteSeason.objects.create(
-                content_type=ct,
-                object_id=team.id,
-                season=f"{start_year}-{start_year + 1} Pairs",
-                primary_coach=self.request.user,
-            )
+            raise ValidationError("No active season found for this team.")
 
         serializer.save(
             author=self.request.user,
             athlete_season=active_season,
             content_type=ct,
-            object_id=team.id,
+            object_id=team_id,
         )
 
 
@@ -123,46 +140,38 @@ class SynchroSessionLogListCreateView(generics.ListCreateAPIView):
     def get_queryset(self):
         team_id = self.kwargs["team_id"]
         ct = ContentType.objects.get_for_model(SynchroTeam)
-        return SessionLog.objects.filter(content_type=ct, object_id=team_id).order_by(
-            "-session_date"
-        )
+        return SessionLog.objects.filter(
+            athlete_season__content_type=ct, athlete_season__object_id=team_id
+        ).order_by("-session_date")
 
     def perform_create(self, serializer):
         team_id = self.kwargs["team_id"]
         team = SynchroTeam.objects.get(id=team_id)
         ct = ContentType.objects.get_for_model(SynchroTeam)
 
-        # Find or Create Synchro Season
         active_season = AthleteSeason.objects.filter(
-            content_type=ct, object_id=team.id, is_active=True
+            content_type=ct, object_id=team_id, is_active=True
         ).last()
+
         if not active_season:
-            today = date.today()
-            start_year = today.year if today.month >= 7 else today.year - 1
-            active_season = AthleteSeason.objects.create(
-                content_type=ct,
-                object_id=team.id,
-                season=f"{start_year}-{start_year + 1} Synchro",
-                primary_coach=self.request.user,
-            )
+            raise ValidationError("No active season found for this team.")
 
         serializer.save(
             author=self.request.user,
             athlete_season=active_season,
             content_type=ct,
-            object_id=team.id,
+            object_id=team_id,
         )
 
 
 class SessionLogDetailView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    permission_classes = [permissions.IsAuthenticated, IsCoachOrOwner]
     serializer_class = SessionLogSerializer
     queryset = SessionLog.objects.all()
 
 
-# ... (Injury Logs remain the same) ...
 class InjuryLogListCreateView(generics.ListCreateAPIView):
-    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    permission_classes = [permissions.IsAuthenticated, IsCoachOrOwner]
     serializer_class = InjuryLogSerializer
 
     def get_queryset(self):
@@ -173,8 +182,17 @@ class InjuryLogListCreateView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         skater = Skater.objects.get(id=self.kwargs["skater_id"])
-        status = self.request.data.get("recovery_status", "Active")
-        serializer.save(skater=skater, recovery_status=status)
+        status_val = self.request.data.get("recovery_status", "Active")
+        serializer.save(skater=skater, recovery_status=status_val)
+
+
+class InjuryLogDetailView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsCoachOrOwner]
+    serializer_class = InjuryLogSerializer
+    queryset = InjuryLog.objects.all()
+
+
+# --- MISSING TEAM INJURY VIEWS (Restores Imports) ---
 
 
 class InjuryLogListCreateByTeamView(generics.ListCreateAPIView):
@@ -183,18 +201,26 @@ class InjuryLogListCreateByTeamView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         team_id = self.kwargs["team_id"]
-        team = Team.objects.get(id=team_id)
-        return InjuryLog.objects.filter(
-            Q(skater=team.partner_a) | Q(skater=team.partner_b)
-        ).order_by("recovery_status", "-date_of_onset")
+        try:
+            team = Team.objects.get(id=team_id)
+            skaters = [team.partner_a, team.partner_b]
+            return InjuryLog.objects.filter(skater__in=skaters).order_by(
+                "-date_of_onset"
+            )
+        except Team.DoesNotExist:
+            return InjuryLog.objects.none()
 
     def perform_create(self, serializer):
+        # Require 'skater_id' in body since injury is skater-specific
         skater_id = self.request.data.get("skater_id")
         if not skater_id:
-            raise ValidationError("You must specify which partner is injured.")
+            raise ValidationError(
+                "skater_id is required to log an injury from team view."
+            )
+
         skater = Skater.objects.get(id=skater_id)
-        status = self.request.data.get("recovery_status", "Active")
-        serializer.save(skater=skater, recovery_status=status)
+        status_val = self.request.data.get("recovery_status", "Active")
+        serializer.save(skater=skater, recovery_status=status_val)
 
 
 class SynchroInjuryLogListCreateView(generics.ListCreateAPIView):
@@ -203,21 +229,22 @@ class SynchroInjuryLogListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         team_id = self.kwargs["team_id"]
-        team = SynchroTeam.objects.get(id=team_id)
-        return InjuryLog.objects.filter(skater__in=team.roster.all()).order_by(
-            "recovery_status", "-date_of_onset"
-        )
+        try:
+            team = SynchroTeam.objects.get(id=team_id)
+            skaters = team.roster.all()
+            return InjuryLog.objects.filter(skater__in=skaters).order_by(
+                "-date_of_onset"
+            )
+        except SynchroTeam.DoesNotExist:
+            return InjuryLog.objects.none()
 
     def perform_create(self, serializer):
         skater_id = self.request.data.get("skater_id")
         if not skater_id:
-            raise ValidationError("You must specify which skater is injured.")
+            raise ValidationError(
+                "skater_id is required to log an injury from team view."
+            )
+
         skater = Skater.objects.get(id=skater_id)
-        status = self.request.data.get("recovery_status", "Active")
-        serializer.save(skater=skater, recovery_status=status)
-
-
-class InjuryLogDetailView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
-    serializer_class = InjuryLogSerializer
-    queryset = InjuryLog.objects.all()
+        status_val = self.request.data.get("recovery_status", "Active")
+        serializer.save(skater=skater, recovery_status=status_val)

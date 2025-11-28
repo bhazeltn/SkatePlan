@@ -21,7 +21,7 @@ from api.models import (
     SynchroTeam,
 )
 from api.serializers import SessionLogSerializer
-from api.permissions import IsCoachUser
+from api.permissions import IsCoachUser, IsCoachOrOwner
 
 
 # --- 1. COACH DASHBOARD AGGREGATOR ---
@@ -124,8 +124,6 @@ class CoachDashboardStatsView(APIView):
         # D. Activity & Agenda
         three_days_ago = today - timedelta(days=3)
 
-        # Retrieve logs for Skaters OR Teams visible to coach.
-        # For MVP we fetch all recent logs to ensure Team logs (where athlete_season.skater is None) appear.
         recent_logs = (
             SessionLog.objects.filter(session_date__gte=three_days_ago)
             .select_related("athlete_season", "athlete_season__skater")
@@ -148,8 +146,6 @@ class CoachDashboardStatsView(APIView):
                 elif isinstance(season.planning_entity, SynchroTeam):
                     link = f"#/synchro/{season.planning_entity.id}?tab=logs"
 
-            # Filter: Ensure we only show logs relevant to our roster scope (optional but good practice)
-            # For now we assume all logs in DB are valid to show.
             activity_data.append(
                 {
                     "skater": name,
@@ -342,10 +338,14 @@ def calculate_stats_response(all_results, total_sessions, season_name):
 
 # --- 2. SKATER STATS ---
 class SkaterStatsView(APIView):
-    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    permission_classes = [permissions.IsAuthenticated, IsCoachOrOwner]
 
     def get(self, request, skater_id):
         skater = Skater.objects.get(id=skater_id)
+
+        # Manual Permission Check
+        self.check_object_permissions(request, skater)
+
         entity_ids = [
             e.id
             for e in list(skater.singles_entities.all())
@@ -362,7 +362,6 @@ class SkaterStatsView(APIView):
             .order_by("competition__start_date")
         )
 
-        # FIX: Count logs for ALL active seasons
         active_seasons = AthleteSeason.objects.filter(skater=skater, is_active=True)
         total_sessions = SessionLog.objects.filter(
             athlete_season__in=active_seasons
@@ -391,7 +390,6 @@ class TeamStatsView(APIView):
             .order_by("competition__start_date")
         )
 
-        # FIX: Count logs specifically for this team
         total_sessions = SessionLog.objects.filter(
             content_type=ct, object_id=team_id
         ).count()
@@ -415,7 +413,6 @@ class SynchroStatsView(APIView):
             .order_by("competition__start_date")
         )
 
-        # FIX: Count logs specifically for this team
         total_sessions = SessionLog.objects.filter(
             content_type=ct, object_id=team_id
         ).count()

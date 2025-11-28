@@ -7,11 +7,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { DatePicker } from '@/components/ui/date-picker';
-import { Plus, Star, Zap, Smile, Users, Check, X, Clock, Trash2 } from 'lucide-react';
+import { Plus, Star, Zap, Smile, Users, Check, X, Clock } from 'lucide-react';
 
 const MOODS = ["🔥", "🙂", "😐", "😓", "😡", "🤕"];
 
-export function LogSessionModal({ skater, team, isSynchro, logToEdit, onLogCreated, trigger }) {
+export function LogSessionModal({ skater, team, isSynchro, logToEdit, onLogCreated, trigger, permissions }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const { token } = useAuth();
@@ -24,29 +24,38 @@ export function LogSessionModal({ skater, team, isSynchro, logToEdit, onLogCreat
   const [rating, setRating] = useState(3);
   const [energy, setEnergy] = useState(3);
   const [mood, setMood] = useState('🙂');
-  const [notes, setNotes] = useState('');
   const [mentalFocus, setMentalFocus] = useState('');
   const [attendanceList, setAttendanceList] = useState([]);
+
+  // Split Notes State
+  const [coachNotes, setCoachNotes] = useState('');
+  const [skaterNotes, setSkaterNotes] = useState('');
+
+  // Permission Checks
+  const isCoach = permissions?.role === 'COACH' || permissions?.role === 'COLLABORATOR';
+  const isFamily = permissions?.role === 'GUARDIAN' || permissions?.role === 'SKATER';
+  const canDelete = isCoach; // Only Coach can delete logs
 
   useEffect(() => {
       if (open) {
           if (logToEdit) {
               // --- EDIT MODE ---
               setDate(logToEdit.session_date);
-              // If the log has a planning_entity ID stored (not always available in serializer), use it. 
-              // Otherwise, we assume the context (skater/team) is correct.
-              // ideally, serializer should return it, but for now keep current ID if set or default.
-              
               setRating(logToEdit.session_rating || 3);
               setEnergy(logToEdit.energy_stamina || 3);
               setMood(logToEdit.sentiment_emoji || '🙂');
-              setNotes(logToEdit.coach_notes || '');
               setMentalFocus(logToEdit.wellbeing_mental_focus_notes || '');
+              
+              // Load split notes
+              setCoachNotes(logToEdit.coach_notes || '');
+              setSkaterNotes(logToEdit.skater_notes || '');
+              
               setAttendanceList(logToEdit.attendance || []);
           } else {
               // --- CREATE MODE ---
               setDate(new Date().toISOString().split('T')[0]);
-              setRating(3); setEnergy(3); setMood('🙂'); setNotes(''); setMentalFocus('');
+              setRating(3); setEnergy(3); setMood('🙂'); 
+              setCoachNotes(''); setSkaterNotes(''); setMentalFocus('');
               
               // Setup Default Entity
               if (team) {
@@ -84,12 +93,11 @@ export function LogSessionModal({ skater, team, isSynchro, logToEdit, onLogCreat
     setLoading(true);
 
     try {
-      // Determine Type (Only needed for create really, but good for consistency)
       let entityType = null;
       if (team) entityType = isSynchro ? 'SynchroTeam' : 'Team';
       else {
            const entity = skater?.planning_entities?.find(e => String(e.id) === String(selectedEntityId));
-           entityType = entity ? entity.type : null;
+           entityType = entity ? entity.type : 'SinglesEntity';
       }
 
       const payload = {
@@ -100,7 +108,8 @@ export function LogSessionModal({ skater, team, isSynchro, logToEdit, onLogCreat
         energy_stamina: energy,
         sentiment_emoji: mood,
         wellbeing_mental_focus_notes: mentalFocus,
-        coach_notes: notes,
+        coach_notes: coachNotes,   // Send both notes
+        skater_notes: skaterNotes, // Backend permissions will ignore the one they can't edit
         attendance: attendanceList
       };
 
@@ -221,10 +230,41 @@ export function LogSessionModal({ skater, team, isSynchro, logToEdit, onLogCreat
              <Input value={mentalFocus} onChange={(e) => setMentalFocus(e.target.value)} placeholder="Focus notes..." />
           </div>
 
-          <div className="space-y-2"><Label>Coach Notes</Label><Textarea className="min-h-[80px]" placeholder="Technical feedback..." value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
+          {/* NOTES SECTION - SPLIT VIEW */}
+          <div className="space-y-3 border-t pt-4">
+             {/* Coach Notes */}
+             <div className="space-y-1.5">
+                 <Label className="text-xs font-bold text-blue-700 uppercase">
+                    {isCoach ? "Coach Notes (Your Feedback)" : "Coach Feedback (Read Only)"}
+                 </Label>
+                 <Textarea 
+                    value={coachNotes} 
+                    onChange={(e) => setCoachNotes(e.target.value)} 
+                    disabled={!isCoach} // Only coach can edit
+                    className={!isCoach ? "bg-slate-50 text-slate-600" : ""}
+                    placeholder={isCoach ? "Technical feedback..." : "Waiting for coach feedback..."}
+                 />
+             </div>
+
+             {/* Skater/Parent Notes */}
+             <div className="space-y-1.5">
+                 <Label className="text-xs font-bold text-green-700 uppercase">
+                    {isFamily ? "My Notes / Reflections" : "Skater Reflections (Read Only)"}
+                 </Label>
+                 <Textarea 
+                    value={skaterNotes} 
+                    onChange={(e) => setSkaterNotes(e.target.value)} 
+                    disabled={!isFamily} // Only family can edit
+                    className={!isFamily ? "bg-slate-50 text-slate-600" : ""}
+                    placeholder={isFamily ? "How did it feel?" : "No reflections yet."}
+                 />
+             </div>
+          </div>
 
           <DialogFooter className="flex justify-between items-center">
-              {logToEdit ? <Button type="button" variant="destructive" onClick={handleDelete}>Delete</Button> : <div></div>}
+              {logToEdit && canDelete ? ( // Only show Delete if allowed (Coach)
+                  <Button type="button" variant="destructive" onClick={handleDelete}>Delete</Button>
+              ) : <div></div>}
               <Button type="submit" disabled={loading}>{loading ? 'Saving...' : 'Save Log'}</Button>
           </DialogFooter>
         </form>

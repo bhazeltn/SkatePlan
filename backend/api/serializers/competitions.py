@@ -15,6 +15,11 @@ class CompetitionResultSerializer(serializers.ModelSerializer):
         queryset=Competition.objects.all(), source="competition", write_only=True
     )
 
+    # --- FIX: Mark object_id as read_only so validation passes ---
+    object_id = serializers.IntegerField(read_only=True)
+    planning_entity_type = serializers.SerializerMethodField()
+    # -------------------------------------------------------------
+
     class Meta:
         model = CompetitionResult
         fields = (
@@ -30,9 +35,15 @@ class CompetitionResultSerializer(serializers.ModelSerializer):
             "notes",
             "detail_sheet",
             "video_url",
+            "object_id",  # Included in output
+            "planning_entity_type",  # Included in output
         )
 
-    # --- FIX: Parse JSON strings from FormData ---
+    def get_planning_entity_type(self, obj):
+        if obj.content_type:
+            return obj.content_type.model_class().__name__
+        return "Unknown"
+
     def validate_segment_scores(self, value):
         if isinstance(value, str):
             try:
@@ -41,10 +52,11 @@ class CompetitionResultSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("Invalid JSON format.")
         return value
 
-    # ---------------------------------------------
-
 
 class SkaterTestSerializer(serializers.ModelSerializer):
+    # FIX: Mark skater as read_only so validation doesn't fail when missing from payload
+    skater = serializers.PrimaryKeyRelatedField(read_only=True)
+
     class Meta:
         model = SkaterTest
         fields = (
@@ -70,6 +82,10 @@ class ProgramAssetSerializer(serializers.ModelSerializer):
 class ProgramSerializer(serializers.ModelSerializer):
     assets = ProgramAssetSerializer(many=True, read_only=True)
 
+    # Ensure these are read_only
+    object_id = serializers.IntegerField(read_only=True)
+    planning_entity_type = serializers.SerializerMethodField()
+
     class Meta:
         model = Program
         fields = (
@@ -84,9 +100,15 @@ class ProgramSerializer(serializers.ModelSerializer):
             "is_active",
             "music_file",
             "assets",
+            "object_id",
+            "planning_entity_type",
         )
 
-    # --- FIX: Parse JSON strings from FormData ---
+    def get_planning_entity_type(self, obj):
+        if obj.content_type:
+            return obj.content_type.model_class().__name__
+        return "Unknown"
+
     def validate_planned_elements(self, value):
         if isinstance(value, str):
             try:
@@ -94,5 +116,3 @@ class ProgramSerializer(serializers.ModelSerializer):
             except json.JSONDecodeError:
                 raise serializers.ValidationError("Invalid JSON format.")
         return value
-
-    # ---------------------------------------------

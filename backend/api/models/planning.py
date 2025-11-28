@@ -148,6 +148,7 @@ class Goal(models.Model):
     id = models.AutoField(primary_key=True)
     title = models.CharField(max_length=255)
 
+    # Link to Discipline (Singles, Team, etc.)
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
     object_id = models.PositiveIntegerField()
     planning_entity = GenericForeignKey("content_type", "object_id")
@@ -159,6 +160,15 @@ class Goal(models.Model):
         blank=True,
         related_name="assigned_goals",
     )
+
+    # --- NEW: AUDIT FIELDS ---
+    created_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, related_name="created_goals"
+    )
+    updated_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, related_name="updated_goals"
+    )
+    # -------------------------
 
     goal_type = models.CharField(max_length=50, blank=True, null=True)
     goal_timeframe = models.CharField(max_length=50, blank=True, null=True)

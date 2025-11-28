@@ -10,8 +10,7 @@ import { Calendar, Trophy, ArrowRight } from 'lucide-react';
 // Helper to format dates
 const formatDate = (d) => new Date(d).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
 
-// --- UPDATED: Accept 'team' prop ---
-export function YearlyPlansTab({ skater, team, isSynchro }) {
+export function YearlyPlansTab({ skater, team, isSynchro, readOnly }) { // <--- Added readOnly
   const { token } = useAuth();
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -49,12 +48,16 @@ export function YearlyPlansTab({ skater, team, isSynchro }) {
             <h3 className="text-lg font-semibold">Season Plans</h3>
             <p className="text-sm text-muted-foreground">Manage YTPs and Macrocycles</p>
         </div>
-        <CreateYearlyPlanModal 
-          skater={skater} 
-          team={team} 
-          isSynchro={isSynchro} // Pass it down
-          onPlanCreated={fetchPlans} 
-      />
+        
+        {/* HIDE CREATE BUTTON IF READ ONLY */}
+        {!readOnly && (
+            <CreateYearlyPlanModal 
+              skater={skater} 
+              team={team} 
+              isSynchro={isSynchro}
+              onPlanCreated={fetchPlans} 
+          />
+        )}
       </div>
 
       {/* Plan List */}
@@ -86,9 +89,13 @@ export function YearlyPlansTab({ skater, team, isSynchro }) {
                                     </span>
                                 )}
                             </p>
-                            <div onClick={(e) => e.stopPropagation()}>
-                                <EditSeasonModal season={plan.season_info} onUpdated={fetchPlans} />
-                            </div>
+                            
+                            {/* HIDE SEASON EDIT IF READ ONLY */}
+                            {!readOnly && (
+                                <div onClick={(e) => e.stopPropagation()}>
+                                    <EditSeasonModal season={plan.season_info} onUpdated={fetchPlans} />
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>

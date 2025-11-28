@@ -5,7 +5,7 @@ import { apiRequest } from '@/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { User, Calendar, MapPin, ArrowLeft } from 'lucide-react';
-import { FederationFlag } from '@/components/ui/FederationFlag'; // <--- Import
+import { FederationFlag } from '@/components/ui/FederationFlag';
 
 // Tabs
 import { WeeklyPlanTab } from '@/components/dashboard/tabs/WeeklyPlanTab';
@@ -23,10 +23,32 @@ import { GapAnalysisTab } from '@/components/dashboard/tabs/GapAnalysisTab';
 export default function AthleteSeasonDashboard() {
   const params = useParams();
   const id = params.id || params.skaterId;
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [skater, setSkater] = useState(null);
   const [activeTab, setActiveTab] = useState('weekly');
   const [loading, setLoading] = useState(true);
+
+  // --- PERMISSIONS LOGIC ---
+  const isGuardian = user?.role === 'GUARDIAN';
+  const isSkater = user?.role === 'SKATER';
+  const isCoach = !isGuardian && !isSkater; 
+
+  const permissions = {
+      role: user?.role,
+      canEditPlan: isCoach,
+      canEditGoals: true,
+      canEditLogs: true,
+      canEditHealth: true,
+      
+      // SPLIT COMPETITION/TEST PERMISSIONS
+      canCreateCompetitions: isCoach, // Only Coach adds events/tests
+      canEditCompetitions: true,      // Parents can edit results/tests
+      
+      canEditProfile: isCoach,  
+      viewGapAnalysis: isCoach || isSkater, 
+      readOnly: !isCoach,       
+  };
+  // ------------------------
 
   const fetchSkater = async () => {
     if (!id || id === 'undefined') return;
@@ -43,9 +65,11 @@ export default function AthleteSeasonDashboard() {
   const formatTabLabel = (str) => str.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
 
   if (loading) return <div className="p-8">Loading...</div>;
-  if (!skater) return <div className="p-8">Not found.</div>;
+  if (!skater) return <div className="p-8">Not found or access denied.</div>;
 
-  const tabs = ['weekly', 'yearly', 'gap_analysis', 'goals', 'programs', 'competitions', 'tests', 'logs', 'health', 'analytics', 'profile'];
+  const tabs = ['weekly', 'yearly'];
+  if (permissions.viewGapAnalysis) tabs.push('gap_analysis');
+  tabs.push('goals', 'programs', 'competitions', 'tests', 'logs', 'health', 'analytics', 'profile');
 
   return (
     <div className="p-8 min-h-screen bg-gray-50">
@@ -55,16 +79,13 @@ export default function AthleteSeasonDashboard() {
             <div>
                 <h1 className="text-3xl font-bold text-gray-900">{skater.full_name}</h1>
                 <div className="flex gap-3 text-sm text-muted-foreground mt-1 items-center">
-                    {/* --- FIX: Use FederationFlag --- */}
                     <FederationFlag federation={skater.federation} />
-                    {/* ------------------------------- */}
-                    
                     <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {skater.date_of_birth}</span>
                     {skater.home_club && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {skater.home_club}</span>}
                 </div>
             </div>
         </div>
-        <a href="#/"><Button variant="outline"><ArrowLeft className="h-4 w-4 mr-2" /> Back to Roster</Button></a>
+        <a href="#/"><Button variant="outline"><ArrowLeft className="h-4 w-4 mr-2" /> Back to Dashboard</Button></a>
       </div>
 
       <div className="flex space-x-2 border-b mb-6 overflow-x-auto no-scrollbar">
@@ -74,17 +95,20 @@ export default function AthleteSeasonDashboard() {
       </div>
 
       <div className="min-h-[400px]">
-        {activeTab === 'weekly' && <WeeklyPlanTab skater={skater} />}
-        {activeTab === 'yearly' && <YearlyPlansTab skater={skater} />}
+        {activeTab === 'weekly' && <WeeklyPlanTab skater={skater} readOnly={permissions.readOnly} />}
+        {activeTab === 'yearly' && <YearlyPlansTab skater={skater} readOnly={permissions.readOnly} />}
         {activeTab === 'gap_analysis' && <GapAnalysisTab skater={skater} />}
-        {activeTab === 'goals' && <GoalsTab skater={skater} />}
-        {activeTab === 'programs' && <ProgramsTab skater={skater} />}
-        {activeTab === 'competitions' && <CompetitionsTab skater={skater} />}
-        {activeTab === 'tests' && <TestsTab skater={skater} />}
-        {activeTab === 'logs' && <LogsTab skater={skater} />}
+        {activeTab === 'goals' && <GoalsTab skater={skater} permissions={permissions} />}
+        {activeTab === 'programs' && <ProgramsTab skater={skater} readOnly={permissions.readOnly} />}
+        {activeTab === 'competitions' && <CompetitionsTab skater={skater} permissions={permissions} />}
+        
+        {/* FIX: Pass permissions prop here */}
+        {activeTab === 'tests' && <TestsTab skater={skater} permissions={permissions} />}
+        
+        {activeTab === 'logs' && <LogsTab skater={skater} permissions={permissions} />}
         {activeTab === 'health' && <HealthTab skater={skater} />}
         {activeTab === 'analytics' && <AnalyticsTab skater={skater} />}
-        {activeTab === 'profile' && <ProfileTab skater={skater} onUpdated={fetchSkater} />}
+        {activeTab === 'profile' && <ProfileTab skater={skater} onUpdated={fetchSkater} readOnly={permissions.readOnly} />}
       </div>
     </div>
   );

@@ -24,7 +24,7 @@ from api.serializers import (
     ProgramSerializer,
     ProgramAssetSerializer,
 )
-from api.permissions import IsCoachUser
+from api.permissions import IsCoachUser, IsCoachOrOwner
 
 
 class CompetitionListCreateView(generics.ListCreateAPIView):
@@ -41,6 +41,12 @@ class CompetitionListCreateView(generics.ListCreateAPIView):
         return queryset
 
     def create(self, request, *args, **kwargs):
+        # Only coaches should create comps
+        if not (
+            request.user.role in ["COACH", "COLLABORATOR"] or request.user.is_superuser
+        ):
+            return Response({"error": "Forbidden"}, status=403)
+
         city = request.data.get("city")
         start_str = request.data.get("start_date")
         end_str = request.data.get("end_date")
@@ -74,15 +80,18 @@ class CompetitionListCreateView(generics.ListCreateAPIView):
 
 
 class CompetitionResultListCreateView(generics.ListCreateAPIView):
-    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    permission_classes = [permissions.IsAuthenticated, IsCoachOrOwner]
     serializer_class = CompetitionResultSerializer
 
     def get_queryset(self):
         skater_id = self.kwargs["skater_id"]
         skater = Skater.objects.get(id=skater_id)
-        # Find results for all skater's entities
-        entities = list(skater.singles_entities.all()) + list(
-            skater.solodance_entities.all()
+        # FIX: Include Partner B entities
+        entities = (
+            list(skater.singles_entities.all())
+            + list(skater.solodance_entities.all())
+            + list(skater.teams_as_partner_a.all())
+            + list(skater.teams_as_partner_b.all())
         )
         entity_ids = [e.id for e in entities]
         return CompetitionResult.objects.filter(object_id__in=entity_ids).order_by(
@@ -96,10 +105,12 @@ class CompetitionResultListCreateView(generics.ListCreateAPIView):
         # Try explicit entity ID
         entity_id = self.request.data.get("planning_entity_id")
         entity = None
+        # FIX: Include Partner B entities
         all_entities = (
             list(skater.singles_entities.all())
             + list(skater.solodance_entities.all())
             + list(skater.teams_as_partner_a.all())
+            + list(skater.teams_as_partner_b.all())
         )
 
         if entity_id:
@@ -118,13 +129,13 @@ class CompetitionResultListCreateView(generics.ListCreateAPIView):
 
 
 class CompetitionResultDetailView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    permission_classes = [permissions.IsAuthenticated, IsCoachOrOwner]
     serializer_class = CompetitionResultSerializer
     queryset = CompetitionResult.objects.all()
 
 
 class SkaterTestListCreateView(generics.ListCreateAPIView):
-    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    permission_classes = [permissions.IsAuthenticated, IsCoachOrOwner]
     serializer_class = SkaterTestSerializer
 
     def get_queryset(self):
@@ -138,13 +149,13 @@ class SkaterTestListCreateView(generics.ListCreateAPIView):
 
 
 class SkaterTestDetailView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    permission_classes = [permissions.IsAuthenticated, IsCoachOrOwner]
     serializer_class = SkaterTestSerializer
     queryset = SkaterTest.objects.all()
 
 
 class ProgramListCreateView(generics.ListCreateAPIView):
-    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    permission_classes = [permissions.IsAuthenticated, IsCoachOrOwner]
     serializer_class = ProgramSerializer
 
     def get_queryset(self):
@@ -171,7 +182,7 @@ class ProgramListCreateView(generics.ListCreateAPIView):
 
 
 class ProgramDetailView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    permission_classes = [permissions.IsAuthenticated, IsCoachOrOwner]
     serializer_class = ProgramSerializer
     queryset = Program.objects.all()
 

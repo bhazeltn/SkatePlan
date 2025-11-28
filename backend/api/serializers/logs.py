@@ -25,6 +25,7 @@ class SessionLogSerializer(serializers.ModelSerializer):
             "spin_focus",
             "synchro_element_focus",
         )
+        read_only_fields = ("author",)
 
     def get_discipline_name(self, obj):
         if obj.planning_entity:
@@ -39,18 +40,30 @@ class SessionLogSerializer(serializers.ModelSerializer):
     def get_author_name(self, obj):
         return obj.author.full_name if obj.author else "Unknown"
 
+    def update(self, instance, validated_data):
+        request = self.context.get("request")
+        if request and request.user:
+            user = request.user
+            if user.role in ["COACH", "COLLABORATOR"] or user.is_superuser:
+                if "skater_notes" in validated_data:
+                    validated_data.pop("skater_notes")
+            elif user.role in ["SKATER", "GUARDIAN"]:
+                if "coach_notes" in validated_data:
+                    validated_data.pop("coach_notes")
+        return super().update(instance, validated_data)
+
 
 class InjuryLogSerializer(serializers.ModelSerializer):
-    # --- NEW: Expose Skater Name ---
+    # FIX: Mark skater as read_only to prevent validation error
+    skater = serializers.PrimaryKeyRelatedField(read_only=True)
     skater_name = serializers.SerializerMethodField()
-    # -------------------------------
 
     class Meta:
         model = InjuryLog
         fields = (
             "id",
             "skater",
-            "skater_name",  # <--- Add field
+            "skater_name",
             "injury_type",
             "body_area",
             "date_of_onset",

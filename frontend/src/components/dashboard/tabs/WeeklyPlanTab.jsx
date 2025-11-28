@@ -7,7 +7,7 @@ import { format, addDays, startOfWeek, parseISO } from 'date-fns';
 import { UnifiedDayCard } from './UnifiedDayCard';
 import { WeeklyEditModal } from './WeeklyEditModal';
 
-export function WeeklyPlanTab({ skater, team, isSynchro }) { // <--- Accept isSynchro
+export function WeeklyPlanTab({ skater, team, isSynchro, readOnly }) { // <--- Added readOnly
   const { token } = useAuth();
   const [loading, setLoading] = useState(true);
   
@@ -21,23 +21,18 @@ export function WeeklyPlanTab({ skater, team, isSynchro }) { // <--- Accept isSy
   const fetchWeek = async (dateStr) => {
       setLoading(true);
       try {
-          // --- FIX: PRIORITY LOGIC ---
           let url = '';
           if (isSynchro && team) {
-               // Synchro Team View
                url = `/synchro/${team.id}/week-view/?date=${dateStr}`;
           } else if (team) {
-               // Pairs/Dance Team View
                url = `/teams/${team.id}/week-view/?date=${dateStr}`;
           } else if (skater) {
-               // Individual Skater View
                url = `/skaters/${skater.id}/week-view/?date=${dateStr}`;
           } else {
                console.error("WeeklyPlanTab: No context provided");
                setLoading(false);
                return;
           }
-          // ---------------------------
 
           const data = await apiRequest(url, 'GET', null, token);
           setPlans(data.plans || []);
@@ -78,10 +73,13 @@ export function WeeklyPlanTab({ skater, team, isSynchro }) { // <--- Accept isSy
         </div>
 
         <div className="flex gap-2">
-            <Button onClick={() => setIsEditing(true)} disabled={plans.length === 0}>
-                <Pencil className="h-4 w-4 mr-2" /> 
-                Manage Weekly Plan
-            </Button>
+            {/* Hide Edit Button if Read Only */}
+            {!readOnly && (
+                <Button onClick={() => setIsEditing(true)} disabled={plans.length === 0}>
+                    <Pencil className="h-4 w-4 mr-2" /> 
+                    Manage Weekly Plan
+                </Button>
+            )}
         </div>
       </div>
 

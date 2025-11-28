@@ -151,6 +151,10 @@ class WeeklyPlanSerializer(serializers.ModelSerializer):
 
 
 class GoalSerializer(serializers.ModelSerializer):
+    created_by_name = serializers.SerializerMethodField()
+    updated_by_name = serializers.SerializerMethodField()
+    discipline = serializers.SerializerMethodField()
+
     class Meta:
         model = Goal
         fields = (
@@ -164,7 +168,45 @@ class GoalSerializer(serializers.ModelSerializer):
             "current_status",
             "progress_notes",
             "created_at",
+            "updated_at",
+            "created_by_name",
+            "updated_by_name",
+            "discipline",
+            "coach_review_notes",
         )
+        read_only_fields = ("created_by", "updated_by", "current_status")
+
+    def get_created_by_name(self, obj):
+        return obj.created_by.full_name if obj.created_by else "System"
+
+    def get_updated_by_name(self, obj):
+        return obj.updated_by.full_name if obj.updated_by else "System"
+
+    def get_discipline(self, obj):
+        # Polymorphic lookup for the display name
+        if obj.planning_entity:
+            if hasattr(obj.planning_entity, "team_name"):
+                return f"{obj.planning_entity.team_name}"  # Team/Synchro
+            if hasattr(obj.planning_entity, "name"):
+                return obj.planning_entity.name  # Singles/Dance Entity name
+        return "General"
+
+    def validate(self, data):
+        # --- PERMISSION LOCK LOGIC ---
+        # If this is an update (instance exists)
+        if self.instance:
+            user = self.context["request"].user
+
+            # If user is NOT a coach (i.e. Guardian or Skater)
+            if user.role in ["GUARDIAN", "SKATER"]:
+                # Check the status of the EXISTING record (from DB)
+                locked_statuses = ["APPROVED", "IN_PROGRESS", "COMPLETED", "ARCHIVED"]
+                if self.instance.current_status in locked_statuses:
+                    raise serializers.ValidationError(
+                        f"You cannot edit this goal because it is {self.instance.get_current_status_display()}. Only a coach can modify it now."
+                    )
+
+        return data
 
 
 class GapAnalysisSerializer(serializers.ModelSerializer):

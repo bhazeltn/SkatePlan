@@ -2,30 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Search, Trash2, Plus, X, ArrowDown } from 'lucide-react'; // Add ArrowDown
+import { Search, Trash2, Plus, X, ArrowDown } from 'lucide-react';
 import { apiRequest } from '@/api';
 import { useAuth } from '@/AuthContext';
-import { Switch } from '@/components/ui/switch'; // Import Switch
+import { Switch } from '@/components/ui/switch';
 
-export function ProgramElementRow({ index, element, onChange, onRemove }) {
+export function ProgramElementRow({ index, element, onChange, onRemove, readOnly }) { // <--- Added readOnly
   const { token } = useAuth();
   
-  // Structure: 
-  // { 
-  //   ..., 
-  //   base_value: '10.5', 
-  //   is_second_half: false 
-  // }
-
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchIndex, setSearchIndex] = useState(0);
 
-  // ... (Keep handleTypeChange, handleSearch, selectElement, add/removeComboJump logic same as before) ...
-  // Copy your existing logic for these handlers here. 
-  // For brevity in this snippet, I am focusing on the Render changes.
-  
-  // (Restore the handlers from previous step if overwriting file)
   const handleTypeChange = (e) => {
       onChange(index, {
           ...element,
@@ -84,6 +72,7 @@ export function ProgramElementRow({ index, element, onChange, onRemove }) {
             className="h-8 w-[70px] rounded border bg-slate-50 text-xs"
             value={element.type}
             onChange={handleTypeChange}
+            disabled={readOnly} // <--- Disabled
         >
             <option value="JUMP">Jump</option>
             <option value="SPIN">Spin</option>
@@ -103,8 +92,9 @@ export function ProgramElementRow({ index, element, onChange, onRemove }) {
                             value={comp.name}
                             onChange={(e) => handleSearch(e.target.value, i)}
                             placeholder={i === 0 ? "Code" : "Combo"}
+                            disabled={readOnly} // <--- Disabled
                         />
-                        {isSearching && searchIndex === i && searchResults.length > 0 && (
+                        {!readOnly && isSearching && searchIndex === i && searchResults.length > 0 && (
                             <div className="absolute top-9 left-0 w-48 bg-white border shadow-lg rounded z-50 max-h-40 overflow-y-auto">
                                 {searchResults.map(res => (
                                     <div key={res.id} className="p-2 hover:bg-blue-50 cursor-pointer text-xs" onClick={() => selectElement(res)}>
@@ -114,12 +104,12 @@ export function ProgramElementRow({ index, element, onChange, onRemove }) {
                             </div>
                         )}
                     </div>
-                    {i > 0 && (
+                    {!readOnly && i > 0 && (
                         <button type="button" onClick={() => removeComboJump(i)} className="ml-1 text-gray-300 hover:text-red-500"><X className="h-3 w-3" /></button>
                     )}
                 </div>
             ))}
-            {element.type === 'JUMP' && element.components.length < 3 && (
+            {!readOnly && element.type === 'JUMP' && element.components.length < 3 && (
                 <Button type="button" variant="ghost" size="icon" className="h-6 w-6 rounded-full" onClick={addComboJump}>
                     <Plus className="h-3 w-3" />
                 </Button>
@@ -133,6 +123,7 @@ export function ProgramElementRow({ index, element, onChange, onRemove }) {
                 placeholder="Lvl" 
                 value={element.level} 
                 onChange={(e) => onChange(index, { ...element, level: e.target.value })}
+                disabled={readOnly} // <--- Disabled
             />
         )}
 
@@ -144,6 +135,7 @@ export function ProgramElementRow({ index, element, onChange, onRemove }) {
                     className="scale-75" 
                     checked={element.is_second_half || false}
                     onCheckedChange={(c) => onChange(index, { ...element, is_second_half: c })}
+                    disabled={readOnly} // <--- Disabled
                 />
              </div>
         )}
@@ -157,13 +149,16 @@ export function ProgramElementRow({ index, element, onChange, onRemove }) {
                 step="0.01"
                 value={element.base_value}
                 onChange={(e) => onChange(index, { ...element, base_value: e.target.value })}
+                disabled={readOnly} // <--- Disabled
             />
         </div>
 
         {/* 7. Delete */}
-        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-red-500" onClick={() => onRemove(index)}>
-            <Trash2 className="h-4 w-4" />
-        </Button>
+        {!readOnly && (
+            <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-red-500" onClick={() => onRemove(index)}>
+                <Trash2 className="h-4 w-4" />
+            </Button>
+        )}
     </div>
   );
 }

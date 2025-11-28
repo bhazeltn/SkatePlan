@@ -9,7 +9,7 @@ import { AlertTriangle, Shield, User, Mail } from 'lucide-react';
 import { apiRequest } from '@/api';
 import { useAuth } from '@/AuthContext';
 
-export function ProfileTab({ skater, onUpdated }) {
+export function ProfileTab({ skater, onUpdated, readOnly }) {
   const { token } = useAuth();
 
   const handleDelete = async () => {
@@ -41,7 +41,38 @@ export function ProfileTab({ skater, onUpdated }) {
       <Card>
         <CardHeader className="flex flex-row justify-between items-center pb-4 border-b">
             <CardTitle>Athlete Details</CardTitle>
-            <EditSkaterModal skater={skater} onSkaterUpdated={onUpdated} />
+            
+            {/* HIDE ACTIONS IF READ ONLY */}
+            {!readOnly && (
+                <div className="flex gap-2">
+                    <InviteUserModal 
+                        entityType="Skater" entityId={skater.id} entityName={skater.full_name}
+                        skaterDOB={skater.date_of_birth} hasGuardian={skater.guardians?.length > 0}
+                        defaultRole="GUARDIAN"
+                        lockRole={true} 
+                        trigger={<Button size="sm" variant="outline">Invite Parent/Guardian</Button>}
+                    />
+
+                    <InviteUserModal 
+                        entityType="Skater" entityId={skater.id} entityName={skater.full_name}
+                        skaterDOB={skater.date_of_birth} hasGuardian={skater.guardians?.length > 0}
+                        defaultRole="ATHLETE"
+                        lockRole={true}
+                        trigger={
+                            <Button 
+                                size="sm" 
+                                variant="outline" 
+                                disabled={isYoungMinor} 
+                                title={isYoungMinor ? "Direct access not available for athletes under 13." : ""}
+                            >
+                                Invite Athlete
+                            </Button>
+                        }
+                    />
+                    
+                    <EditSkaterModal skater={skater} onSkaterUpdated={onUpdated} />
+                </div>
+            )}
         </CardHeader>
         
         <CardContent className="pt-6 space-y-6">
@@ -55,7 +86,7 @@ export function ProfileTab({ skater, onUpdated }) {
                 <div><label className="text-xs font-bold text-gray-500 uppercase">Home Club</label><p className="text-lg">{skater.home_club || '-'}</p></div>
             </div>
 
-            {/* ACCOUNT CONNECTIONS (Compact & Grouped) */}
+            {/* ACCOUNT CONNECTIONS */}
             <div className="bg-slate-50 rounded-lg border border-slate-200 overflow-hidden">
                 <div className="px-4 py-2 bg-slate-100 border-b border-slate-200 flex justify-between items-center">
                     <h4 className="text-xs font-bold text-gray-700 uppercase">Linked Accounts</h4>
@@ -78,13 +109,20 @@ export function ProfileTab({ skater, onUpdated }) {
                             ) : (
                                 <div className="flex items-center gap-4">
                                     <span className="text-sm text-gray-400 italic">Not Linked</span>
-                                    <InviteUserModal 
-                                        entityType="Skater" entityId={skater.id} entityName={skater.full_name}
-                                        skaterDOB={skater.date_of_birth} hasGuardian={hasGuardian}
-                                        defaultRole="ATHLETE"
-                                        lockRole={true}
-                                        trigger={<Button size="sm" variant="link" className="h-auto p-0">Invite</Button>}
-                                    />
+                                    {/* Standardized Button */}
+                                    {!readOnly && (
+                                        <InviteUserModal 
+                                            entityType="Skater" entityId={skater.id} entityName={skater.full_name}
+                                            skaterDOB={skater.date_of_birth} hasGuardian={hasGuardian}
+                                            defaultRole="ATHLETE"
+                                            lockRole={true}
+                                            trigger={
+                                                <Button size="sm" variant="outline" className="h-7 text-xs">
+                                                    <Mail className="h-3 w-3 mr-1.5" /> Invite
+                                                </Button>
+                                            }
+                                        />
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -93,7 +131,7 @@ export function ProfileTab({ skater, onUpdated }) {
                     {/* 2. Guardian Row */}
                     <div className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-8">
                         <div className="w-32 flex items-center gap-2 text-sm font-medium text-gray-900 mt-1">
-                            <Shield className="h-4 w-4 text-purple-500" /> Guardian(s)
+                            <Shield className="h-4 w-4 text-purple-500" /> Parent / Guardian
                         </div>
                         <div className="flex-1 space-y-2">
                             {hasGuardian ? (
@@ -108,15 +146,22 @@ export function ProfileTab({ skater, onUpdated }) {
                                 <span className="text-sm text-gray-400 italic">None linked</span>
                             )}
                             
-                            <div className="pt-1">
-                                <InviteUserModal 
-                                    entityType="Skater" entityId={skater.id} entityName={skater.full_name}
-                                    skaterDOB={skater.date_of_birth} hasGuardian={hasGuardian}
-                                    defaultRole="GUARDIAN"
-                                    lockRole={true} 
-                                    trigger={<Button size="sm" variant="outline" className="h-7 text-xs"><Mail className="h-3 w-3 mr-1.5" /> Invite Guardian</Button>}
-                                />
-                            </div>
+                            {/* Standardized Button */}
+                            {!readOnly && (
+                                <div className="pt-1">
+                                    <InviteUserModal 
+                                        entityType="Skater" entityId={skater.id} entityName={skater.full_name}
+                                        skaterDOB={skater.date_of_birth} hasGuardian={hasGuardian}
+                                        defaultRole="GUARDIAN"
+                                        lockRole={true} 
+                                        trigger={
+                                            <Button size="sm" variant="outline" className="h-7 text-xs">
+                                                <Mail className="h-3 w-3 mr-1.5" /> Invite Parent/Guardian
+                                            </Button>
+                                        }
+                                    />
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -138,20 +183,22 @@ export function ProfileTab({ skater, onUpdated }) {
                           <span className="font-bold text-gray-900">{entity.name}</span>
                           <span className="ml-2 text-sm text-gray-500">{entity.current_level}</span>
                       </div>
-                      <EditDisciplineModal entity={entity} onUpdated={onUpdated} />
+                      {!readOnly && <EditDisciplineModal entity={entity} onUpdated={onUpdated} />}
                   </div>
               ))}
           </CardContent>
       </Card>
 
       {/* Danger Zone */}
-      <Card className="border-red-100">
-          <CardHeader className="bg-red-50/50 border-b border-red-100"><CardTitle className="text-red-800 flex items-center gap-2"><AlertTriangle className="h-5 w-5" /> Danger Zone</CardTitle></CardHeader>
-          <CardContent className="p-6 flex justify-between items-center">
-              <div className="text-sm text-gray-600"><p className="font-medium text-gray-900">Delete Athlete</p><p>Permanently remove this profile and all data.</p></div>
-              <Button variant="destructive" onClick={handleDelete}>Delete Profile</Button>
-          </CardContent>
-      </Card>
+      {!readOnly && (
+          <Card className="border-red-100">
+              <CardHeader className="bg-red-50/50 border-b border-red-100"><CardTitle className="text-red-800 flex items-center gap-2"><AlertTriangle className="h-5 w-5" /> Danger Zone</CardTitle></CardHeader>
+              <CardContent className="p-6 flex justify-between items-center">
+                  <div className="text-sm text-gray-600"><p className="font-medium text-gray-900">Delete Athlete</p><p>Permanently remove this profile and all data.</p></div>
+                  <Button variant="destructive" onClick={handleDelete}>Delete Profile</Button>
+              </CardContent>
+          </Card>
+      )}
     </div>
   );
 }

@@ -6,12 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { CheckCircle2, XCircle, Loader2, UserCheck } from 'lucide-react';
 
 export default function AcceptInvite() {
   const { token } = useParams();
   const navigate = useNavigate();
-  const { setAuth } = useAuth(); // Use setAuth instead of login
+  const { setAuth } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [valid, setValid] = useState(false);
@@ -39,23 +39,37 @@ export default function AcceptInvite() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (password !== confirm) return alert("Passwords do not match");
+    
+    // Validation
+    if (!inviteData.user_exists && password !== confirm) {
+        return alert("Passwords do not match");
+    }
     
     setSubmitting(true);
     try {
-        const data = await apiRequest(`/invitations/accept/${token}/`, 'POST', {
-            password, full_name: fullName
-        });
+        const payload = { password };
+        if (!inviteData.user_exists) {
+            payload.full_name = fullName;
+        }
+
+        const data = await apiRequest(`/invitations/accept/${token}/`, 'POST', payload);
         
         if (data.token) {
-            // FIX: Use setAuth to directly set state without another API call
-            setAuth(data.token, { id: data.user_id, role: data.role, email: inviteData.email, full_name: fullName });
+            // Determine display name (Use existing from token if available, else form)
+            const name = inviteData.user_exists ? "User" : fullName;
             
-            if (data.role === 'ATHLETE') navigate('/my-dashboard');
+            setAuth(data.token, { 
+                id: data.user_id, 
+                role: data.role, 
+                email: inviteData.email, 
+                full_name: name 
+            });
+            
+            if (data.role === 'SKATER' || data.role === 'ATHLETE') navigate('/my-dashboard');
             else navigate('/'); 
         }
     } catch (err) {
-        alert("Registration failed: " + (err.message || "Unknown error"));
+        alert("Failed: " + (err.message || "Unknown error"));
     } finally {
         setSubmitting(false);
     }
@@ -74,16 +88,21 @@ export default function AcceptInvite() {
       </div>
   );
 
+  const isExisting = inviteData.user_exists;
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="text-center space-y-2">
             <div className="bg-blue-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2">
-                <CheckCircle2 className="h-6 w-6 text-blue-600" />
+                {isExisting ? <UserCheck className="h-6 w-6 text-blue-600" /> : <CheckCircle2 className="h-6 w-6 text-blue-600" />}
             </div>
-            <CardTitle className="text-2xl">Welcome to SkatePlan</CardTitle>
+            <CardTitle className="text-2xl">{isExisting ? 'Accept Collaboration' : 'Welcome to SkatePlan'}</CardTitle>
             <CardDescription>
-                Completing registration as <strong>{inviteData.role}</strong> for <strong>{inviteData.target}</strong>
+                {isExisting 
+                    ? `Link your existing account to ${inviteData.target}`
+                    : `Completing registration as ${inviteData.role} for ${inviteData.target}`
+                }
             </CardDescription>
         </CardHeader>
         <CardContent>
@@ -92,20 +111,30 @@ export default function AcceptInvite() {
                     <Label>Email</Label>
                     <Input value={inviteData.email} disabled className="bg-slate-50" />
                 </div>
+                
+                {/* SHOW NAME ONLY FOR NEW USERS */}
+                {!isExisting && (
+                    <div className="space-y-2">
+                        <Label>Full Name</Label>
+                        <Input value={fullName} onChange={e => setFullName(e.target.value)} required />
+                    </div>
+                )}
+
                 <div className="space-y-2">
-                    <Label>Full Name</Label>
-                    <Input value={fullName} onChange={e => setFullName(e.target.value)} required />
-                </div>
-                <div className="space-y-2">
-                    <Label>Password</Label>
+                    <Label>{isExisting ? 'Verify Password' : 'Create Password'}</Label>
                     <Input type="password" value={password} onChange={e => setPassword(e.target.value)} required minLength={6} />
                 </div>
-                <div className="space-y-2">
-                    <Label>Confirm Password</Label>
-                    <Input type="password" value={confirm} onChange={e => setConfirm(e.target.value)} required />
-                </div>
+
+                {/* SHOW CONFIRM ONLY FOR NEW USERS */}
+                {!isExisting && (
+                    <div className="space-y-2">
+                        <Label>Confirm Password</Label>
+                        <Input type="password" value={confirm} onChange={e => setConfirm(e.target.value)} required />
+                    </div>
+                )}
+
                 <Button type="submit" className="w-full" disabled={submitting}>
-                    {submitting ? 'Creating Account...' : 'Join Now'}
+                    {submitting ? 'Processing...' : (isExisting ? 'Accept & Link' : 'Join Now')}
                 </Button>
             </form>
         </CardContent>

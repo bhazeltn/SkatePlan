@@ -15,21 +15,49 @@ from api.models import (
     CompetitionResult,
     WeeklyPlan,
     AthleteSeason,
+    PlanningEntityAccess,
     SinglesEntity,
     SoloDanceEntity,
     Team,
     SynchroTeam,
+    User,
 )
 from api.serializers import SessionLogSerializer
 from api.permissions import IsCoachUser, IsCoachOrOwner
 
 
-# --- 1. COACH DASHBOARD AGGREGATOR ---
 class CoachDashboardStatsView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsCoachUser]
 
     def get(self, request):
-        skaters = Skater.objects.all()
+        user = request.user
+
+        # 1. SECURITY: Fetch ONLY skaters this coach has access to
+        access_records = PlanningEntityAccess.objects.filter(user=user)
+
+        # Build map of {skater_id: access_level} for quick lookup
+        skater_access_map = {}
+        for record in access_records:
+            entity = record.planning_entity
+            if not entity:
+                continue
+
+            level = record.access_level
+
+            if hasattr(entity, "skater"):
+                skater_access_map[entity.skater.id] = level
+            elif hasattr(entity, "partner_a"):  # Team
+                skater_access_map[entity.partner_a.id] = level
+                skater_access_map[entity.partner_b.id] = level
+            elif hasattr(entity, "roster"):  # Synchro
+                for s in entity.roster.all():
+                    skater_access_map[s.id] = level
+
+        # Fetch actual skater objects
+        skaters = Skater.objects.filter(
+            id__in=skater_access_map.keys(), is_active=True
+        ).distinct()
+
         today = date.today()
         next_week = today + timedelta(days=7)
         two_weeks = today + timedelta(days=14)
@@ -48,8 +76,9 @@ class CoachDashboardStatsView(APIView):
         start_of_week = today - timedelta(days=today.weekday())
 
         for skater in skaters:
-            if not skater.is_active:
-                continue
+            # Determine if this is a shared/collaborative skater
+            is_shared = skater_access_map.get(skater.id) == "COLLABORATOR"
+
             active_seasons = skater.athlete_seasons.filter(is_active=True)
             if not active_seasons.exists():
                 continue
@@ -61,6 +90,7 @@ class CoachDashboardStatsView(APIView):
                             "skater": skater.full_name,
                             "id": skater.id,
                             "issue": f"No Plan for {season.season}",
+                            "is_shared": is_shared,
                         }
                     )
                 else:
@@ -78,16 +108,28 @@ class CoachDashboardStatsView(APIView):
                             {
                                 "skater": skater.full_name,
                                 "id": skater.id,
-                                "issue": f"Unplanned Week ({season.season})",
+                                "issue": f"Unplanned Week",
+                                "is_shared": is_shared,
                             }
                         )
 
         # C. Goals
+        # (Filtering goals by the accessible skaters)
+        goal_query = Q(assignee_skater__in=skaters)
+        singles_ids = SinglesEntity.objects.filter(skater__in=skaters).values_list(
+            "id", flat=True
+        )
+        if singles_ids:
+            ct = ContentType.objects.get_for_model(SinglesEntity)
+            goal_query |= Q(content_type=ct, object_id__in=singles_ids)
+
         overdue_goals = Goal.objects.filter(
+            goal_query,
             target_date__lt=today,
             current_status__in=["IN_PROGRESS", "PENDING", "APPROVED"],
         ).order_by("target_date")[:10]
         due_soon_goals = Goal.objects.filter(
+            goal_query,
             target_date__range=(today, next_week),
             current_status__in=["IN_PROGRESS", "PENDING", "APPROVED"],
         ).order_by("target_date")[:10]
@@ -96,108 +138,74 @@ class CoachDashboardStatsView(APIView):
             formatted = []
             for g in goal_list:
                 name = "Unknown"
-                link_id = ""
-                link_type = "skater"
+                skater_id = None
                 if g.assignee_skater:
                     name = g.assignee_skater.full_name
-                    link_id = g.assignee_skater.id
-                elif g.planning_entity:
-                    entity = g.planning_entity
-                    if hasattr(entity, "skater"):
-                        name = entity.skater.full_name
-                        link_id = entity.skater.id
-                    elif hasattr(entity, "team_name"):
-                        name = entity.team_name
-                        link_id = entity.id
-                        link_type = "team" if isinstance(entity, Team) else "synchro"
+                    skater_id = g.assignee_skater.id
+                elif g.planning_entity and hasattr(g.planning_entity, "skater"):
+                    name = g.planning_entity.skater.full_name
+                    skater_id = g.planning_entity.skater.id
+
+                is_shared = False
+                if skater_id:
+                    is_shared = skater_access_map.get(skater_id) == "COLLABORATOR"
+
                 formatted.append(
                     {
                         "title": g.title,
                         "due": g.target_date,
                         "skater_name": name,
-                        "link_id": link_id,
-                        "link_type": link_type,
+                        "is_shared": is_shared,
                     }
                 )
             return formatted
 
-        # D. Activity & Agenda
-        three_days_ago = today - timedelta(days=3)
-
+        # D. Activity
         recent_logs = (
-            SessionLog.objects.filter(session_date__gte=three_days_ago)
-            .select_related("athlete_season", "athlete_season__skater")
+            SessionLog.objects.filter(
+                athlete_season__skater__in=skaters,
+                session_date__gte=today - timedelta(days=3),
+            )
+            .select_related("athlete_season__skater")
             .order_by("-session_date")[:15]
         )
 
         activity_data = []
         for log in recent_logs:
-            season = log.athlete_season
-            name = "Unknown"
-            link = "#/"
+            if not log.athlete_season.skater:
+                continue
 
-            if season.skater:
-                name = season.skater.full_name
-                link = f"#/skater/{season.skater.id}?tab=logs"
-            elif season.planning_entity:
-                name = str(season.planning_entity)
-                if isinstance(season.planning_entity, Team):
-                    link = f"#/team/{season.planning_entity.id}?tab=logs"
-                elif isinstance(season.planning_entity, SynchroTeam):
-                    link = f"#/synchro/{season.planning_entity.id}?tab=logs"
+            skater_name = log.athlete_season.skater.full_name
+            sid = log.athlete_season.skater.id
+            is_shared = skater_access_map.get(sid) == "COLLABORATOR"
 
             activity_data.append(
                 {
-                    "skater": name,
-                    "link": link,
+                    "skater": skater_name,
                     "type": "Session",
                     "date": log.session_date,
                     "rating": log.session_rating,
+                    "is_shared": is_shared,
+                    "link": f"#/skater/{sid}?tab=logs",
                 }
             )
 
-        upcoming_tests = (
-            SkaterTest.objects.filter(
-                test_date__range=(today, two_weeks), skater__in=skaters
-            )
-            .select_related("skater")
-            .order_by("test_date")
-        )
-        upcoming_comps = Competition.objects.filter(
-            start_date__range=(today, two_weeks)
-        ).order_by("start_date")
-
+        # Agenda
+        upcoming_tests = SkaterTest.objects.filter(
+            test_date__range=(today, two_weeks), skater__in=skaters
+        ).order_by("test_date")
         agenda_items = []
         for t in upcoming_tests:
+            is_shared = skater_access_map.get(t.skater.id) == "COLLABORATOR"
             agenda_items.append(
                 {
                     "type": "Test",
                     "title": t.test_name,
                     "who": t.skater.full_name,
                     "date": t.test_date,
-                    "skater_id": t.skater.id,
+                    "is_shared": is_shared,
                 }
             )
-        for c in upcoming_comps:
-            results = CompetitionResult.objects.filter(competition=c)
-            attendees = set()
-            for r in results:
-                if r.planning_entity:
-                    if hasattr(r.planning_entity, "skater"):
-                        attendees.add(r.planning_entity.skater.full_name)
-                    elif hasattr(r.planning_entity, "team_name"):
-                        attendees.add(r.planning_entity.team_name)
-            if attendees:
-                agenda_items.append(
-                    {
-                        "type": "Competition",
-                        "title": c.title,
-                        "who": ", ".join(list(attendees)),
-                        "date": c.start_date,
-                    }
-                )
-
-        agenda_items.sort(key=lambda x: x["date"])
 
         return Response(
             {
@@ -209,6 +217,8 @@ class CoachDashboardStatsView(APIView):
                             "injury": i.injury_type,
                             "status": i.recovery_status,
                             "date": i.date_of_onset,
+                            "is_shared": skater_access_map.get(i.skater.id)
+                            == "COLLABORATOR",
                         }
                         for i in active_injuries
                     ],
@@ -224,6 +234,7 @@ class CoachDashboardStatsView(APIView):
 
 # --- HELPER FOR STATS ---
 def calculate_stats_response(all_results, total_sessions, season_name):
+    # (Keep existing implementation - no changes needed for this helper)
     def make_stat():
         return {"score": 0.0, "comp": "N/A", "date": None}
 

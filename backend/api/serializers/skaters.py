@@ -200,10 +200,7 @@ class SkaterSerializer(serializers.ModelSerializer):
     user_account_email = serializers.SerializerMethodField()
     guardians = serializers.SerializerMethodField()
     synchro_teams = SimpleSynchroTeamSerializer(many=True, read_only=True)
-
-    # --- FIXED: Explicitly define the method field ---
     has_guardian = serializers.SerializerMethodField()
-    # -------------------------------------------------
 
     class Meta:
         model = Skater
@@ -269,6 +266,10 @@ class RosterSkaterSerializer(serializers.ModelSerializer):
     federation = FederationSerializer(read_only=True)
     gender = serializers.CharField(source="get_gender_display", read_only=True)
 
+    # --- NEW FIELD ---
+    access_level = serializers.SerializerMethodField()
+    # -----------------
+
     class Meta:
         model = Skater
         fields = (
@@ -278,6 +279,7 @@ class RosterSkaterSerializer(serializers.ModelSerializer):
             "gender",
             "federation",
             "planning_entities",
+            "access_level",  # <--- Added
         )
 
     def get_planning_entities(self, obj):
@@ -299,3 +301,24 @@ class RosterSkaterSerializer(serializers.ModelSerializer):
                 GenericPlanningEntitySerializer(entity, context=self.context).data
             )
         return entities
+
+    def get_access_level(self, obj):
+        # Determine relationship for the Current User (request.user)
+        user = self.context.get("request").user
+        if not user:
+            return None
+
+        from django.contrib.contenttypes.models import ContentType
+
+        ct = ContentType.objects.get_for_model(obj)
+
+        # 1. Check direct access (most common for Roster view)
+        access = PlanningEntityAccess.objects.filter(
+            user=user, content_type=ct, object_id=obj.id
+        ).first()
+
+        if access:
+            return access.access_level
+
+        # 2. Implicit Owner (fallback for legacy/superuser)
+        return "COACH"

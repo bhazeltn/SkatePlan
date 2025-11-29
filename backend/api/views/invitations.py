@@ -7,6 +7,7 @@ from django.core.mail import send_mail
 from django.utils import timezone
 from django.db import transaction
 from django.conf import settings
+from django.contrib.auth import authenticate  # <--- Added
 import uuid
 from datetime import date
 
@@ -26,11 +27,8 @@ class SendInviteView(APIView):
         if not email or not role:
             return Response({"error": "Email and Role required"}, status=400)
 
-        if User.objects.filter(email=email).exists():
-            return Response(
-                {"error": "User already exists. Add as collaborator instead."},
-                status=409,
-            )
+        # REMOVED: The check that blocked existing users.
+        # We WANT to allow inviting existing users (Collaborators/Observers).
 
         # Find Target
         target = None
@@ -108,7 +106,6 @@ class SendInviteView(APIView):
 class AcceptInviteView(APIView):
     permission_classes = [permissions.AllowAny]
 
-    # ... (keep validate_requirements and get method same) ...
     def validate_requirements(self, invite):
         if invite.role == "ATHLETE" and isinstance(invite.target_entity, Skater):
             skater = invite.target_entity
@@ -142,11 +139,15 @@ class AcceptInviteView(APIView):
                 {"error": error_msg, "code": "DEPENDENCY_ERROR"}, status=400
             )
 
+        # Check if user exists
+        user_exists = User.objects.filter(email=invite.email).exists()
+
         return Response(
             {
                 "email": invite.email,
                 "role": invite.role,
                 "target": str(invite.target_entity),
+                "user_exists": user_exists,  # <--- ADDED FLAG
             }
         )
 
@@ -160,71 +161,74 @@ class AcceptInviteView(APIView):
             return Response({"error": error_msg}, status=400)
 
         password = request.data.get("password")
-        full_name = request.data.get("full_name")
+        full_name = request.data.get("full_name")  # Only for new users
 
-        if not password or len(password) < 6:
-            return Response(
-                {"error": "Password must be at least 6 characters"}, status=400
-            )
+        # --- 1. MAP ROLES ---
+        final_role = invite.role
+        if final_role == "PARENT":
+            final_role = User.Role.GUARDIAN
+        elif final_role == "ATHLETE":
+            final_role = User.Role.SKATER
 
-        with transaction.atomic():
-            # 1. MAP ROLES CORRECTLY
-            final_role = invite.role
-            if final_role == "PARENT":
-                final_role = User.Role.GUARDIAN
-            elif final_role == "ATHLETE":
-                final_role = User.Role.SKATER  # <--- FIX ADDED HERE
+        # --- 2. RESOLVE USER ---
+        user = None
 
-            # 2. CREATE USER
-            user = User.objects.create_user(
-                email=invite.email,
-                password=password,
-                full_name=full_name,
-                role=final_role,
-            )
-            entity = invite.target_entity
+        # Check if exists
+        existing_user = User.objects.filter(email=invite.email).first()
 
-            # 3. ASSIGN PERMISSIONS
-            # Use the original invite.role for logic checks to match the flow
-            if invite.role == "ATHLETE" and hasattr(entity, "user_account"):
+        if existing_user:
+            # LOGIN CHECK
+            user = authenticate(email=invite.email, password=password)
+            if not user:
+                return Response(
+                    {"error": "Invalid password for existing account."}, status=401
+                )
+        else:
+            # CREATE CHECK
+            if not password or len(password) < 6:
+                return Response(
+                    {"error": "Password must be at least 6 characters"}, status=400
+                )
+
+            with transaction.atomic():
+                user = User.objects.create_user(
+                    email=invite.email,
+                    password=password,
+                    full_name=full_name,
+                    role=final_role,
+                )
+
+        # --- 3. ASSIGN PERMISSIONS ---
+        entity = invite.target_entity
+
+        if final_role == "ATHLETE" and hasattr(entity, "user_account"):
+            # Only link if not already linked (safety check)
+            if not entity.user_account:
                 entity.user_account = user
                 entity.save()
 
-            elif final_role == User.Role.GUARDIAN or invite.role == "PARENT":
-                PlanningEntityAccess.objects.create(
-                    user=user,
-                    planning_entity=entity,
-                    access_level=PlanningEntityAccess.AccessLevel.GUARDIAN,
-                )
-
-            elif final_role == "COLLABORATOR":
-                PlanningEntityAccess.objects.create(
-                    user=user,
-                    planning_entity=entity,
-                    access_level=PlanningEntityAccess.AccessLevel.COLLABORATOR,
-                )
-
-            elif final_role == "MANAGER":
-                PlanningEntityAccess.objects.create(
-                    user=user,
-                    planning_entity=entity,
-                    access_level=PlanningEntityAccess.AccessLevel.MANAGER,
-                )
-
-            elif final_role == "OBSERVER":
-                PlanningEntityAccess.objects.create(
-                    user=user,
-                    planning_entity=entity,
-                    access_level=PlanningEntityAccess.AccessLevel.VIEWER,
-                )
-
-            invite.accepted_at = timezone.now()
-            invite.save()
-
-            from rest_framework.authtoken.models import Token
-
-            auth_token, _ = Token.objects.get_or_create(user=user)
-
-            return Response(
-                {"token": auth_token.key, "user_id": user.pk, "role": user.role}
+        # Grant Access Record (For Guardian, Collaborator, Manager, Observer)
+        elif final_role in [User.Role.GUARDIAN, "COLLABORATOR", "MANAGER", "OBSERVER"]:
+            # Use get_or_create to prevent duplicates if re-invited
+            PlanningEntityAccess.objects.get_or_create(
+                user=user,
+                planning_entity=entity,
+                defaults={
+                    "access_level": (
+                        invite.role
+                        if invite.role in ["COLLABORATOR", "MANAGER", "OBSERVER"]
+                        else "GUARDIAN"
+                    )
+                },
             )
+
+        invite.accepted_at = timezone.now()
+        invite.save()
+
+        from rest_framework.authtoken.models import Token
+
+        auth_token, _ = Token.objects.get_or_create(user=user)
+
+        return Response(
+            {"token": auth_token.key, "user_id": user.pk, "role": user.role}
+        )

@@ -5,7 +5,7 @@ import { EditSkaterModal } from '@/components/dashboard/EditSkaterModal';
 import { EditDisciplineModal } from '@/components/dashboard/EditDisciplineModal';
 import { InviteUserModal } from '@/components/dashboard/InviteUserModal';
 import { FederationFlag } from '@/components/ui/FederationFlag';
-import { AlertTriangle, Shield, User, Mail } from 'lucide-react';
+import { AlertTriangle, Shield, User, Mail, Users, Trash2 } from 'lucide-react'; // Added Trash2
 import { apiRequest } from '@/api';
 import { useAuth } from '@/AuthContext';
 
@@ -18,6 +18,17 @@ export function ProfileTab({ skater, onUpdated, readOnly }) {
           await apiRequest(`/skaters/${skater.id}/`, 'DELETE', null, token);
           window.location.hash = '#/';
       } catch (e) { alert("Failed."); }
+  };
+
+  // --- NEW: Revoke Access Handler ---
+  const handleRevoke = async (accessId) => {
+      if (!confirm("Revoke access for this user? They will no longer see this athlete.")) return;
+      try {
+          await apiRequest(`/access/${accessId}/revoke/`, 'DELETE', null, token);
+          if (onUpdated) onUpdated();
+      } catch (e) {
+          alert("Failed to revoke access.");
+      }
   };
 
   const getAge = (dobString) => {
@@ -45,6 +56,13 @@ export function ProfileTab({ skater, onUpdated, readOnly }) {
             {/* HIDE ACTIONS IF READ ONLY */}
             {!readOnly && (
                 <div className="flex gap-2">
+                    {/* Invite Collaborator Button */}
+                    <InviteUserModal 
+                        entityType="Skater" entityId={skater.id} entityName={skater.full_name}
+                        defaultRole="COLLABORATOR"
+                        trigger={<Button size="sm" variant="outline"><Users className="h-4 w-4 mr-2" /> Invite Coach / Staff</Button>}
+                    />
+
                     <InviteUserModal 
                         entityType="Skater" entityId={skater.id} entityName={skater.full_name}
                         skaterDOB={skater.date_of_birth} hasGuardian={skater.guardians?.length > 0}
@@ -109,18 +127,13 @@ export function ProfileTab({ skater, onUpdated, readOnly }) {
                             ) : (
                                 <div className="flex items-center gap-4">
                                     <span className="text-sm text-gray-400 italic">Not Linked</span>
-                                    {/* Standardized Button */}
                                     {!readOnly && (
                                         <InviteUserModal 
                                             entityType="Skater" entityId={skater.id} entityName={skater.full_name}
                                             skaterDOB={skater.date_of_birth} hasGuardian={hasGuardian}
                                             defaultRole="ATHLETE"
                                             lockRole={true}
-                                            trigger={
-                                                <Button size="sm" variant="outline" className="h-7 text-xs">
-                                                    <Mail className="h-3 w-3 mr-1.5" /> Invite
-                                                </Button>
-                                            }
+                                            trigger={<Button size="sm" variant="link" className="h-auto p-0">Invite</Button>}
                                         />
                                     )}
                                 </div>
@@ -131,7 +144,7 @@ export function ProfileTab({ skater, onUpdated, readOnly }) {
                     {/* 2. Guardian Row */}
                     <div className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-8">
                         <div className="w-32 flex items-center gap-2 text-sm font-medium text-gray-900 mt-1">
-                            <Shield className="h-4 w-4 text-purple-500" /> Parent / Guardian
+                            <Shield className="h-4 w-4 text-purple-500" /> Parent/Guardian
                         </div>
                         <div className="flex-1 space-y-2">
                             {hasGuardian ? (
@@ -146,7 +159,6 @@ export function ProfileTab({ skater, onUpdated, readOnly }) {
                                 <span className="text-sm text-gray-400 italic">None linked</span>
                             )}
                             
-                            {/* Standardized Button */}
                             {!readOnly && (
                                 <div className="pt-1">
                                     <InviteUserModal 
@@ -161,6 +173,39 @@ export function ProfileTab({ skater, onUpdated, readOnly }) {
                                         }
                                     />
                                 </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* 3. Collaborators Row (New Section) */}
+                    <div className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-8 pt-4 border-t border-slate-200">
+                        <div className="w-32 flex items-center gap-2 text-sm font-medium text-gray-900 mt-1">
+                            <Users className="h-4 w-4 text-indigo-500" /> Coaching Staff
+                        </div>
+                        <div className="flex-1 space-y-2">
+                            {skater.collaborators && skater.collaborators.length > 0 ? (
+                                skater.collaborators.map((collab) => (
+                                    <div key={collab.id} className="flex items-center justify-between text-sm bg-white p-2 rounded border border-slate-200 shadow-sm">
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-medium text-gray-900">{collab.full_name}</span>
+                                            <span className="text-[10px] font-bold text-indigo-600 px-1.5 py-0.5 bg-indigo-50 border border-indigo-100 rounded uppercase">{collab.role}</span>
+                                        </div>
+                                        <div className="flex items-center gap-4">
+                                            <span className="font-mono text-gray-400 text-xs hidden sm:inline">{collab.email}</span>
+                                            {!readOnly && (
+                                                <button 
+                                                    onClick={() => handleRevoke(collab.id)}
+                                                    className="text-gray-400 hover:text-red-600 transition-colors"
+                                                    title="Revoke Access"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <span className="text-sm text-gray-400 italic">No additional staff linked</span>
                             )}
                         </div>
                     </div>

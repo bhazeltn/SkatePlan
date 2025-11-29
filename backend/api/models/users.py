@@ -10,11 +10,6 @@ import uuid
 
 
 class UserManager(BaseUserManager):
-    """
-    Custom manager for our User model.
-    We use email as the unique identifier instead of username.
-    """
-
     def create_user(self, email, full_name, password=None, **extra_fields):
         if not email:
             raise ValueError("The Email field must be set")
@@ -63,19 +58,30 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 
 class Invitation(models.Model):
+    # --- EXTENDED ROLES FOR INVITES ---
+    class InviteRole(models.TextChoices):
+        # Core User Roles
+        COACH = "COACH", "Coach"
+        SKATER = "SKATER", "Skater"
+        GUARDIAN = "GUARDIAN", "Guardian"
+        OBSERVER = "OBSERVER", "Observer"
+
+        # Context/Legacy Roles
+        COLLABORATOR = "COLLABORATOR", "Collaborator"
+        MANAGER = "MANAGER", "Team Manager"
+        ATHLETE = "ATHLETE", "Athlete"  # Legacy/Frontend term for Skater
+        PARENT = "PARENT", "Parent"  # Legacy term for Guardian
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField()
 
-    # Who sent it?
     sender = models.ForeignKey(
         User, related_name="sent_invites", on_delete=models.CASCADE
     )
 
-    # What access are we granting?
-    role = models.CharField(max_length=20, choices=User.Role.choices)
+    # Updated to use the superset
+    role = models.CharField(max_length=20, choices=InviteRole.choices)
 
-    # TARGET: Who is this invite for?
-    # We use GenericForeignKey so we can invite someone to a Skater OR a Team
     from django.contrib.contenttypes.fields import GenericForeignKey
     from django.contrib.contenttypes.models import ContentType
 
@@ -85,7 +91,6 @@ class Invitation(models.Model):
     object_id = models.PositiveIntegerField(null=True, blank=True)
     target_entity = GenericForeignKey("content_type", "object_id")
 
-    # Security
     token = models.CharField(max_length=64, unique=True, default=uuid.uuid4)
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField()
@@ -93,7 +98,6 @@ class Invitation(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.expires_at:
-            # Invites valid for 7 days
             self.expires_at = timezone.now() + timedelta(days=7)
         super().save(*args, **kwargs)
 

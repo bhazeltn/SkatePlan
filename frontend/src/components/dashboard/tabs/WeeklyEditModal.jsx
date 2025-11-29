@@ -10,18 +10,26 @@ import { Lock } from 'lucide-react';
 
 export function WeeklyEditModal({ open, onClose, plans, weekStart, onSaved }) {
     const { token } = useAuth();
-    const [selectedPlanIndex, setSelectedPlanIndex] = useState(0);
+    
+    // CHANGED: Lazy initialization to set the default index to the first editable plan
+    const [selectedPlanIndex, setSelectedPlanIndex] = useState(() => {
+        if (plans && plans.length > 0) {
+            const firstEditable = plans.findIndex(p => p.can_edit);
+            return firstEditable !== -1 ? firstEditable : 0;
+        }
+        return 0;
+    });
+    
     const [editData, setEditData] = useState(null);
     const [loading, setLoading] = useState(false);
 
-    // Force reset when opening
+    // CHANGED: Effect now only handles data synchronization, not index resetting
     useEffect(() => {
         if (open && plans && plans.length > 0) {
             const indexToUse = (selectedPlanIndex < plans.length) ? selectedPlanIndex : 0;
             const planToLoad = plans[indexToUse];
             if (planToLoad) {
                 setEditData(JSON.parse(JSON.stringify(planToLoad)));
-                setSelectedPlanIndex(indexToUse);
             }
         }
     }, [open, selectedPlanIndex, plans]);
@@ -69,7 +77,6 @@ export function WeeklyEditModal({ open, onClose, plans, weekStart, onSaved }) {
             .map(p => {
                 const dayData = p.plan_data?.session_breakdown?.[dayIdx];
                 if (!dayData) return null;
-                // Check for content
                 const hasContent = dayData.status && (dayData.status !== 'TRAINING' || dayData.on_ice || dayData.off_ice || dayData.notes);
                 if (!hasContent) return null;
 
@@ -83,7 +90,7 @@ export function WeeklyEditModal({ open, onClose, plans, weekStart, onSaved }) {
     };
 
     if (!open) return null;
-    if (!editData) return null; // Prevent rendering if data isn't ready
+    if (!editData) return null;
 
     return (
         <Dialog open={open} onOpenChange={onClose}>

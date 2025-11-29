@@ -23,9 +23,12 @@ from api.models import (
     User,
 )
 from api.serializers import SessionLogSerializer
+
+# FIX: Import IsCoachOrOwner
 from api.permissions import IsCoachUser, IsCoachOrOwner
 
 
+# --- 1. COACH DASHBOARD AGGREGATOR ---
 class CoachDashboardStatsView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsCoachUser]
 
@@ -44,7 +47,9 @@ class CoachDashboardStatsView(APIView):
 
             level = record.access_level
 
-            if hasattr(entity, "skater"):
+            if isinstance(entity, Skater):
+                skater_access_map[entity.id] = level
+            elif hasattr(entity, "skater"):
                 skater_access_map[entity.skater.id] = level
             elif hasattr(entity, "partner_a"):  # Team
                 skater_access_map[entity.partner_a.id] = level
@@ -114,7 +119,6 @@ class CoachDashboardStatsView(APIView):
                         )
 
         # C. Goals
-        # (Filtering goals by the accessible skaters)
         goal_query = Q(assignee_skater__in=skaters)
         singles_ids = SinglesEntity.objects.filter(skater__in=skaters).values_list(
             "id", flat=True
@@ -207,6 +211,35 @@ class CoachDashboardStatsView(APIView):
                 }
             )
 
+        upcoming_comps = Competition.objects.filter(
+            start_date__range=(today, two_weeks)
+        ).order_by("start_date")
+
+        for c in upcoming_comps:
+            results = CompetitionResult.objects.filter(competition=c)
+            attendees = set()
+            for r in results:
+                if r.planning_entity:
+                    if (
+                        hasattr(r.planning_entity, "skater")
+                        and r.planning_entity.skater in skaters
+                    ):
+                        attendees.add(r.planning_entity.skater.full_name)
+                    elif hasattr(r.planning_entity, "team_name"):
+                        attendees.add(r.planning_entity.team_name)
+            if attendees:
+                agenda_items.append(
+                    {
+                        "type": "Competition",
+                        "title": c.title,
+                        "who": ", ".join(list(attendees)),
+                        "date": c.start_date,
+                        "is_shared": False,
+                    }
+                )
+
+        agenda_items.sort(key=lambda x: x["date"])
+
         return Response(
             {
                 "red_flags": {
@@ -234,7 +267,6 @@ class CoachDashboardStatsView(APIView):
 
 # --- HELPER FOR STATS ---
 def calculate_stats_response(all_results, total_sessions, season_name):
-    # (Keep existing implementation - no changes needed for this helper)
     def make_stat():
         return {"score": 0.0, "comp": "N/A", "date": None}
 

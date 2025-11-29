@@ -27,6 +27,12 @@ export default function YearlyPlanEditor() {
   // --- PERMISSIONS ---
   const isCoach = user?.role === 'COACH' || user?.role === 'COLLABORATOR';
   const readOnly = !isCoach;
+
+  // FIX: Use user.email for comparison (plan.coach_owner is the email string from backend)
+  const isCreator = plan && user && plan.coach_owner === user.email;
+  const canDelete = !readOnly && isCreator;
+  
+  const isCollaborator = !readOnly && !isCreator;
   // -------------------
 
   const fetchPlan = async () => {
@@ -120,17 +126,19 @@ export default function YearlyPlanEditor() {
                 <div className="flex items-center gap-2">
                     <h1 className="text-3xl font-bold text-gray-900">{plan.discipline_name} Plan</h1>
                     {readOnly && <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded border border-amber-200 flex items-center gap-1"><Lock className="h-3 w-3"/> Read Only</span>}
+                    {isCollaborator && <span className="text-xs bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded border border-indigo-200 flex items-center gap-1">Collaborator (Edit Only)</span>}
                 </div>
                 <p className="text-muted-foreground">Yearly Training Plan Editor</p>
             </div>
         </div>
         
-        {/* HIDE ACTIONS IF READ ONLY */}
         {!readOnly && (
             <div className="flex gap-2">
-                <Button variant="destructive" onClick={handleDeletePlan}>
-                    <Trash2 className="h-4 w-4 mr-2" /> Delete Plan
-                </Button>
+                {canDelete && (
+                    <Button variant="destructive" onClick={handleDeletePlan}>
+                        <Trash2 className="h-4 w-4 mr-2" /> Delete Plan
+                    </Button>
+                )}
                 <Button onClick={handleUpdateDetails}>Save Changes</Button>
             </div>
         )}
@@ -138,10 +146,8 @@ export default function YearlyPlanEditor() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        {/* LEFT COLUMN: Strategy & Analysis */}
+        {/* LEFT COLUMN */}
         <div className="lg:col-span-1 space-y-6">
-            
-            {/* 1. Basic Strategy */}
             <Card>
                 <CardHeader>
                     <CardTitle>Plan Strategy</CardTitle>
@@ -153,7 +159,7 @@ export default function YearlyPlanEditor() {
                             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                             value={plan.peak_type || ''}
                             onChange={(e) => setPlan({...plan, peak_type: e.target.value})}
-                            disabled={readOnly} // <--- Disable
+                            disabled={readOnly} 
                         >
                             <option value="Single Peak">Single Peak</option>
                             <option value="Double Peak">Double Peak</option>
@@ -167,23 +173,21 @@ export default function YearlyPlanEditor() {
                             className="flex min-h-[100px]"
                             value={plan.primary_season_goal || ''}
                             onChange={(e) => setPlan({...plan, primary_season_goal: e.target.value})}
-                            disabled={readOnly} // <--- Disable
+                            disabled={readOnly} 
                         />
                     </div>
                 </CardContent>
             </Card>
 
-            {/* 2. Gap Analysis (HIDE for Non-Coach) */}
             {isCoach && <GapAnalysisCard planId={planId} />}
             
-            {/* 3. Linked Goals */}
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                     <CardTitle className="text-lg">Season Goals</CardTitle>
                     <GoalModal 
                         planId={planId} 
                         onSaved={fetchGoals} 
-                        permissions={{ role: user.role }} // Pass Basic Context
+                        permissions={{ role: user.role }} 
                         trigger={readOnly ? null : <Button size="sm" variant="outline">Add Goal</Button>} 
                     />
                 </CardHeader>
@@ -199,7 +203,6 @@ export default function YearlyPlanEditor() {
                                     ) : (
                                         <Circle className="h-5 w-5 text-gray-300 mt-0.5" />
                                     )}
-
                                     <div className="flex-1">
                                         <div className="flex justify-between items-start">
                                             <div>
@@ -214,7 +217,6 @@ export default function YearlyPlanEditor() {
                                                     )}
                                                 </div>
                                             </div>
-                                            {/* Pass permissions so it locks if approved */}
                                             <GoalModal 
                                                 planId={planId} 
                                                 goal={goal} 
@@ -236,7 +238,7 @@ export default function YearlyPlanEditor() {
             </Card>
         </div>
 
-        {/* RIGHT COLUMN: Timeline (Macrocycles) */}
+        {/* RIGHT COLUMN */}
         <div className="lg:col-span-2 space-y-6">
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
@@ -259,8 +261,6 @@ export default function YearlyPlanEditor() {
                         <div className="space-y-4">
                             {sortedCycles.map((cycle) => (
                                 <div key={cycle.id} className="flex flex-col p-4 border rounded-lg bg-white hover:border-brand-blue transition-colors gap-3">
-                                    
-                                    {/* Phase Header */}
                                     <div className="flex justify-between items-start">
                                         <div>
                                             <h4 className="font-semibold text-lg">{cycle.phase_title}</h4>
@@ -273,7 +273,7 @@ export default function YearlyPlanEditor() {
                                             <MacrocycleModal 
                                                 planId={plan.id} 
                                                 macrocycle={cycle} 
-                                                readOnly={readOnly} // <--- Pass readOnly
+                                                readOnly={readOnly} 
                                                 onSaved={fetchPlan} 
                                                 trigger={<Button variant="outline" size="sm">View / Edit</Button>} 
                                             />
@@ -284,38 +284,12 @@ export default function YearlyPlanEditor() {
                                             )}
                                         </div>
                                     </div>
-                                    {/* ... (Grid Logic remains the same) ... */}
-                                    {/* (Keeping the display logic) */}
-                                    {cycle.phase_focus && (
-                                        <div className="bg-slate-100 p-2 rounded text-sm font-medium text-slate-800">
-                                            {cycle.phase_focus}
-                                        </div>
-                                    )}
+                                    {cycle.phase_focus && <div className="bg-slate-100 p-2 rounded text-sm font-medium text-slate-800">{cycle.phase_focus}</div>}
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
-                                        {cycle.technical_focus && (
-                                            <div className="text-xs p-2 bg-blue-50 rounded border border-blue-100">
-                                                <div className="flex items-center gap-1 font-bold text-blue-700 mb-1"><Zap className="h-3 w-3" /> Tech</div>
-                                                {cycle.technical_focus}
-                                            </div>
-                                        )}
-                                        {cycle.component_focus && (
-                                            <div className="text-xs p-2 bg-pink-50 rounded border border-pink-100">
-                                                <div className="flex items-center gap-1 font-bold text-pink-700 mb-1"><Palette className="h-3 w-3" /> Comp</div>
-                                                {cycle.component_focus}
-                                            </div>
-                                        )}
-                                        {cycle.physical_focus && (
-                                            <div className="text-xs p-2 bg-orange-50 rounded border border-orange-100">
-                                                <div className="flex items-center gap-1 font-bold text-orange-700 mb-1"><Dumbbell className="h-3 w-3" /> Phys</div>
-                                                {cycle.physical_focus}
-                                            </div>
-                                        )}
-                                        {cycle.mental_focus && (
-                                            <div className="text-xs p-2 bg-purple-50 rounded border border-purple-100">
-                                                <div className="flex items-center gap-1 font-bold text-purple-700 mb-1"><Brain className="h-3 w-3" /> Ment</div>
-                                                {cycle.mental_focus}
-                                            </div>
-                                        )}
+                                        {cycle.technical_focus && <div className="text-xs p-2 bg-blue-50 rounded border border-blue-100"><div className="flex items-center gap-1 font-bold text-blue-700 mb-1"><Zap className="h-3 w-3" /> Tech</div>{cycle.technical_focus}</div>}
+                                        {cycle.component_focus && <div className="text-xs p-2 bg-pink-50 rounded border border-pink-100"><div className="flex items-center gap-1 font-bold text-pink-700 mb-1"><Palette className="h-3 w-3" /> Comp</div>{cycle.component_focus}</div>}
+                                        {cycle.physical_focus && <div className="text-xs p-2 bg-orange-50 rounded border border-orange-100"><div className="flex items-center gap-1 font-bold text-orange-700 mb-1"><Dumbbell className="h-3 w-3" /> Phys</div>{cycle.physical_focus}</div>}
+                                        {cycle.mental_focus && <div className="text-xs p-2 bg-purple-50 rounded border border-purple-100"><div className="flex items-center gap-1 font-bold text-purple-700 mb-1"><Brain className="h-3 w-3" /> Ment</div>{cycle.mental_focus}</div>}
                                     </div>
                                 </div>
                             ))}
@@ -324,7 +298,6 @@ export default function YearlyPlanEditor() {
                 </CardContent>
             </Card>
         </div>
-
       </div>
     </div>
   );

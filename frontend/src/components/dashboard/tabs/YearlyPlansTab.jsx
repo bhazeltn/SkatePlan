@@ -7,15 +7,20 @@ import { CreateYearlyPlanModal } from '../CreateYearlyPlanModal';
 import { EditSeasonModal } from '../EditSeasonModal';
 import { Calendar, Trophy, ArrowRight } from 'lucide-react';
 
-// Helper to format dates
 const formatDate = (d) => new Date(d).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
 
-export function YearlyPlansTab({ skater, team, isSynchro, readOnly }) { // <--- Added readOnly
+export function YearlyPlansTab({ skater, team, isSynchro, readOnly }) { 
   const { token } = useAuth();
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // --- DYNAMIC ENDPOINT ---
+  // --- PERMISSIONS ---
+  // ReadOnly covers Guardians/Skaters.
+  // We also need to block Collaborators from creating.
+  const isCollaborator = skater?.access_level === 'COLLABORATOR'; 
+  const canCreate = !readOnly && !isCollaborator;
+  // -------------------
+
   let fetchUrl = '';
   if (isSynchro) fetchUrl = `/synchro/${team.id}/ytps/`;
   else if (team) fetchUrl = `/teams/${team.id}/ytps/`;
@@ -33,7 +38,6 @@ export function YearlyPlansTab({ skater, team, isSynchro, readOnly }) { // <--- 
     }
   };
 
-  // Trigger fetch if EITHER skater or team exists
   useEffect(() => {
     if (skater || team) fetchPlans();
   }, [skater, team, token]);
@@ -49,8 +53,8 @@ export function YearlyPlansTab({ skater, team, isSynchro, readOnly }) { // <--- 
             <p className="text-sm text-muted-foreground">Manage YTPs and Macrocycles</p>
         </div>
         
-        {/* HIDE CREATE BUTTON IF READ ONLY */}
-        {!readOnly && (
+        {/* HIDE CREATE BUTTON IF READ ONLY OR COLLABORATOR */}
+        {canCreate && (
             <CreateYearlyPlanModal 
               skater={skater} 
               team={team} 

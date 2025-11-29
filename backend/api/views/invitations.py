@@ -7,7 +7,7 @@ from django.core.mail import send_mail
 from django.utils import timezone
 from django.db import transaction
 from django.conf import settings
-from django.contrib.auth import authenticate  # <--- Added
+from django.contrib.auth import authenticate
 import uuid
 from datetime import date
 
@@ -27,9 +27,6 @@ class SendInviteView(APIView):
         if not email or not role:
             return Response({"error": "Email and Role required"}, status=400)
 
-        # REMOVED: The check that blocked existing users.
-        # We WANT to allow inviting existing users (Collaborators/Observers).
-
         # Find Target
         target = None
         if entity_type == "Skater":
@@ -42,7 +39,7 @@ class SendInviteView(APIView):
         if not target:
             return Response({"error": "Target not found"}, status=404)
 
-        # --- UPDATED COMPLIANCE CHECK ---
+        # Compliance Check
         if role == "ATHLETE" and entity_type == "Skater":
             if target.date_of_birth:
                 today = date.today()
@@ -147,7 +144,7 @@ class AcceptInviteView(APIView):
                 "email": invite.email,
                 "role": invite.role,
                 "target": str(invite.target_entity),
-                "user_exists": user_exists,  # <--- ADDED FLAG
+                "user_exists": user_exists,
             }
         )
 
@@ -161,30 +158,32 @@ class AcceptInviteView(APIView):
             return Response({"error": error_msg}, status=400)
 
         password = request.data.get("password")
-        full_name = request.data.get("full_name")  # Only for new users
+        full_name = request.data.get("full_name")
 
         # --- 1. MAP ROLES ---
         final_role = invite.role
+        user_role = final_role
+
         if final_role == "PARENT":
-            final_role = User.Role.GUARDIAN
+            user_role = User.Role.GUARDIAN
         elif final_role == "ATHLETE":
-            final_role = User.Role.SKATER
+            user_role = User.Role.SKATER
+        elif final_role in ["COLLABORATOR", "MANAGER"]:
+            user_role = User.Role.COACH
+        elif final_role == "OBSERVER":
+            user_role = User.Role.OBSERVER
 
         # --- 2. RESOLVE USER ---
         user = None
-
-        # Check if exists
         existing_user = User.objects.filter(email=invite.email).first()
 
         if existing_user:
-            # LOGIN CHECK
             user = authenticate(email=invite.email, password=password)
             if not user:
                 return Response(
                     {"error": "Invalid password for existing account."}, status=401
                 )
         else:
-            # CREATE CHECK
             if not password or len(password) < 6:
                 return Response(
                     {"error": "Password must be at least 6 characters"}, status=400
@@ -195,31 +194,39 @@ class AcceptInviteView(APIView):
                     email=invite.email,
                     password=password,
                     full_name=full_name,
-                    role=final_role,
+                    role=user_role,
                 )
 
         # --- 3. ASSIGN PERMISSIONS ---
         entity = invite.target_entity
 
-        if final_role == "ATHLETE" and hasattr(entity, "user_account"):
-            # Only link if not already linked (safety check)
+        if (invite.role == "ATHLETE" or invite.role == "SKATER") and hasattr(
+            entity, "user_account"
+        ):
             if not entity.user_account:
                 entity.user_account = user
                 entity.save()
 
-        # Grant Access Record (For Guardian, Collaborator, Manager, Observer)
-        elif final_role in [User.Role.GUARDIAN, "COLLABORATOR", "MANAGER", "OBSERVER"]:
-            # Use get_or_create to prevent duplicates if re-invited
+        elif final_role in [
+            "GUARDIAN",
+            "PARENT",
+            "COLLABORATOR",
+            "MANAGER",
+            "OBSERVER",
+        ]:
+            access_level = "GUARDIAN"
+            if final_role == "PARENT":
+                access_level = "GUARDIAN"
+            elif final_role in ["COLLABORATOR", "MANAGER", "OBSERVER"]:
+                access_level = final_role
+
+            # FIX: Use content_type and object_id explicitly for GenericForeignKey filtering
+            ct = ContentType.objects.get_for_model(entity)
             PlanningEntityAccess.objects.get_or_create(
                 user=user,
-                planning_entity=entity,
-                defaults={
-                    "access_level": (
-                        invite.role
-                        if invite.role in ["COLLABORATOR", "MANAGER", "OBSERVER"]
-                        else "GUARDIAN"
-                    )
-                },
+                content_type=ct,
+                object_id=entity.id,
+                defaults={"access_level": access_level},
             )
 
         invite.accepted_at = timezone.now()

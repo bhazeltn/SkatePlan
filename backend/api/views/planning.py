@@ -1,7 +1,7 @@
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError, PermissionDenied
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from datetime import date, timedelta
@@ -18,6 +18,7 @@ from api.models import (
     SoloDanceEntity,
     Team,
     SynchroTeam,
+    PlanningEntityAccess,
 )
 from api.serializers import (
     AthleteSeasonSerializer,
@@ -36,8 +37,6 @@ class AthleteSeasonList(generics.ListAPIView):
     serializer_class = AthleteSeasonSerializer
 
     def get_queryset(self):
-        # For ListViews, standard permission classes don't filter the queryset automatically.
-        # Ideally we filter here, but IsCoachOrOwner allows access to the *View*.
         return AthleteSeason.objects.filter(skater_id=self.kwargs["skater_id"])
 
 
@@ -62,6 +61,24 @@ class YearlyPlanListCreateView(generics.ListCreateAPIView):
             return YearlyPlan.objects.filter(athlete_seasons__skater_id=skater_id)
 
     def perform_create(self, serializer):
+        # --- BLOCK COLLABORATORS FROM CREATING PLANS ---
+        target_id = self.kwargs.get("skater_id")
+        target_model = Skater
+
+        if "team_id" in self.kwargs:
+            target_id = self.kwargs["team_id"]
+            target_model = Team
+
+        if target_id:
+            ct = ContentType.objects.get_for_model(target_model)
+            access = PlanningEntityAccess.objects.filter(
+                user=self.request.user, content_type=ct, object_id=target_id
+            ).first()
+
+            if access and access.access_level == "COLLABORATOR":
+                raise PermissionDenied("Collaborators cannot create Yearly Plans.")
+        # ----------------------------------------------------
+
         if "skater_id" in self.kwargs:
             skater_id = self.kwargs["skater_id"]
             skater = Skater.objects.get(id=skater_id)
@@ -227,24 +244,18 @@ class WeeklyPlanDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 # --- MASTER VIEWS ---
 class MasterWeeklyPlanView(APIView):
-    """
-    The Aggregator: Finds ALL active seasons (Individual + Team) for a skater.
-    Auto-generates weekly records to ensure the grid is never empty.
-    """
-
     permission_classes = [permissions.IsAuthenticated, IsCoachOrOwner]
 
     def get(self, request, skater_id):
         skater = Skater.objects.get(id=skater_id)
 
-        # Manual Check for non-standard views
+        # Manual Check
         self.check_object_permissions(request, skater)
 
         date_str = request.query_params.get("date")
 
         if not date_str:
             today = date.today()
-            # Align to Monday
             target_date = today - timedelta(days=today.weekday())
         else:
             try:
@@ -254,10 +265,8 @@ class MasterWeeklyPlanView(APIView):
                     {"error": "Invalid date"}, status=status.HTTP_400_BAD_REQUEST
                 )
 
-        # 1. Find All Active Seasons
         season_query = Q(skater=skater, is_active=True)
 
-        # Add Teams (Pairs/Dance)
         teams = Team.objects.filter(Q(partner_a=skater) | Q(partner_b=skater))
         if teams.exists():
             ct_team = ContentType.objects.get_for_model(Team)
@@ -267,7 +276,6 @@ class MasterWeeklyPlanView(APIView):
                 is_active=True,
             )
 
-        # Add Synchro Teams
         synchro_teams = skater.synchro_teams.all()
         if synchro_teams.exists():
             ct_synchro = ContentType.objects.get_for_model(SynchroTeam)
@@ -277,31 +285,22 @@ class MasterWeeklyPlanView(APIView):
                 is_active=True,
             )
 
-        # Fetch all relevant seasons (NO strict date filtering to ensure visibility)
         active_seasons = AthleteSeason.objects.filter(season_query)
 
-        # 2. Build the Weekly Stack
         data = []
         for season in active_seasons:
-            # "Self-Healing": Ensure the record exists for this week
             week_plan, created = WeeklyPlan.objects.get_or_create(
                 athlete_season=season, week_start=target_date, defaults={"theme": ""}
             )
 
-            # 3. Labeling Context
             label = season.season
             ytp = season.yearly_plans.first()
 
             if ytp:
-                # Use the Plan's entity name (e.g. "Flip & Salchow")
                 label = str(ytp.planning_entity)
             elif season.planning_entity:
-                # Fallback to Team Name
                 label = str(season.planning_entity)
-            # Else it's "2025-2026 (Jane Doe)"
 
-            # Permission Check: Is this MY individual plan?
-            # Skaters can edit their own. Team plans are Read-Only here (Edit on Team Dashboard).
             can_edit = season.skater == skater
 
             data.append(
@@ -321,17 +320,13 @@ class TeamMasterWeeklyPlanView(APIView):
 
     def get(self, request, team_id):
         debug = []
-
-        # Check if this is a Synchro request based on URL structure
         is_synchro = "synchro" in request.path
-        debug.append(f"Request for Team ID: {team_id} (Synchro Mode: {is_synchro})")
 
         if is_synchro:
             try:
                 target_entity = SynchroTeam.objects.get(id=team_id)
                 ct = ContentType.objects.get_for_model(SynchroTeam)
-                relevant_skaters = []  # Synchro focuses on Team Plan
-                debug.append(f"Found Synchro Team: {target_entity.team_name}")
+                relevant_skaters = []
             except SynchroTeam.DoesNotExist:
                 return Response({"error": "Synchro Team not found"}, status=404)
         else:
@@ -339,7 +334,6 @@ class TeamMasterWeeklyPlanView(APIView):
                 target_entity = Team.objects.get(id=team_id)
                 ct = ContentType.objects.get_for_model(Team)
                 relevant_skaters = [target_entity.partner_a, target_entity.partner_b]
-                debug.append(f"Found Pair Team: {target_entity.team_name}")
             except Team.DoesNotExist:
                 return Response({"error": "Team not found"}, status=404)
 
@@ -353,27 +347,19 @@ class TeamMasterWeeklyPlanView(APIView):
             except ValueError:
                 return Response({"error": "Invalid date"}, status=400)
 
-        debug.append(f"Target Date: {target_date}")
-
-        # 1. Team Seasons
-        # No Date Filter - Get ALL active seasons so we can navigate future/past
         team_seasons = AthleteSeason.objects.filter(
             content_type=ct, object_id=team_id, is_active=True
         )
-        debug.append(f"Team Seasons Found: {team_seasons.count()}")
 
-        # 2. Partner Seasons
         partner_seasons = AthleteSeason.objects.none()
         for s in relevant_skaters:
             p_seasons = AthleteSeason.objects.filter(skater=s, is_active=True)
             partner_seasons = partner_seasons | p_seasons
 
         all_seasons = list(team_seasons) + list(partner_seasons)
-        debug.append(f"Total Combined Seasons: {len(all_seasons)}")
 
         data = []
         for season in all_seasons:
-            # Atomic Get-Or-Create
             week_plan, created = WeeklyPlan.objects.get_or_create(
                 athlete_season=season, week_start=target_date, defaults={"theme": ""}
             )
@@ -406,17 +392,24 @@ class GapAnalysisRetrieveUpdateView(generics.RetrieveUpdateAPIView):
     serializer_class = GapAnalysisSerializer
 
     def get_object(self):
+        # Option A: Team via URL
         if "team_id" in self.kwargs:
             team_id = self.kwargs["team_id"]
             if "synchro" in self.request.path:
                 entity = SynchroTeam.objects.get(id=team_id)
             else:
                 entity = Team.objects.get(id=team_id)
-        else:
+
+        # Option B: Plan via URL (Fix for KeyError)
+        elif "plan_id" in self.kwargs:
+            plan = YearlyPlan.objects.get(id=self.kwargs["plan_id"])
+            entity = plan.planning_entity
+
+        # Option C: Skater via URL
+        elif "skater_id" in self.kwargs:
             skater_id = self.kwargs["skater_id"]
             entity = Skater.objects.get(id=skater_id)
 
-        # Manual Permission Check
         self.check_object_permissions(self.request, entity)
 
         ct = ContentType.objects.get_for_model(entity)
@@ -445,7 +438,7 @@ class GoalListCreateByPlanView(generics.ListCreateAPIView):
             content_type=plan.content_type,
             object_id=plan.object_id,
             current_status=status_val,
-            created_by=self.request.user,  # Save Creator
+            created_by=self.request.user,
             updated_by=self.request.user,
         )
 
@@ -455,45 +448,100 @@ class GoalListBySkaterView(generics.ListCreateAPIView):
     serializer_class = GoalSerializer
 
     def get_queryset(self):
-        # (Keep existing query logic)
-        skater = Skater.objects.get(id=self.kwargs["skater_id"])
+        skater_id = self.kwargs["skater_id"]
+        user = self.request.user
+
+        # 1. Get all access records for this user related to this skater
+        access_records = PlanningEntityAccess.objects.filter(user=user)
+
+        allowed_content_types = []
+        allowed_object_ids = []
+        can_see_personal = False
+
+        for record in access_records:
+            entity = record.planning_entity
+            if not entity:
+                continue
+
+            if isinstance(entity, Skater) and entity.id == int(skater_id):
+                can_see_personal = True
+            elif isinstance(entity, Team):
+                if entity.partner_a_id == int(skater_id) or entity.partner_b_id == int(
+                    skater_id
+                ):
+                    allowed_content_types.append(
+                        ContentType.objects.get_for_model(Team)
+                    )
+                    allowed_object_ids.append(entity.id)
+            elif isinstance(entity, SynchroTeam):
+                if entity.roster.filter(id=skater_id).exists():
+                    allowed_content_types.append(
+                        ContentType.objects.get_for_model(SynchroTeam)
+                    )
+                    allowed_object_ids.append(entity.id)
+
+        # Owner Override
+        if user.role == "SKATER" and user.skater_id == int(skater_id):
+            can_see_personal = True
+
+        # Build Query
         query = Q()
-        singles = skater.singles_entities.all()
-        dance = skater.solodance_entities.all()
-        if singles.exists():
-            ct = ContentType.objects.get_for_model(SinglesEntity)
-            query |= Q(
-                content_type=ct, object_id__in=singles.values_list("id", flat=True)
-            )
-        if dance.exists():
-            ct = ContentType.objects.get_for_model(SoloDanceEntity)
-            query |= Q(
-                content_type=ct, object_id__in=dance.values_list("id", flat=True)
-            )
-        teams = Team.objects.filter(Q(partner_a=skater) | Q(partner_b=skater))
-        if teams.exists():
-            ct = ContentType.objects.get_for_model(Team)
-            query |= Q(
-                content_type=ct, object_id__in=teams.values_list("id", flat=True)
-            )
-        synchro = skater.synchro_teams.all()
-        if synchro.exists():
-            ct = ContentType.objects.get_for_model(SynchroTeam)
-            query |= Q(
-                content_type=ct, object_id__in=synchro.values_list("id", flat=True)
-            )
+
+        if user.role == "SKATER" and user.skater_id == int(skater_id):
+            # OWNER VIEW (See Everything)
+            skater = Skater.objects.get(id=skater_id)
+            singles = skater.singles_entities.all()
+            dance = skater.solodance_entities.all()
+            teams = Team.objects.filter(Q(partner_a=skater) | Q(partner_b=skater))
+            synchro = skater.synchro_teams.all()
+
+            if singles.exists():
+                ct = ContentType.objects.get_for_model(SinglesEntity)
+                query |= Q(
+                    content_type=ct, object_id__in=singles.values_list("id", flat=True)
+                )
+            if dance.exists():
+                ct = ContentType.objects.get_for_model(SoloDanceEntity)
+                query |= Q(
+                    content_type=ct, object_id__in=dance.values_list("id", flat=True)
+                )
+            if teams.exists():
+                ct = ContentType.objects.get_for_model(Team)
+                query |= Q(
+                    content_type=ct, object_id__in=teams.values_list("id", flat=True)
+                )
+            if synchro.exists():
+                ct = ContentType.objects.get_for_model(SynchroTeam)
+                query |= Q(
+                    content_type=ct, object_id__in=synchro.values_list("id", flat=True)
+                )
+
+        else:
+            # RESTRICTED VIEW (Coach/Collab/Parent)
+            if can_see_personal:
+                ct_singles = ContentType.objects.get_for_model(SinglesEntity)
+                ct_dance = ContentType.objects.get_for_model(SoloDanceEntity)
+                skater_obj = Skater.objects.get(id=skater_id)
+                singles_ids = skater_obj.singles_entities.values_list("id", flat=True)
+                dance_ids = skater_obj.solodance_entities.values_list("id", flat=True)
+
+                if singles_ids:
+                    query |= Q(content_type=ct_singles, object_id__in=singles_ids)
+                if dance_ids:
+                    query |= Q(content_type=ct_dance, object_id__in=dance_ids)
+
+            for i, ct in enumerate(allowed_content_types):
+                query |= Q(content_type=ct, object_id=allowed_object_ids[i])
+
         if not query:
             return Goal.objects.none()
         return Goal.objects.filter(query).order_by("-created_at")
 
     def perform_create(self, serializer):
         skater = Skater.objects.get(id=self.kwargs["skater_id"])
-
-        # --- CHANGED: Look for specific entity ID from frontend ---
         entity_id = self.request.data.get("planning_entity_id")
         entity = None
 
-        # Build list of all valid entities for this skater
         all_entities = (
             list(skater.singles_entities.all())
             + list(skater.solodance_entities.all())
@@ -503,12 +551,10 @@ class GoalListBySkaterView(generics.ListCreateAPIView):
         )
 
         if entity_id:
-            # Find the matching object
             entity = next(
                 (e for e in all_entities if str(e.id) == str(entity_id)), None
             )
 
-        # Fallback to first if not specified
         if not entity:
             entity = all_entities[0] if all_entities else None
 
@@ -525,13 +571,12 @@ class GoalListBySkaterView(generics.ListCreateAPIView):
             content_type=content_type,
             object_id=entity.id,
             current_status=status_val,
-            created_by=self.request.user,  # Save Creator
+            created_by=self.request.user,
             updated_by=self.request.user,
         )
 
 
 class GoalListByTeamView(generics.ListCreateAPIView):
-    # ... (Keep existing logic, just add user saving) ...
     permission_classes = [permissions.IsAuthenticated, IsCoachUser]
     serializer_class = GoalSerializer
 
@@ -555,7 +600,6 @@ class GoalListByTeamView(generics.ListCreateAPIView):
 
 
 class SynchroGoalListCreateView(generics.ListCreateAPIView):
-    # ... (Keep existing logic, just add user saving) ...
     permission_classes = [permissions.IsAuthenticated, IsCoachUser]
     serializer_class = GoalSerializer
 

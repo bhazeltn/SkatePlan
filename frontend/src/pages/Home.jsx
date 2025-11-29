@@ -20,17 +20,22 @@ import { Navigate } from 'react-router-dom';
 export default function Home() {
   const { user, logout, token } = useAuth();
   
-  if (user?.role === 'GUARDIAN') return <GuardianDashboard />;
-  if (user?.role === 'SKATER') {
-      if (user.skater_id) return <Navigate to={`/skater/${user.skater_id}`} replace />;
-      return <div className="p-12 text-center"><h2 className="text-xl font-bold">Profile Not Found</h2><Button variant="outline" onClick={logout}>Log Out</Button></div>;
-  }
-
+  // --- STATE ---
   const [roster, setRoster] = useState([]);
   const [teams, setTeams] = useState([]);
   const [synchroTeams, setSynchroTeams] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  
+  // NEW: Control the "Create New" menu state
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  // --- ROUTING CHECKS ---
+  if (user?.role === 'GUARDIAN') return <GuardianDashboard />;
+  if (user?.role === 'SKATER') {
+      if (user.skater_id) return <Navigate to={`/skater/${user.skater_id}`} replace />;
+      return <div className="p-12 text-center"><h2 className="text-xl font-bold">Profile Not Found</h2><Button variant="outline" onClick={logout}>Log Out</Button></div>;
+  }
 
   const fetchData = async () => {
     try {
@@ -51,13 +56,17 @@ export default function Home() {
   };
 
   useEffect(() => { fetchData(); }, [token]);
-  const handleRefresh = () => fetchData();
+
+  // NEW: Helper to refresh data AND close the menu
+  const handleActionComplete = () => {
+      fetchData();
+      setMenuOpen(false);
+  };
 
   // --- SPLIT ROSTER ---
   const mySkaters = roster.filter(s => !s.access_level || s.access_level === 'COACH' || s.access_level === 'OWNER');
   const sharedSkaters = roster.filter(s => s.access_level === 'COLLABORATOR');
 
-  // --- SHARED ICON HELPER ---
   const SharedBadge = ({ isShared }) => isShared ? <Handshake className="h-3 w-3 text-indigo-500 ml-1 inline" /> : null;
 
   return (
@@ -69,14 +78,27 @@ export default function Home() {
             <p className="text-muted-foreground">Welcome back, {user?.full_name}</p>
         </div>
         <div className="flex items-center gap-3">
-          <Popover>
-            <PopoverTrigger asChild><Button className="bg-brand-blue hover:bg-brand-blue/90 text-white"><Plus className="h-4 w-4 mr-2" /> Create New...</Button></PopoverTrigger>
+          
+          {/* CONSOLIDATED MENU (CONTROLLED) */}
+          <Popover open={menuOpen} onOpenChange={setMenuOpen}>
+            <PopoverTrigger asChild>
+                <Button className="bg-brand-blue hover:bg-brand-blue/90 text-white">
+                    <Plus className="h-4 w-4 mr-2" /> Create New...
+                </Button>
+            </PopoverTrigger>
             <PopoverContent align="end" className="w-56 p-2 flex flex-col gap-2 bg-white shadow-lg border rounded-md">
-                 <AddSkaterModal onSkaterAdded={handleRefresh} trigger={<Button variant="ghost" className="w-full justify-start h-10 font-normal"><UserPlus className="h-4 w-4 mr-2 text-gray-500" /> Athlete</Button>}/>
-                 <CreateTeamModal onTeamCreated={handleRefresh} trigger={<Button variant="ghost" className="w-full justify-start h-10 font-normal"><Users className="h-4 w-4 mr-2 text-indigo-500" /> Pair/Dance Team</Button>}/>
-                 <CreateSynchroTeamModal onTeamCreated={handleRefresh} trigger={<Button variant="ghost" className="w-full justify-start h-10 font-normal"><Users className="h-4 w-4 mr-2 text-purple-500" /> Synchro Team</Button>}/>
+                 <AddSkaterModal onSkaterAdded={handleActionComplete} trigger={
+                     <Button variant="ghost" className="w-full justify-start h-10 font-normal"><UserPlus className="h-4 w-4 mr-2 text-gray-500" /> Athlete</Button>
+                 }/>
+                 <CreateTeamModal onTeamCreated={handleActionComplete} trigger={
+                     <Button variant="ghost" className="w-full justify-start h-10 font-normal"><Users className="h-4 w-4 mr-2 text-indigo-500" /> Pair/Dance Team</Button>
+                 }/>
+                 <CreateSynchroTeamModal onTeamCreated={handleActionComplete} trigger={
+                     <Button variant="ghost" className="w-full justify-start h-10 font-normal"><Users className="h-4 w-4 mr-2 text-purple-500" /> Synchro Team</Button>
+                 }/>
             </PopoverContent>
           </Popover>
+
           <a href="#/settings"><Button variant="secondary" size="icon"><Settings className="h-5 w-5 text-gray-600" /></Button></a>
           <Button variant="outline" onClick={logout}>Log Out</Button>
         </div>
@@ -88,9 +110,14 @@ export default function Home() {
             <div className="space-y-6">
                 {/* Health */}
                 <Card className={stats.red_flags?.injuries?.length > 0 ? "border-red-200 bg-red-50/30" : "border-green-200 bg-green-50/30"}>
-                    <CardHeader className="pb-2 flex flex-row items-center gap-2 space-y-0"><HeartPulse className={`h-5 w-5 ${stats.red_flags?.injuries?.length > 0 ? "text-red-600" : "text-green-600"}`} /><CardTitle className="text-base font-semibold text-gray-900">Health Status</CardTitle></CardHeader>
+                    <CardHeader className="pb-2 flex flex-row items-center gap-2 space-y-0">
+                        <HeartPulse className={`h-5 w-5 ${stats.red_flags?.injuries?.length > 0 ? "text-red-600" : "text-green-600"}`} />
+                        <CardTitle className="text-base font-semibold text-gray-900">Health Status</CardTitle>
+                    </CardHeader>
                     <CardContent>
-                        {stats.red_flags?.injuries?.length === 0 ? (<div className="flex items-center gap-2 text-sm text-green-700 font-medium"><ShieldCheck className="h-5 w-5" /> All athletes healthy.</div>) : (
+                        {stats.red_flags?.injuries?.length === 0 ? (
+                            <div className="flex items-center gap-2 text-sm text-green-700 font-medium"><ShieldCheck className="h-5 w-5" /> All athletes healthy.</div>
+                        ) : (
                             <div className="space-y-2">{stats.red_flags?.injuries?.map((inj, i) => (<a key={i} href={`#/skater/${inj.skater_id}?tab=health`} className="text-sm flex justify-between items-center text-red-800 bg-white border border-red-100 px-3 py-2 rounded shadow-sm hover:bg-red-50 transition-colors cursor-pointer"><div><span className="font-bold">{inj.skater}</span><SharedBadge isShared={inj.is_shared}/><span className="text-xs opacity-80 block">{inj.injury}</span></div><span className="text-xs bg-red-100 px-2 py-0.5 rounded-full font-medium">{inj.status}</span></a>))}</div>
                         )}
                     </CardContent>

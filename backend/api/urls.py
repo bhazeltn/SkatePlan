@@ -120,4 +120,5 @@ urlpatterns = [
     # Invites
     path("invitations/send/", views.SendInviteView.as_view()),
     path("invitations/accept/<str:token>/", views.AcceptInviteView.as_view()),
+    path("access/<int:pk>/revoke/", views.RevokeAccessView.as_view()),
 ]

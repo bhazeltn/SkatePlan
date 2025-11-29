@@ -12,142 +12,64 @@ from api.models import (
 class AthleteSeasonSerializer(serializers.ModelSerializer):
     class Meta:
         model = AthleteSeason
-        fields = ("id", "season", "start_date", "end_date", "is_active")
+        fields = "__all__"
 
 
 class MacrocycleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Macrocycle
-        fields = (
-            "id",
-            "phase_title",
-            "phase_start",
-            "phase_end",
-            "phase_focus",
-            "technical_focus",
-            "component_focus",
-            "physical_focus",
-            "mental_focus",
-        )
+        fields = "__all__"
 
 
 class YearlyPlanSerializer(serializers.ModelSerializer):
     macrocycles = MacrocycleSerializer(many=True, read_only=True)
+    season_info = AthleteSeasonSerializer(
+        source="athlete_seasons", many=True, read_only=True
+    )
     discipline_name = serializers.SerializerMethodField()
-    planning_entity = serializers.SerializerMethodField()
-    season_info = serializers.SerializerMethodField()
-    skater_id = serializers.SerializerMethodField()
     dashboard_url = serializers.SerializerMethodField()
 
     class Meta:
         model = YearlyPlan
         fields = (
             "id",
+            "coach_owner",
             "planning_entity",
-            "discipline_name",
-            "skater_id",
             "peak_type",
             "primary_season_goal",
+            "created_at",
+            "updated_at",
             "macrocycles",
             "season_info",
+            "discipline_name",
             "dashboard_url",
         )
-
-    def get_season_info(self, obj):
-        season = obj.athlete_seasons.first()
-        if season:
-            return AthleteSeasonSerializer(season).data
-        return None
-
-    def get_skater_id(self, obj):
-        # --- FIX: Handle missing skater (Team/Synchro Plan) ---
-        # Try to get skater from seasons
-        season = obj.athlete_seasons.first()
-        if season and season.skater:
-            return season.skater.id
-
-        # Fallback: If linked to entity via GenericFK
-        if hasattr(obj.planning_entity, "skater") and obj.planning_entity.skater:
-            return obj.planning_entity.skater.id
-
-        return None  # Return None for Teams
 
     def get_discipline_name(self, obj):
         if obj.planning_entity:
             if hasattr(obj.planning_entity, "team_name"):
                 return obj.planning_entity.team_name
-            if hasattr(obj.planning_entity, "skater"):
-                return (
-                    "Singles" if "Singles" in str(obj.planning_entity) else "Solo Dance"
-                )
-        return "Unknown Discipline"
-
-    def get_planning_entity(self, obj):
-        return str(obj.planning_entity)
+            if hasattr(obj.planning_entity, "name"):
+                return obj.planning_entity.name
+        return "General"
 
     def get_dashboard_url(self, obj):
-        # Helper to determine where the "Back" button should go
-        if not obj.planning_entity:
-            return "#/"
-
-        # Check type of entity
-        model_name = obj.content_type.model
-        if model_name == "synchroteam":
-            return f"#/synchro/{obj.object_id}"
-        elif model_name == "team":
-            return f"#/team/{obj.object_id}"
-        elif model_name in ["singlesentity", "solodanceentity"]:
-            # For singles, we need the skater ID
-            # Access via the entity relation (e.g. obj.planning_entity.skater.id)
+        # Helper to link back to the correct dashboard from the Editor
+        if obj.planning_entity:
             if hasattr(obj.planning_entity, "skater"):
                 return f"#/skater/{obj.planning_entity.skater.id}"
-
-        # Fallback: Try finding via season
-        season = obj.athlete_seasons.first()
-        if season and season.skater:
-            return f"#/skater/{season.skater.id}"
-
+            if hasattr(obj.planning_entity, "team_name"):
+                # Check if Synchro
+                if hasattr(obj.planning_entity, "roster"):
+                    return f"#/synchro/{obj.planning_entity.id}"
+                return f"#/team/{obj.planning_entity.id}"
         return "#/"
 
 
 class WeeklyPlanSerializer(serializers.ModelSerializer):
-    active_macrocycles = serializers.SerializerMethodField()
-
     class Meta:
         model = WeeklyPlan
-        fields = (
-            "id",
-            "week_start",
-            "theme",
-            "planned_off_ice_activities",
-            "session_breakdown",
-            "active_macrocycles",
-        )
-
-    def get_active_macrocycles(self, obj):
-        week_date = obj.week_start
-        season = obj.athlete_season
-        plans = season.yearly_plans.all()
-        active_cycles = Macrocycle.objects.filter(
-            yearly_plan__in=plans, phase_start__lte=week_date, phase_end__gte=week_date
-        )
-        results = []
-        for cycle in active_cycles:
-            discipline = "Unknown"
-            entity = cycle.yearly_plan.planning_entity
-            if entity:
-                if hasattr(entity, "team_name"):
-                    discipline = entity.team_name
-                elif hasattr(entity, "skater"):
-                    discipline = "Singles" if "Singles" in str(entity) else "Solo Dance"
-            results.append(
-                {
-                    "discipline": discipline,
-                    "phase_title": cycle.phase_title,
-                    "phase_focus": cycle.phase_focus,
-                }
-            )
-        return results
+        fields = "__all__"
 
 
 class GoalSerializer(serializers.ModelSerializer):
@@ -174,7 +96,9 @@ class GoalSerializer(serializers.ModelSerializer):
             "discipline",
             "coach_review_notes",
         )
-        read_only_fields = ("created_by", "updated_by", "current_status")
+        # NOTE: current_status is NOT read-only so Coaches can update it.
+        # We protect it via the update() method below for non-coaches.
+        read_only_fields = ("created_by", "updated_by")
 
     def get_created_by_name(self, obj):
         return obj.created_by.full_name if obj.created_by else "System"
@@ -183,30 +107,40 @@ class GoalSerializer(serializers.ModelSerializer):
         return obj.updated_by.full_name if obj.updated_by else "System"
 
     def get_discipline(self, obj):
-        # Polymorphic lookup for the display name
         if obj.planning_entity:
             if hasattr(obj.planning_entity, "team_name"):
-                return f"{obj.planning_entity.team_name}"  # Team/Synchro
+                return f"{obj.planning_entity.team_name}"
             if hasattr(obj.planning_entity, "name"):
-                return obj.planning_entity.name  # Singles/Dance Entity name
+                return obj.planning_entity.name
         return "General"
 
     def validate(self, data):
-        # --- PERMISSION LOCK LOGIC ---
-        # If this is an update (instance exists)
+        # Lock Logic: Non-coaches cannot edit locked goals
         if self.instance:
             user = self.context["request"].user
-
-            # If user is NOT a coach (i.e. Guardian or Skater)
             if user.role in ["GUARDIAN", "SKATER"]:
-                # Check the status of the EXISTING record (from DB)
                 locked_statuses = ["APPROVED", "IN_PROGRESS", "COMPLETED", "ARCHIVED"]
+
+                # If the goal IS locked, prevent editing core details via the modal form
+                # We check the *existing* status in the DB, not the incoming one
                 if self.instance.current_status in locked_statuses:
+                    # Exception: If they are just adding progress notes?
+                    # For now, strict block to match requirements.
                     raise serializers.ValidationError(
                         f"You cannot edit this goal because it is {self.instance.get_current_status_display()}. Only a coach can modify it now."
                     )
-
         return data
+
+    def update(self, instance, validated_data):
+        # Permission Logic for Status Changes
+        user = self.context["request"].user
+
+        if user.role in ["GUARDIAN", "SKATER"]:
+            # If a non-coach tries to change status (e.g. via API directly), ignore it
+            if "current_status" in validated_data:
+                validated_data.pop("current_status")
+
+        return super().update(instance, validated_data)
 
 
 class GapAnalysisSerializer(serializers.ModelSerializer):

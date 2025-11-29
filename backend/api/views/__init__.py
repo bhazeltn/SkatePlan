@@ -1,5 +1,5 @@
 from .auth import RegisterView, LoginView, UserProfileView
-from .core import FederationList, SkatingElementList
+from .core import FederationList, SkatingElementList, RevokeAccessView
 from .skaters import (
     CreateSkaterView,
     SkaterDetailView,
@@ -68,7 +68,7 @@ from .dashboard import (
 
 from .logistics import (
     SynchroTripListCreateView,
-    SkaterTripListView,  # <--- ADDED
+    SkaterTripListView,
     TeamTripDetailView,
     ItineraryListCreateView,
     ItineraryDetailView,

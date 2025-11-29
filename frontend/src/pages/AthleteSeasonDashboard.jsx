@@ -42,30 +42,29 @@ export default function AthleteSeasonDashboard() {
   useEffect(() => { fetchSkater(); }, [id, token]);
 
   // --- PERMISSIONS LOGIC ---
-  // 1. Determine Roles
   const isGuardian = user?.role === 'GUARDIAN';
   const isSkater = user?.role === 'SKATER';
   const isCoach = !isGuardian && !isSkater;
   
-  // 2. Determine Context (Owner vs Collaborator)
-  // Default to Owner ('COACH') if access_level is missing (legacy)
   const accessLevel = skater?.access_level || 'COACH';
   const isCollaborator = accessLevel === 'COLLABORATOR';
 
   const permissions = {
       role: user?.role,
-      // Coaches (Owners + Collabs) can edit plans, Parents/Skaters cannot
-      canEditPlan: isCoach, 
       
+      // Can Edit? (Coaches & Collaborators)
+      canEditPlan: isCoach, 
       canEditGoals: true,
       canEditLogs: true,
       canEditHealth: true,
-      canCreateCompetitions: isCoach,
+      canCreateCompetitions: isCoach, // Collaborators can create events? Usually yes, let's allow it.
       canEditCompetitions: true,
       
-      // RESTRICTED: Only true Owners can edit profile/invite/delete
+      // Can Delete? (Owners Only)
+      canDelete: isCoach && !isCollaborator, // <--- NEW GLOBAL FLAG
+
+      // Specifics
       canEditProfile: isCoach && !isCollaborator, 
-      
       viewGapAnalysis: isCoach,
       readOnly: !isCoach,       
   };
@@ -76,13 +75,10 @@ export default function AthleteSeasonDashboard() {
   if (loading) return <div className="p-8">Loading...</div>;
   if (!skater) return <div className="p-8">Not found or access denied.</div>;
 
-  // --- DYNAMIC TAB LIST ---
   const tabs = ['weekly', 'yearly'];
   if (permissions.viewGapAnalysis) tabs.push('gap_analysis');
   tabs.push('goals', 'programs', 'competitions');
-  if (!isCoach && skater?.synchro_teams?.length > 0) {
-      tabs.push('synchro_logistics');
-  }
+  if (!isCoach && skater?.synchro_teams?.length > 0) tabs.push('synchro_logistics');
   tabs.push('tests', 'logs', 'health', 'analytics', 'profile');
 
   return (
@@ -100,8 +96,6 @@ export default function AthleteSeasonDashboard() {
                 </div>
             </div>
         </div>
-        
-        {/* HEADER ACTIONS */}
         <div className="flex gap-2">
             {isSkater ? (
                 <>
@@ -125,17 +119,16 @@ export default function AthleteSeasonDashboard() {
         {activeTab === 'yearly' && <YearlyPlansTab skater={skater} readOnly={permissions.readOnly} />}
         {activeTab === 'gap_analysis' && <GapAnalysisTab skater={skater} />}
         {activeTab === 'goals' && <GoalsTab skater={skater} permissions={permissions} />}
-        {activeTab === 'programs' && <ProgramsTab skater={skater} readOnly={permissions.readOnly} />}
-        {activeTab === 'competitions' && <CompetitionsTab skater={skater} permissions={permissions} readOnly={false} />}
         
+        {/* PASS PERMISSIONS TO ALL TABS */}
+        {activeTab === 'programs' && <ProgramsTab skater={skater} readOnly={permissions.readOnly} permissions={permissions} />}
+        {activeTab === 'competitions' && <CompetitionsTab skater={skater} permissions={permissions} readOnly={permissions.readOnly} />}
         {activeTab === 'synchro_logistics' && <LogisticsTab skater={skater} isSynchro={true} />}
-
-        {activeTab === 'tests' && <TestsTab skater={skater} permissions={permissions} />}
+        {activeTab === 'tests' && <TestsTab skater={skater} permissions={permissions} readOnly={permissions.readOnly} />}
         {activeTab === 'logs' && <LogsTab skater={skater} permissions={permissions} />}
         {activeTab === 'health' && <HealthTab skater={skater} permissions={permissions} />}
-        {activeTab === 'analytics' && <AnalyticsTab skater={skater} />}
         
-        {/* PASS STRICT READ-ONLY for Collaborators on Profile */}
+        {activeTab === 'analytics' && <AnalyticsTab skater={skater} />}
         {activeTab === 'profile' && <ProfileTab skater={skater} onUpdated={fetchSkater} readOnly={!permissions.canEditProfile} />}
       </div>
     </div>

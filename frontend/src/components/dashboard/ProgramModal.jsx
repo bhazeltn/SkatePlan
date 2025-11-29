@@ -5,10 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, Music, User, Archive, FileText, Image, Paperclip, Trash2, X, Lock, Upload } from 'lucide-react'; // Added Upload icon
+import { Plus, Music, User, Archive, FileText, Image, Paperclip, Trash2, X, Lock, Upload } from 'lucide-react';
 import { ProgramElementRow } from './ProgramElementRow';
 
-export function ProgramModal({ skater, team, isSynchro, programToEdit, onSaved, trigger, readOnly }) {
+export function ProgramModal({ skater, team, isSynchro, programToEdit, onSaved, trigger, readOnly, permissions }) {
   const [open, setOpen] = useState(false);
   const { token } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -28,10 +28,10 @@ export function ProgramModal({ skater, team, isSynchro, programToEdit, onSaved, 
   const [musicFile, setMusicFile] = useState(null);
   const [currentMusic, setCurrentMusic] = useState(null);
   const [assets, setAssets] = useState([]);
-  
-  // New Asset State
   const [newAssetFile, setNewAssetFile] = useState(null);
   const [newAssetType, setNewAssetType] = useState('COSTUME');
+
+  const canDelete = permissions?.canDelete;
 
   useEffect(() => {
     if (open) {
@@ -76,31 +76,18 @@ export function ProgramModal({ skater, team, isSynchro, programToEdit, onSaved, 
   const updateElementRow = (index, newData) => { const updated = [...elements]; updated[index] = newData; setElements(updated); };
   const removeElementRow = (index) => { setElements(elements.filter((_, i) => i !== index)); };
 
-  // --- NEW: Explicit Music Upload Handler ---
   const handleUploadMusic = async () => {
       if (!musicFile || !programToEdit) return;
       setLoading(true);
       const formData = new FormData();
       formData.append('music_file', musicFile);
-      
       try {
-          // Patch just the file
           const updatedProg = await apiRequest(`/programs/${programToEdit.id}/`, 'PATCH', formData, token);
-          
-          // Update local state
           setCurrentMusic(updatedProg.music_file);
           setMusicFile(null);
-          
-          // Update parent list
           if (onSaved) onSaved();
-          
           alert("Music uploaded successfully!");
-      } catch (e) { 
-          console.error(e);
-          alert("Failed to upload music."); 
-      } finally { 
-          setLoading(false); 
-      }
+      } catch (e) { alert("Failed to upload music."); } finally { setLoading(false); }
   };
 
   const handleUploadAsset = async () => {
@@ -238,17 +225,8 @@ export function ProgramModal({ skater, team, isSynchro, programToEdit, onSaved, 
                             <div className="flex-1">
                                 <Input type="file" accept="audio/*" onChange={(e) => setMusicFile(e.target.files[0])} className="h-9 text-xs" />
                             </div>
-                            {/* Show specific Upload button only in Edit Mode */}
                             {programToEdit && (
-                                <Button 
-                                    type="button" 
-                                    size="sm" 
-                                    className="h-9"
-                                    onClick={handleUploadMusic}
-                                    disabled={!musicFile || loading}
-                                >
-                                    <Upload className="h-4 w-4 mr-2" /> Upload
-                                </Button>
+                                <Button type="button" size="sm" className="h-9" onClick={handleUploadMusic} disabled={!musicFile || loading}><Upload className="h-4 w-4 mr-2" /> Upload</Button>
                             )}
                         </div>
                      )
@@ -269,7 +247,7 @@ export function ProgramModal({ skater, team, isSynchro, programToEdit, onSaved, 
                                     {asset.asset_type === 'COSTUME' ? <Image className="h-3 w-3 text-purple-500"/> : <FileText className="h-3 w-3 text-blue-500"/>}
                                     <a href={asset.file} target="_blank" className="truncate hover:underline max-w-[100px]">{asset.asset_type}</a>
                                 </div>
-                                {!readOnly && (
+                                {!readOnly && canDelete && (
                                     <button type="button" onClick={() => handleDeleteAsset(asset.id)}><X className="h-3 w-3 text-gray-400 hover:text-red-500"/></button>
                                 )}
                             </div>
@@ -297,7 +275,6 @@ export function ProgramModal({ skater, team, isSynchro, programToEdit, onSaved, 
                 )}
             </div>
 
-            {/* --- ELEMENTS --- */}
             <div className="border-t pt-4 mt-2">
                 <div className="flex justify-between items-center mb-2">
                     <div className="flex items-center gap-4"><Label className="text-gray-900 font-bold">Program Layout</Label><span className="bg-blue-100 text-blue-800 text-xs font-bold px-2 py-1 rounded">Est. Base Value: {totalBV.toFixed(2)}</span></div>
@@ -319,13 +296,16 @@ export function ProgramModal({ skater, team, isSynchro, programToEdit, onSaved, 
                 </div>
             </div>
 
-            {/* --- FOOTER --- */}
             {!readOnly && (
                 <div className="pt-4 flex justify-between items-center border-t">
                     {programToEdit ? (
                         <div className="flex gap-2">
-                            <Button type="button" variant="destructive" onClick={() => { if(confirm("Delete Program?")) { /* TODO */ } }}>Delete</Button>
-                            <Button type="button" variant="outline" onClick={() => setIsActive(!isActive)}>{isActive ? 'Archive' : 'Restore'}</Button>
+                            {canDelete && (
+                                <>
+                                    <Button type="button" variant="destructive" onClick={() => { if(confirm("Delete Program?")) { /* API Call */ } }}>Delete</Button>
+                                    <Button type="button" variant="outline" onClick={() => setIsActive(!isActive)}>{isActive ? 'Archive' : 'Restore'}</Button>
+                                </>
+                            )}
                         </div>
                     ) : (<div></div>)}
                     <Button type="submit" disabled={loading} className={!programToEdit ? "w-full" : ""}>Save Program</Button>

@@ -29,6 +29,9 @@ class YearlyPlanSerializer(serializers.ModelSerializer):
     discipline_name = serializers.SerializerMethodField()
     dashboard_url = serializers.SerializerMethodField()
 
+    # FIX: Handle GenericForeignKey serialization
+    planning_entity = serializers.SerializerMethodField()
+
     class Meta:
         model = YearlyPlan
         fields = (
@@ -44,6 +47,9 @@ class YearlyPlanSerializer(serializers.ModelSerializer):
             "discipline_name",
             "dashboard_url",
         )
+
+    def get_planning_entity(self, obj):
+        return str(obj.planning_entity)
 
     def get_discipline_name(self, obj):
         if obj.planning_entity:
@@ -97,7 +103,6 @@ class GoalSerializer(serializers.ModelSerializer):
             "coach_review_notes",
         )
         # NOTE: current_status is NOT read-only so Coaches can update it.
-        # We protect it via the update() method below for non-coaches.
         read_only_fields = ("created_by", "updated_by")
 
     def get_created_by_name(self, obj):
@@ -121,11 +126,7 @@ class GoalSerializer(serializers.ModelSerializer):
             if user.role in ["GUARDIAN", "SKATER"]:
                 locked_statuses = ["APPROVED", "IN_PROGRESS", "COMPLETED", "ARCHIVED"]
 
-                # If the goal IS locked, prevent editing core details via the modal form
-                # We check the *existing* status in the DB, not the incoming one
                 if self.instance.current_status in locked_statuses:
-                    # Exception: If they are just adding progress notes?
-                    # For now, strict block to match requirements.
                     raise serializers.ValidationError(
                         f"You cannot edit this goal because it is {self.instance.get_current_status_display()}. Only a coach can modify it now."
                     )
@@ -136,7 +137,6 @@ class GoalSerializer(serializers.ModelSerializer):
         user = self.context["request"].user
 
         if user.role in ["GUARDIAN", "SKATER"]:
-            # If a non-coach tries to change status (e.g. via API directly), ignore it
             if "current_status" in validated_data:
                 validated_data.pop("current_status")
 

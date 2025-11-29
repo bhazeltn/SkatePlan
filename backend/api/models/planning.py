@@ -7,8 +7,6 @@ from .skaters import Skater
 
 class AthleteSeason(models.Model):
     id = models.AutoField(primary_key=True)
-
-    # --- CHANGED: Optional Skater + Generic Link ---
     skater = models.ForeignKey(
         Skater,
         on_delete=models.CASCADE,
@@ -21,31 +19,28 @@ class AthleteSeason(models.Model):
     )
     object_id = models.PositiveIntegerField(null=True, blank=True)
     planning_entity = GenericForeignKey("content_type", "object_id")
-    # -----------------------------------------------
 
     season = models.CharField(max_length=50)
     start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
-    is_active = models.BooleanField(default=True)
-
     primary_coach = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="athlete_seasons_as_primary",
+        related_name="coached_seasons",
     )
+    is_active = models.BooleanField(default=True)
 
     def __str__(self):
-        entity = self.skater or self.planning_entity or "Unknown"
-        return f"{self.season} ({entity})"
-
-    class Meta:
-        ordering = ["-season"]
+        return f"{self.season} - {self.skater or self.planning_entity}"
 
 
 class YearlyPlan(models.Model):
     id = models.AutoField(primary_key=True)
+    coach_owner = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="yearly_plans"
+    )
 
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
     object_id = models.PositiveIntegerField()
@@ -53,24 +48,24 @@ class YearlyPlan(models.Model):
 
     athlete_seasons = models.ManyToManyField(AthleteSeason, related_name="yearly_plans")
 
-    coach_owner = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="yearly_plans",
+    peak_type = models.CharField(
+        max_length=50,
+        choices=[
+            ("Single Peak", "Single Peak"),
+            ("Double Peak", "Double Peak"),
+            ("Triple Peak", "Triple Peak"),
+            ("Development", "Development"),
+        ],
+        default="Single Peak",
     )
 
-    peak_type = models.CharField(max_length=100, blank=True, null=True)
     primary_season_goal = models.TextField(blank=True, null=True)
 
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
     def __str__(self):
-        season = (
-            self.athlete_seasons.first().season
-            if self.athlete_seasons.exists()
-            else "Unknown"
-        )
-        return f"YTP for {self.planning_entity} ({season})"
+        return f"YTP: {self.planning_entity}"
 
 
 class Macrocycle(models.Model):
@@ -78,30 +73,15 @@ class Macrocycle(models.Model):
     yearly_plan = models.ForeignKey(
         YearlyPlan, on_delete=models.CASCADE, related_name="macrocycles"
     )
-    phase_title = models.CharField(max_length=100)  # e.g. "General Prep"
+    phase_title = models.CharField(max_length=100)
     phase_start = models.DateField()
     phase_end = models.DateField()
 
-    # The "Headline" Goal
     phase_focus = models.TextField(blank=True, null=True)
-
-    # --- NEW: THE 4 PILLARS ---
-    technical_focus = models.TextField(
-        blank=True, null=True, help_text="Elements, Strategy"
-    )
-    component_focus = models.TextField(
-        blank=True, null=True, help_text="Artistic, Performance"
-    )
-    physical_focus = models.TextField(
-        blank=True, null=True, help_text="Strength, Conditioning"
-    )
-    mental_focus = models.TextField(
-        blank=True, null=True, help_text="Psychology, Lifestyle"
-    )
-    # --------------------------
-
-    def __str__(self):
-        return self.phase_title
+    technical_focus = models.TextField(blank=True, null=True)
+    component_focus = models.TextField(blank=True, null=True)
+    physical_focus = models.TextField(blank=True, null=True)
+    mental_focus = models.TextField(blank=True, null=True)
 
     class Meta:
         ordering = ["phase_start"]
@@ -112,27 +92,14 @@ class WeeklyPlan(models.Model):
     athlete_season = models.ForeignKey(
         AthleteSeason, on_delete=models.CASCADE, related_name="weekly_plans"
     )
-
-    # --- CRITICAL CHANGE: Remove unique=True ---
     week_start = models.DateField()
-    # -------------------------------------------
 
     theme = models.CharField(max_length=255, blank=True, null=True)
-    planned_off_ice_activities = models.JSONField(default=list, blank=True)
     session_breakdown = models.JSONField(default=dict, blank=True)
 
-    def __str__(self):
-        # Handle cases where skater is None (Team Season)
-        entity = (
-            self.athlete_season.skater or self.athlete_season.planning_entity or "Team"
-        )
-        return f"Week of {self.week_start} ({entity})"
-
     class Meta:
-        ordering = ["-week_start"]
-        # --- ADD COMPOSITE CONSTRAINT ---
         unique_together = ("athlete_season", "week_start")
-        # --------------------------------
+        ordering = ["week_start"]
 
 
 class Goal(models.Model):
@@ -148,7 +115,6 @@ class Goal(models.Model):
     id = models.AutoField(primary_key=True)
     title = models.CharField(max_length=255)
 
-    # Link to Discipline (Singles, Team, etc.)
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
     object_id = models.PositiveIntegerField()
     planning_entity = GenericForeignKey("content_type", "object_id")
@@ -161,14 +127,12 @@ class Goal(models.Model):
         related_name="assigned_goals",
     )
 
-    # --- NEW: AUDIT FIELDS ---
     created_by = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, related_name="created_goals"
     )
     updated_by = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, related_name="updated_goals"
     )
-    # -------------------------
 
     goal_type = models.CharField(max_length=50, blank=True, null=True)
     goal_timeframe = models.CharField(max_length=50, blank=True, null=True)
@@ -195,31 +159,18 @@ class Goal(models.Model):
 
 
 class GapAnalysis(models.Model):
-    """
-    A continuous, living strategic document linked to an entity (Skater/Team).
-    Not tied to a specific season.
-    """
-
     id = models.AutoField(primary_key=True)
 
-    # --- CHANGED: Add null=True to handle existing rows ---
+    # FIX: Allow nulls to handle existing rows during migration
     content_type = models.ForeignKey(
         ContentType, on_delete=models.CASCADE, null=True, blank=True
     )
     object_id = models.PositiveIntegerField(null=True, blank=True)
     planning_entity = GenericForeignKey("content_type", "object_id")
-    # -----------------------------------------------------
 
-    # Structure: [{ id, category, benchmark, current, strategy }]
-    elements = models.JSONField(default=list, blank=True)
+    elements_status = models.JSONField(default=dict, blank=True)
 
-    notes = models.TextField(blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    def __str__(self):
-        return f"Gap Analysis for {self.planning_entity}"
-
     class Meta:
-        # Remove unique_together temporarily if it causes issues with nulls,
-        # or keep it if your DB supports unique nulls (Postgres does).
         unique_together = ("content_type", "object_id")

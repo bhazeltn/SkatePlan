@@ -11,7 +11,7 @@ import { Search, Plus, MapPin, Trash2, ChevronDown, ChevronUp, Video, FileText, 
 import { Country, State, City } from 'country-state-city';
 import { ProtocolEditor } from './ProtocolEditor';
 
-export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved, trigger, readOnly, permissions }) { // <--- permissions
+export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved, trigger, readOnly, permissions }) {
   const [open, setOpen] = useState(false);
   const { token } = useAuth();
   
@@ -19,7 +19,7 @@ export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved,
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // ... (State hooks remain same) ...
+  // State
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [selectedComp, setSelectedComp] = useState(resultToEdit?.competition || null);
@@ -42,13 +42,14 @@ export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved,
   const [segments, setSegments] = useState(resultToEdit?.segment_scores || []);
   const [expandedPCS, setExpandedPCS] = useState(null);
   const [expandedProtocol, setExpandedProtocol] = useState(null);
-
   const [detailSheet, setDetailSheet] = useState(null);
   const [currentDetailSheet, setCurrentDetailSheet] = useState(null); 
   const [videoUrl, setVideoUrl] = useState('');
 
-  // PERMISSION CHECK
+  // Permissions
   const isCoach = permissions?.role === 'COACH' || permissions?.role === 'COLLABORATOR';
+  const canCreateComp = permissions?.canCreateCompetitions;
+  const canDelete = permissions?.canDelete;
 
   useEffect(() => {
       if (open) {
@@ -79,7 +80,6 @@ export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved,
       }
   }, [open, resultToEdit, skater, team]);
 
-  // ... (Effect and Handlers remain same) ...
   useEffect(() => {
       if (segments.length > 0 && status === 'COMPLETED') {
           const total = segments.reduce((sum, seg) => sum + (parseFloat(seg.score) || 0), 0);
@@ -165,9 +165,11 @@ export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved,
           <div className="flex items-center justify-between mb-2 text-xs bg-blue-50 p-2 rounded border border-blue-100">
               <div className="flex items-center gap-2 overflow-hidden">
                   <Paperclip className="h-3 w-3 text-blue-600 flex-shrink-0" />
-                  <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-700 hover:underline truncate" title={filename}>{filename}</a>
+                  <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-700 hover:underline truncate" title={filename}>
+                      {filename}
+                  </a>
               </div>
-              {!readOnly && (
+              {!readOnly && canDelete && (
                   <Button type="button" variant="ghost" size="sm" className="h-5 w-5 p-0 text-red-400 hover:text-red-600" onClick={handleDeleteSheet}><Trash2 className="h-3 w-3" /></Button>
               )}
           </div>
@@ -222,7 +224,6 @@ export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved,
                                       <div className="col-span-2 sm:col-span-1"><Label className="text-xs">Segment</Label><select className="flex h-8 w-full rounded-md border border-input bg-white px-2 text-xs" value={seg.name} onChange={(e) => updateSegment(seg.id, 'name', e.target.value)} disabled={readOnly}><option value="Short Program">Short Program</option><option value="Free Skate">Free Skate</option><option value="Pattern Dance">Pattern Dance</option><option value="Rhythm Dance">Rhythm Dance</option><option value="Free Dance">Free Dance</option></select></div>
                                       <div><Label className="text-xs">Place</Label><Input className="h-8 bg-white" type="number" value={seg.placement} onChange={(e) => updateSegment(seg.id, 'placement', e.target.value)} placeholder="#" disabled={readOnly} /></div>
                                   </div>
-                                  {/* ... (Segment fields same as before) ... */}
                                   <div className="grid grid-cols-6 gap-2">
                                       <div className="col-span-2"><Label className="text-xs text-gray-500">Total</Label><Input className="h-8 bg-white font-bold" type="number" step="0.01" value={seg.score} onChange={(e) => updateSegment(seg.id, 'score', e.target.value)} disabled={readOnly} /></div>
                                       <div><Label className="text-xs text-gray-500">TES</Label><Input className="h-8 bg-white" type="number" step="0.01" value={seg.tes} onChange={(e) => updateSegment(seg.id, 'tes', e.target.value)} disabled={readOnly} /></div>
@@ -230,12 +231,10 @@ export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved,
                                       <div><Label className="text-xs text-red-500">Ded</Label><Input className="h-8 bg-white text-red-600" type="number" step="0.01" value={seg.deductions} onChange={(e) => updateSegment(seg.id, 'deductions', e.target.value)} disabled={readOnly} /></div>
                                       <div><Label className="text-xs text-green-600">Bon</Label><Input className="h-8 bg-white text-green-600" type="number" step="0.01" value={seg.bonus} onChange={(e) => updateSegment(seg.id, 'bonus', e.target.value)} disabled={readOnly} /></div>
                                   </div>
-                                  
                                   <div className="mt-2">
                                       <Button type="button" variant="ghost" size="sm" className="h-5 text-[10px] text-slate-500" onClick={() => togglePCS(seg.id)}>{expandedPCS === seg.id ? "Hide PCS Details" : "Show PCS Details"}</Button>
                                       {expandedPCS === seg.id && (<div className="grid grid-cols-3 gap-2 mt-1 p-2 bg-slate-100 rounded border border-slate-200 animate-in fade-in slide-in-from-top-1"><div className="col-span-1"><Label className="text-[10px]">Comp</Label><Input className="h-7 text-xs" type="number" step="0.01" value={seg.pcs_composition} onChange={(e)=>updateSegment(seg.id, 'pcs_composition', e.target.value)} disabled={readOnly} /></div><div className="col-span-1"><Label className="text-[10px]">Pres</Label><Input className="h-7 text-xs" type="number" step="0.01" value={seg.pcs_presentation} onChange={(e)=>updateSegment(seg.id, 'pcs_presentation', e.target.value)} disabled={readOnly} /></div><div className="col-span-1"><Label className="text-[10px]">Skills</Label><Input className="h-7 text-xs" type="number" step="0.01" value={seg.pcs_skills} onChange={(e)=>updateSegment(seg.id, 'pcs_skills', e.target.value)} disabled={readOnly} /></div></div>)}
                                   </div>
-                                  {/* ... (Protocol toggle same as before) ... */}
                                   <div className="mt-2 pt-2 border-t border-slate-200">
                                       <Button type="button" variant="ghost" size="sm" className="w-full h-6 text-xs flex justify-between text-slate-500 hover:text-slate-800 hover:bg-slate-100" onClick={() => toggleProtocol(seg.id)}>
                                           <span>Detailed Protocol / Elements</span>
@@ -286,7 +285,7 @@ export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved,
         {step === 'SEARCH' && !readOnly && (
             <div className="space-y-4"><div className="flex gap-2"><Input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Search..." /><Button onClick={handleSearch} disabled={loading}><Search className="h-4 w-4" /></Button></div><div className="max-h-[200px] overflow-y-auto space-y-2 border rounded p-2">{searchResults.map(comp => (<div key={comp.id} className="flex justify-between p-2 hover:bg-slate-50 rounded items-center border-b last:border-0"><div className="text-sm"><div className="font-bold">{comp.title}</div><div className="text-xs text-gray-500">{comp.city}, {comp.province_state}</div></div><Button size="sm" variant="outline" onClick={() => { setSelectedComp(comp); setStep('LOG'); }}>Select</Button></div>))}</div>
             {/* HIDE CREATE BUTTON FOR NON-COACHES */}
-            {isCoach && (
+            {canCreateComp && (
                 <div className="pt-2"><Button variant="secondary" className="w-full" onClick={() => setStep('CREATE')}><Plus className="h-4 w-4 mr-2" /> Create New Competition</Button></div>
             )}
             </div>

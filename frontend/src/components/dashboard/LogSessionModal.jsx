@@ -34,7 +34,7 @@ export function LogSessionModal({ skater, team, isSynchro, logToEdit, onLogCreat
   // Permission Checks
   const isCoach = permissions?.role === 'COACH' || permissions?.role === 'COLLABORATOR';
   const isFamily = permissions?.role === 'GUARDIAN' || permissions?.role === 'SKATER';
-  const canDelete = isCoach; // Only Coach can delete logs
+  const canDelete = permissions?.canDelete;
 
   useEffect(() => {
       if (open) {
@@ -108,8 +108,8 @@ export function LogSessionModal({ skater, team, isSynchro, logToEdit, onLogCreat
         energy_stamina: energy,
         sentiment_emoji: mood,
         wellbeing_mental_focus_notes: mentalFocus,
-        coach_notes: coachNotes,   // Send both notes
-        skater_notes: skaterNotes, // Backend permissions will ignore the one they can't edit
+        coach_notes: coachNotes,   
+        skater_notes: skaterNotes, 
         attendance: attendanceList
       };
 
@@ -174,25 +174,23 @@ export function LogSessionModal({ skater, team, isSynchro, logToEdit, onLogCreat
       <DialogContent className="sm:max-w-[500px] max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{logToEdit ? 'Edit Log' : 'Log Training Session'}</DialogTitle>
-          <DialogDescription>Record details and wellbeing.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           
-          <div className="grid grid-cols-2 gap-4">
+           <div className="grid grid-cols-2 gap-4">
              <div className="space-y-2"><Label>Date</Label><DatePicker date={date} setDate={setDate} /></div>
              <div className="space-y-2">
                 <Label>Discipline</Label>
                 {team ? (
                     <Input value={team.team_name} disabled className="bg-slate-50 text-slate-500" />
                 ) : (
-                    <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={selectedEntityId} onChange={(e) => setSelectedEntityId(e.target.value)} disabled={!!logToEdit}>
+                    <select className="flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm" value={selectedEntityId} onChange={(e) => setSelectedEntityId(e.target.value)} disabled={!!logToEdit}>
                         {skater?.planning_entities?.map((entity) => (<option key={entity.id} value={entity.id}>{entity.name}</option>))}
                     </select>
                 )}
              </div>
           </div>
 
-          {/* --- ATTENDANCE --- */}
           {attendanceList.length > 0 && (
               <div className="space-y-2 border rounded-md p-3 bg-slate-50">
                   <Label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2">
@@ -213,7 +211,7 @@ export function LogSessionModal({ skater, team, isSynchro, logToEdit, onLogCreat
 
           <div className="grid grid-cols-2 gap-4">
             <div className="p-3 bg-slate-50 rounded-md border flex flex-col justify-center items-center space-y-2">
-                <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Quality</Label>
+                <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Quality Rating</Label>
                 {renderRating(rating, setRating, 'star')}
             </div>
             <div className="p-3 bg-slate-50 rounded-md border flex flex-col justify-center items-center space-y-2">
@@ -230,9 +228,7 @@ export function LogSessionModal({ skater, team, isSynchro, logToEdit, onLogCreat
              <Input value={mentalFocus} onChange={(e) => setMentalFocus(e.target.value)} placeholder="Focus notes..." />
           </div>
 
-          {/* NOTES SECTION - SPLIT VIEW */}
           <div className="space-y-3 border-t pt-4">
-             {/* Coach Notes */}
              <div className="space-y-1.5">
                  <Label className="text-xs font-bold text-blue-700 uppercase">
                     {isCoach ? "Coach Notes (Your Feedback)" : "Coach Feedback (Read Only)"}
@@ -240,13 +236,12 @@ export function LogSessionModal({ skater, team, isSynchro, logToEdit, onLogCreat
                  <Textarea 
                     value={coachNotes} 
                     onChange={(e) => setCoachNotes(e.target.value)} 
-                    disabled={!isCoach} // Only coach can edit
+                    disabled={!isCoach} 
                     className={!isCoach ? "bg-slate-50 text-slate-600" : ""}
                     placeholder={isCoach ? "Technical feedback..." : "Waiting for coach feedback..."}
                  />
              </div>
 
-             {/* Skater/Parent Notes */}
              <div className="space-y-1.5">
                  <Label className="text-xs font-bold text-green-700 uppercase">
                     {isFamily ? "My Notes / Reflections" : "Skater Reflections (Read Only)"}
@@ -254,7 +249,7 @@ export function LogSessionModal({ skater, team, isSynchro, logToEdit, onLogCreat
                  <Textarea 
                     value={skaterNotes} 
                     onChange={(e) => setSkaterNotes(e.target.value)} 
-                    disabled={!isFamily} // Only family can edit
+                    disabled={!isFamily} 
                     className={!isFamily ? "bg-slate-50 text-slate-600" : ""}
                     placeholder={isFamily ? "How did it feel?" : "No reflections yet."}
                  />
@@ -262,7 +257,7 @@ export function LogSessionModal({ skater, team, isSynchro, logToEdit, onLogCreat
           </div>
 
           <DialogFooter className="flex justify-between items-center">
-              {logToEdit && canDelete ? ( // Only show Delete if allowed (Coach)
+              {logToEdit && canDelete ? ( 
                   <Button type="button" variant="destructive" onClick={handleDelete}>Delete</Button>
               ) : <div></div>}
               <Button type="submit" disabled={loading}>{loading ? 'Saving...' : 'Save Log'}</Button>

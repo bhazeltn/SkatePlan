@@ -14,8 +14,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_skater_id(self, obj):
         if obj.role == User.Role.SKATER:
-            # FIX: The model defines related_name='skaters'
-            # Since it's a ForeignKey, we access the manager and get the first record.
+            # FIX: Uses the reverse relation 'skaters' (plural) and takes the first one
             skater = obj.skaters.first()
             return skater.id if skater else None
         return None

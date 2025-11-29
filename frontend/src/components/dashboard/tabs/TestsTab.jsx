@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { LogTestModal } from '@/components/dashboard/LogTestModal';
 import { ClipboardCheck, Calendar, Clock } from 'lucide-react';
 
-export function TestsTab({ skater, readOnly, permissions }) { // <--- Added permissions
+export function TestsTab({ skater, readOnly, permissions }) { 
   const { token } = useAuth();
   const [tests, setTests] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -26,8 +26,9 @@ export function TestsTab({ skater, readOnly, permissions }) { // <--- Added perm
   const planned = tests.filter(t => t.status !== 'COMPLETED' && t.status !== 'WITHDRAWN');
 
   // Permission Checks
-  const canCreate = permissions?.canCreateCompetitions; // Reuse "Create Events" permission
-  const canDelete = permissions?.canCreateCompetitions; // Only coaches can delete
+  const canCreate = permissions?.canCreateCompetitions; 
+  const canDelete = permissions?.canDelete; 
+  const canEdit = permissions?.canEditCompetitions;
 
   if (loading) return <div className="p-8 text-center">Loading records...</div>;
 
@@ -39,8 +40,7 @@ export function TestsTab({ skater, readOnly, permissions }) { // <--- Added perm
             <h3 className="text-lg font-semibold">Test Records</h3>
             <p className="text-sm text-muted-foreground">Progress through levels</p>
         </div>
-        
-        {/* HIDE CREATE BUTTON FOR PARENTS */}
+        {/* Only Coach can create */}
         {!readOnly && canCreate && <LogTestModal skater={skater} onSaved={fetchTests} />}
       </div>
 
@@ -56,7 +56,8 @@ export function TestsTab({ skater, readOnly, permissions }) { // <--- Added perm
                        key={test.id} 
                        skater={skater} 
                        testToEdit={test} 
-                       canDelete={canDelete} // <--- Pass Delete Permission
+                       canDelete={canDelete} 
+                       readOnly={!canEdit}
                        onSaved={fetchTests} 
                        trigger={
                            <Card className="border-l-4 border-l-indigo-500 cursor-pointer hover:shadow-md transition-all h-full">
@@ -94,7 +95,8 @@ export function TestsTab({ skater, readOnly, permissions }) { // <--- Added perm
                         key={test.id} 
                         skater={skater} 
                         testToEdit={test} 
-                        canDelete={canDelete} // <--- Pass Delete Permission
+                        canDelete={canDelete}
+                        readOnly={!canEdit}
                         onSaved={fetchTests} 
                         trigger={
                             <Card className="cursor-pointer hover:border-brand-blue hover:shadow-sm transition-all h-full">

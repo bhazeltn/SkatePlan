@@ -7,9 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { DatePicker } from '@/components/ui/date-picker';
-import { AlertTriangle, Plus } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 
-export function InjuryModal({ skater, team, isSynchro, injuryToEdit, onSaved, trigger, permissions }) { // <--- Added permissions
+export function InjuryModal({ skater, team, isSynchro, injuryToEdit, onSaved, trigger, permissions }) {
   const [open, setOpen] = useState(false);
   const { token } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -26,8 +26,8 @@ export function InjuryModal({ skater, team, isSynchro, injuryToEdit, onSaved, tr
   // For team logs
   const [selectedSkaterId, setSelectedSkaterId] = useState('');
 
-  // Permissions
-  const canDelete = permissions?.role === 'COACH' || permissions?.role === 'COLLABORATOR';
+  // Permissions: Only Owner can delete
+  const canDelete = permissions?.canDelete;
 
   useEffect(() => {
       if (open) {
@@ -143,7 +143,7 @@ export function InjuryModal({ skater, team, isSynchro, injuryToEdit, onSaved, tr
             <div className="space-y-2"><Label>Recovery Notes</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Physio instructions, limitations..." /></div>
 
             <DialogFooter className="flex justify-between items-center">
-                {injuryToEdit && canDelete ? ( // Check permission
+                {injuryToEdit && canDelete ? ( 
                     <Button type="button" variant="destructive" onClick={handleDelete} disabled={loading}>Delete</Button>
                 ) : <div></div>}
                 <Button type="submit" disabled={loading}>{loading ? 'Saving...' : 'Save Record'}</Button>

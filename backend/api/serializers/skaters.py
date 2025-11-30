@@ -10,28 +10,10 @@ from api.models import (
     PlanningEntityAccess,
 )
 from .core import FederationSerializer
+from api.services import get_access_role
 
 
-# --- HELPER ---
-def get_context_access_level(user, obj):
-    if not user:
-        return None
-    if user.is_superuser:
-        return "COACH"
-
-    from django.contrib.contenttypes.models import ContentType
-
-    ct = ContentType.objects.get_for_model(obj)
-
-    access = PlanningEntityAccess.objects.filter(
-        user=user, content_type=ct, object_id=obj.id
-    ).first()
-
-    if access:
-        return access.access_level
-    return "COACH"  # Fallback for creators
-
-
+# --- HELPER TO FETCH STAFF (Specific to Serialization) ---
 def get_entity_staff(entity_obj, role_list):
     from django.contrib.contenttypes.models import ContentType
 
@@ -136,10 +118,7 @@ class TeamSerializer(serializers.ModelSerializer):
 
     collaborators = serializers.SerializerMethodField()
     observers = serializers.SerializerMethodField()
-
-    # --- NEW FIELD ---
     access_level = serializers.SerializerMethodField()
-    # -----------------
 
     class Meta:
         model = Team
@@ -170,7 +149,7 @@ class TeamSerializer(serializers.ModelSerializer):
         return get_entity_staff(obj, ["VIEWER", "OBSERVER"])
 
     def get_access_level(self, obj):
-        return get_context_access_level(self.context.get("request").user, obj)
+        return get_access_role(self.context.get("request").user, obj)
 
 
 class SynchroTeamSerializer(serializers.ModelSerializer):
@@ -193,10 +172,7 @@ class SynchroTeamSerializer(serializers.ModelSerializer):
 
     collaborators = serializers.SerializerMethodField()
     observers = serializers.SerializerMethodField()
-
-    # --- NEW FIELD ---
     access_level = serializers.SerializerMethodField()
-    # -----------------
 
     class Meta:
         model = SynchroTeam
@@ -220,51 +196,7 @@ class SynchroTeamSerializer(serializers.ModelSerializer):
         return get_entity_staff(obj, ["VIEWER", "OBSERVER"])
 
     def get_access_level(self, obj):
-        return get_context_access_level(self.context.get("request").user, obj)
-
-
-class SynchroTeamSerializer(serializers.ModelSerializer):
-    federation = FederationSerializer(read_only=True)
-    federation_id = serializers.PrimaryKeyRelatedField(
-        queryset=Federation.objects.all(),
-        source="federation",
-        write_only=True,
-        required=False,
-        allow_null=True,
-    )
-    roster = SimpleSkaterSerializer(many=True, read_only=True)
-    roster_ids = serializers.PrimaryKeyRelatedField(
-        queryset=Skater.objects.all(),
-        source="roster",
-        many=True,
-        write_only=True,
-        required=False,
-    )
-
-    # --- NEW FIELDS ---
-    collaborators = serializers.SerializerMethodField()
-    observers = serializers.SerializerMethodField()
-    # ------------------
-
-    class Meta:
-        model = SynchroTeam
-        fields = (
-            "id",
-            "team_name",
-            "level",
-            "federation",
-            "federation_id",
-            "roster",
-            "roster_ids",
-            "collaborators",  # <--- Added
-            "observers",  # <--- Added
-        )
-
-    def get_collaborators(self, obj):
-        return get_entity_staff(obj, ["COLLABORATOR", "MANAGER", "COACH"])
-
-    def get_observers(self, obj):
-        return get_entity_staff(obj, ["VIEWER", "OBSERVER"])
+        return get_access_role(self.context.get("request").user, obj)
 
 
 class GenericPlanningEntitySerializer(serializers.Serializer):
@@ -323,10 +255,10 @@ class SkaterSerializer(serializers.ModelSerializer):
     profile = AthleteProfileSerializer(read_only=True)
     user_account_email = serializers.SerializerMethodField()
     guardians = serializers.SerializerMethodField()
-    synchro_teams = SimpleSynchroTeamSerializer(many=True, read_only=True)
-    has_guardian = serializers.SerializerMethodField()
     collaborators = serializers.SerializerMethodField()
     observers = serializers.SerializerMethodField()
+    synchro_teams = SimpleSynchroTeamSerializer(many=True, read_only=True)
+    has_guardian = serializers.SerializerMethodField()
     access_level = serializers.SerializerMethodField()
 
     class Meta:
@@ -345,9 +277,9 @@ class SkaterSerializer(serializers.ModelSerializer):
             "user_account",
             "user_account_email",
             "guardians",
-            "has_guardian",
             "collaborators",
             "observers",
+            "has_guardian",
             "access_level",
         )
 
@@ -438,44 +370,8 @@ class SkaterSerializer(serializers.ModelSerializer):
         return results
 
     def get_access_level(self, obj):
-        user = self.context.get("request").user
-        if not user:
-            return None
-        if user.is_superuser:
-            return "COACH"
-
-        from django.contrib.contenttypes.models import ContentType
-
-        ct = ContentType.objects.get_for_model(obj)
-
-        access = PlanningEntityAccess.objects.filter(
-            user=user, content_type=ct, object_id=obj.id
-        ).first()
-
-        if access:
-            return access.access_level
-
-        team_ids = list(obj.teams_as_partner_a.values_list("id", flat=True)) + list(
-            obj.teams_as_partner_b.values_list("id", flat=True)
-        )
-        if team_ids:
-            ct_team = ContentType.objects.get_for_model(Team)
-            team_access = PlanningEntityAccess.objects.filter(
-                user=user, content_type=ct_team, object_id__in=team_ids
-            ).first()
-            if team_access:
-                return team_access.access_level
-
-        synchro_ids = obj.synchro_teams.values_list("id", flat=True)
-        if synchro_ids:
-            ct_synchro = ContentType.objects.get_for_model(SynchroTeam)
-            synchro_access = PlanningEntityAccess.objects.filter(
-                user=user, content_type=ct_synchro, object_id__in=synchro_ids
-            ).first()
-            if synchro_access:
-                return synchro_access.access_level
-
-        return "VIEWER"
+        # REFACTORED: Use Service
+        return get_access_role(self.context.get("request").user, obj)
 
 
 class RosterSkaterSerializer(serializers.ModelSerializer):
@@ -517,41 +413,4 @@ class RosterSkaterSerializer(serializers.ModelSerializer):
         return entities
 
     def get_access_level(self, obj):
-        user = self.context.get("request").user
-        if not user:
-            return None
-        if user.is_superuser:
-            return "COACH"
-
-        from django.contrib.contenttypes.models import ContentType
-
-        ct = ContentType.objects.get_for_model(obj)
-
-        access = PlanningEntityAccess.objects.filter(
-            user=user, content_type=ct, object_id=obj.id
-        ).first()
-
-        if access:
-            return access.access_level
-
-        team_ids = list(obj.teams_as_partner_a.values_list("id", flat=True)) + list(
-            obj.teams_as_partner_b.values_list("id", flat=True)
-        )
-        if team_ids:
-            ct_team = ContentType.objects.get_for_model(Team)
-            team_access = PlanningEntityAccess.objects.filter(
-                user=user, content_type=ct_team, object_id__in=team_ids
-            ).first()
-            if team_access:
-                return team_access.access_level
-
-        synchro_ids = obj.synchro_teams.values_list("id", flat=True)
-        if synchro_ids:
-            ct_synchro = ContentType.objects.get_for_model(SynchroTeam)
-            synchro_access = PlanningEntityAccess.objects.filter(
-                user=user, content_type=ct_synchro, object_id__in=synchro_ids
-            ).first()
-            if synchro_access:
-                return synchro_access.access_level
-
-        return "VIEWER"
+        return get_access_role(self.context.get("request").user, obj)

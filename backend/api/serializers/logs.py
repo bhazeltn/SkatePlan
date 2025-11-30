@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from api.models import SessionLog, InjuryLog
+from api.services import get_access_role
 
 
 class SessionLogSerializer(serializers.ModelSerializer):
@@ -44,17 +45,31 @@ class SessionLogSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         if request and request.user:
             user = request.user
-            if user.role in ["COACH", "COLLABORATOR"] or user.is_superuser:
+
+            # Resolve Entity to check role
+            entity = None
+            if instance.athlete_season:
+                entity = (
+                    instance.athlete_season.skater
+                    or instance.athlete_season.planning_entity
+                )
+
+            role = get_access_role(user, entity)
+
+            # STAFF: Can edit Coach Notes, CANNOT edit Skater Notes
+            if role in ["OWNER", "COACH", "COLLABORATOR", "MANAGER"]:
                 if "skater_notes" in validated_data:
                     validated_data.pop("skater_notes")
-            elif user.role in ["SKATER", "GUARDIAN"]:
+
+            # FAMILY: Can edit Skater Notes, CANNOT edit Coach Notes
+            elif role in ["SKATER", "GUARDIAN", "SKATER_OWNER"]:
                 if "coach_notes" in validated_data:
                     validated_data.pop("coach_notes")
+
         return super().update(instance, validated_data)
 
 
 class InjuryLogSerializer(serializers.ModelSerializer):
-    # FIX: Mark skater as read_only to prevent validation error
     skater = serializers.PrimaryKeyRelatedField(read_only=True)
     skater_name = serializers.SerializerMethodField()
 

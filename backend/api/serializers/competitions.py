@@ -15,10 +15,8 @@ class CompetitionResultSerializer(serializers.ModelSerializer):
         queryset=Competition.objects.all(), source="competition", write_only=True
     )
 
-    # --- FIX: Mark object_id as read_only so validation passes ---
     object_id = serializers.IntegerField(read_only=True)
     planning_entity_type = serializers.SerializerMethodField()
-    # -------------------------------------------------------------
 
     class Meta:
         model = CompetitionResult
@@ -35,8 +33,8 @@ class CompetitionResultSerializer(serializers.ModelSerializer):
             "notes",
             "detail_sheet",
             "video_url",
-            "object_id",  # Included in output
-            "planning_entity_type",  # Included in output
+            "object_id",
+            "planning_entity_type",
         )
 
     def get_planning_entity_type(self, obj):
@@ -54,7 +52,7 @@ class CompetitionResultSerializer(serializers.ModelSerializer):
 
 
 class SkaterTestSerializer(serializers.ModelSerializer):
-    # FIX: Mark skater as read_only so validation doesn't fail when missing from payload
+    # skater is read_only to allow backend to set it from context
     skater = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
@@ -82,9 +80,12 @@ class ProgramAssetSerializer(serializers.ModelSerializer):
 class ProgramSerializer(serializers.ModelSerializer):
     assets = ProgramAssetSerializer(many=True, read_only=True)
 
-    # Ensure these are read_only
     object_id = serializers.IntegerField(read_only=True)
     planning_entity_type = serializers.SerializerMethodField()
+
+    # --- NEW: Navigation Helper ---
+    dashboard_url = serializers.SerializerMethodField()
+    # ------------------------------
 
     class Meta:
         model = Program
@@ -102,12 +103,23 @@ class ProgramSerializer(serializers.ModelSerializer):
             "assets",
             "object_id",
             "planning_entity_type",
+            "dashboard_url",  # <--- Added
         )
 
     def get_planning_entity_type(self, obj):
         if obj.content_type:
             return obj.content_type.model_class().__name__
         return "Unknown"
+
+    def get_dashboard_url(self, obj):
+        if obj.planning_entity:
+            if hasattr(obj.planning_entity, "skater"):
+                return f"#/skater/{obj.planning_entity.skater.id}"
+            if hasattr(obj.planning_entity, "team_name"):
+                if hasattr(obj.planning_entity, "roster"):
+                    return f"#/synchro/{obj.planning_entity.id}"
+                return f"#/team/{obj.planning_entity.id}"
+        return "#/"
 
     def validate_planned_elements(self, value):
         if isinstance(value, str):

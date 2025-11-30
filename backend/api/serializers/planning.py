@@ -10,6 +10,7 @@ from api.models import (
 )
 
 from django.contrib.contenttypes.models import ContentType
+from api.services import get_access_role
 
 
 class AthleteSeasonSerializer(serializers.ModelSerializer):
@@ -32,10 +33,7 @@ class YearlyPlanSerializer(serializers.ModelSerializer):
     discipline_name = serializers.SerializerMethodField()
     dashboard_url = serializers.SerializerMethodField()
     planning_entity = serializers.SerializerMethodField()
-
-    # --- NEW: Context-Aware Permission Field ---
     access_level = serializers.SerializerMethodField()
-    # -------------------------------------------
 
     class Meta:
         model = YearlyPlan
@@ -51,7 +49,7 @@ class YearlyPlanSerializer(serializers.ModelSerializer):
             "season_info",
             "discipline_name",
             "dashboard_url",
-            "access_level",  # <--- Added
+            "access_level",
         )
 
     def get_planning_entity(self, obj):
@@ -76,10 +74,6 @@ class YearlyPlanSerializer(serializers.ModelSerializer):
         return "#/"
 
     def get_access_level(self, obj):
-        """
-        Returns the request user's access level (COACH, COLLABORATOR, OBSERVER)
-        for the entity this plan belongs to.
-        """
         user = self.context.get("request").user
         if not user:
             return None
@@ -97,16 +91,8 @@ class YearlyPlanSerializer(serializers.ModelSerializer):
         if hasattr(target, "skater"):
             target = target.skater
 
-        # 3. Check Permissions Table
-        ct = ContentType.objects.get_for_model(target)
-        access = PlanningEntityAccess.objects.filter(
-            user=user, content_type=ct, object_id=target.id
-        ).first()
-
-        if access:
-            return access.access_level
-
-        return None
+        # 3. Use Service
+        return get_access_role(user, target)
 
 
 class WeeklyPlanSerializer(serializers.ModelSerializer):

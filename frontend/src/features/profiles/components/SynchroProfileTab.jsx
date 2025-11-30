@@ -6,7 +6,7 @@ import { FederationFlag } from '@/components/ui/FederationFlag';
 import { AlertTriangle, Users, Trash2, Eye, UserCheck } from 'lucide-react';
 import { apiRequest } from '@/api';
 import { useAuth } from '@/features/auth/AuthContext';
-import { EditSynchroTeamModal } from '../EditSynchroTeamModal';
+import { EditSynchroTeamModal } from '@/features/profiles/components/EditSynchroTeamModal';
 
 export function SynchroProfileTab({ team, onUpdated, readOnly }) {
   const { token } = useAuth();

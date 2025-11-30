@@ -3,8 +3,8 @@ import { useAuth } from '@/features/auth/AuthContext';
 import { apiRequest } from '@/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { CreateYearlyPlanModal } from '../CreateYearlyPlanModal';
-import { EditSeasonModal } from '../EditSeasonModal';
+import { CreateYearlyPlanModal } from './CreateYearlyPlanModal';
+import { EditSeasonModal } from './EditSeasonModal';
 import { Calendar, Trophy, ArrowRight } from 'lucide-react';
 
 const formatDate = (d) => new Date(d).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });

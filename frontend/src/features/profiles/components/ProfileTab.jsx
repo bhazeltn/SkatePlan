@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { EditSkaterModal } from '@/features/profiles/components/EditSkaterModal';
-import { EditDisciplineModal } from '@/components/dashboard/EditDisciplineModal';
+import { EditDisciplineModal } from './EditDisciplineModal';
 import { InviteUserModal } from '@/features/profiles/components/InviteUserModal';
 import { FederationFlag } from '@/components/ui/FederationFlag';
 import { AlertTriangle, Shield, User, Mail, Users, Trash2, Eye } from 'lucide-react'; // Added Eye

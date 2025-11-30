@@ -6,8 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TeamTripModal } from '@/features/logistics/components/TeamTripModal';
 import { MapPin, Calendar, Plane, Building, Bus, Edit2, Archive } from 'lucide-react';
 
-import { ItineraryManager } from '../logistics/ItineraryManager';
-import { RoomingManager } from '../logistics/RoomingManager';
+import { ItineraryManager } from '@/features/logistics/components/ItineraryManager';
+import { RoomingManager } from '@/features/logistics/components/RoomingManager';
 
 export function LogisticsTab({ team, skater, isSynchro, readOnly }) {
   const { user, token } = useAuth();

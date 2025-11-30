@@ -1,6 +1,6 @@
 import React from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from './features/auth/AuthContext';
+import { useAuth } from '@/features/auth/AuthContext';
 
 // Pages
 import Home from './pages/Home';

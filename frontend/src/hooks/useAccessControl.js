@@ -1,3 +1,4 @@
+// FIX: Update import path
 import { useAuth } from '@/features/auth/AuthContext';
 
 /**
@@ -45,9 +46,9 @@ export function useAccessControl(entity) {
     }
 
     // 2. Define Role Groups
-    const isOwner = role === 'COACH' || role === 'OWNER'; // Head Coach
-    const isCollaborator = role === 'COLLABORATOR';       // Asst Coach (Tech focus)
-    const isManager = role === 'MANAGER';                 // Team Manager (Logistics focus)
+    const isOwner = role === 'COACH' || role === 'OWNER'; 
+    const isCollaborator = role === 'COLLABORATOR';       
+    const isManager = role === 'MANAGER';                 
     
     const isStaff = isOwner || isCollaborator || isManager;
     
@@ -57,9 +58,6 @@ export function useAccessControl(entity) {
     const isFamily = isGuardian || isSelf;
 
     // 3. Calculate Capabilities
-
-    // Who can see "Training Tech" (YTP, Gap, Goals, Programs)?
-    // Owners, Collaborators, Observers, and Family (except Gap Analysis)
     const isTechViewer = isOwner || isCollaborator || isObserver || isFamily;
 
     return {
@@ -73,31 +71,15 @@ export function useAccessControl(entity) {
         isStaff,
 
         // --- TAB VISIBILITY FLAGS ---
-        
-        // Yearly Plan: Staff (except Managers) + Observers + Family
         canViewYearlyPlan: isTechViewer && !isManager,
-        
-        // Gap Analysis: ONLY Tech Staff + Observers (Hidden from Family & Managers)
         canViewGapAnalysis: isOwner || isCollaborator || isObserver,
-        
-        // Performance (Goals/Programs/Comps): Tech Staff + Observers + Family
         canViewPerformance: isTechViewer && !isManager,
-        
-        // Logistics: Everyone involved (Staff, Observers, Family)
         canViewLogistics: true, 
-
-        // Health/Logs: Tech Staff + Observers + Family
         canViewHealth: isTechViewer && !isManager,
 
         // --- EDIT PERMISSIONS ---
-        
-        // Structure (Plan/Roster): Only Owners and Collaborators
         canEditStructure: isOwner || isCollaborator,
-        
-        // Data (Logs/Goals): Tech Staff (inc. Collab) + Family
         canEditData: isOwner || isCollaborator || isFamily,
-        
-        // Destructive: Only Owner
         canDelete: isOwner,
 
         // --- SPECIFIC UI FLAGS ---
@@ -107,10 +89,10 @@ export function useAccessControl(entity) {
         canEditGoals: (isOwner || isCollaborator || isFamily),
         canEditLogs: (isOwner || isCollaborator || isFamily),
         canEditHealth: (isOwner || isCollaborator || isFamily),
-        canEditProfile: isOwner, // Only Owner invites staff
+        canEditProfile: isOwner, 
         
         // Global "View Only" flags
         readOnlyStructure: !(isOwner || isCollaborator), 
-        readOnlyData: isObserver // Observers can never edit data
+        readOnlyData: isObserver
     };
 }

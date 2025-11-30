@@ -6,7 +6,10 @@ from api.models import (
     WeeklyPlan,
     Goal,
     GapAnalysis,
+    PlanningEntityAccess,
 )
+
+from django.contrib.contenttypes.models import ContentType
 
 
 class AthleteSeasonSerializer(serializers.ModelSerializer):
@@ -28,9 +31,11 @@ class YearlyPlanSerializer(serializers.ModelSerializer):
     )
     discipline_name = serializers.SerializerMethodField()
     dashboard_url = serializers.SerializerMethodField()
-
-    # FIX: Handle GenericForeignKey serialization
     planning_entity = serializers.SerializerMethodField()
+
+    # --- NEW: Context-Aware Permission Field ---
+    access_level = serializers.SerializerMethodField()
+    # -------------------------------------------
 
     class Meta:
         model = YearlyPlan
@@ -46,6 +51,7 @@ class YearlyPlanSerializer(serializers.ModelSerializer):
             "season_info",
             "discipline_name",
             "dashboard_url",
+            "access_level",  # <--- Added
         )
 
     def get_planning_entity(self, obj):
@@ -60,16 +66,47 @@ class YearlyPlanSerializer(serializers.ModelSerializer):
         return "General"
 
     def get_dashboard_url(self, obj):
-        # Helper to link back to the correct dashboard from the Editor
         if obj.planning_entity:
             if hasattr(obj.planning_entity, "skater"):
                 return f"#/skater/{obj.planning_entity.skater.id}"
             if hasattr(obj.planning_entity, "team_name"):
-                # Check if Synchro
                 if hasattr(obj.planning_entity, "roster"):
                     return f"#/synchro/{obj.planning_entity.id}"
                 return f"#/team/{obj.planning_entity.id}"
         return "#/"
+
+    def get_access_level(self, obj):
+        """
+        Returns the request user's access level (COACH, COLLABORATOR, OBSERVER)
+        for the entity this plan belongs to.
+        """
+        user = self.context.get("request").user
+        if not user:
+            return None
+
+        # 1. If user is the plan owner (Creator), they are COACH/OWNER
+        if obj.coach_owner == user:
+            return "OWNER"
+
+        # 2. Resolve the Target Entity (Skater/Team)
+        target = obj.planning_entity
+        if not target:
+            return None
+
+        # Unwrap Singles/Dance entities to the Skater
+        if hasattr(target, "skater"):
+            target = target.skater
+
+        # 3. Check Permissions Table
+        ct = ContentType.objects.get_for_model(target)
+        access = PlanningEntityAccess.objects.filter(
+            user=user, content_type=ct, object_id=target.id
+        ).first()
+
+        if access:
+            return access.access_level
+
+        return None
 
 
 class WeeklyPlanSerializer(serializers.ModelSerializer):

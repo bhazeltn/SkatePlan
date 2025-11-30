@@ -4,12 +4,15 @@ import { apiRequest } from '@/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { GoalModal } from '@/components/planning/GoalModal';
-import { CheckCircle2, Target, Calendar } from 'lucide-react';
+import { CheckCircle2, Target, Calendar, ClipboardList, Handshake } from 'lucide-react';
 
 export function GoalsTab({ skater, team, isSynchro, permissions }) {
   const { token } = useAuth();
   const [goals, setGoals] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Permission Check
+  const canEdit = permissions?.canEditGoals;
 
   let fetchUrl = '';
   if (isSynchro) fetchUrl = `/synchro/${team.id}/goals/`;
@@ -42,15 +45,19 @@ export function GoalsTab({ skater, team, isSynchro, permissions }) {
             <h3 className="text-lg font-semibold">{team ? 'Team Goals' : 'Goals'}</h3>
             <p className="text-sm text-muted-foreground">Track objectives across all timeframes</p>
         </div>
-        <GoalModal 
-            skater={skater} // Pass full object for dropdown
-            skaterId={skater?.id}
-            teamId={team?.id}
-            isSynchro={isSynchro}
-            onSaved={fetchGoals} 
-            permissions={permissions}
-            trigger={<Button>Add New Goal</Button>}
-        />
+        
+        {/* HIDE ADD BUTTON if not allowed */}
+        {canEdit && (
+            <GoalModal 
+                skater={skater} 
+                skaterId={skater?.id}
+                teamId={team?.id}
+                isSynchro={isSynchro}
+                onSaved={fetchGoals} 
+                permissions={permissions}
+                trigger={<Button>Add New Goal</Button>}
+            />
+        )}
       </div>
 
       {/* Active Goals Grid */}

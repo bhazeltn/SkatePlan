@@ -26,13 +26,13 @@ from api.serializers import (
 )
 from api.permissions import IsCoachUser, IsCoachOrOwner
 
+# --- SKATERS ---
 
-# ... (CreateSkaterView and SkaterDetailView remain the same) ...
+
 class CreateSkaterView(generics.CreateAPIView):
     permission_classes = [permissions.IsAuthenticated, IsCoachUser]
     serializer_class = SkaterSerializer
 
-    # ... (keep implementation)
     def create(self, request, *args, **kwargs):
         # 1. Validate Inputs
         full_name = request.data.get("full_name")
@@ -147,48 +147,34 @@ class RosterView(generics.ListAPIView):
 
     def get_queryset(self):
         user = self.request.user
+        skater_ids = set()
 
-        # 1. Coaches & Collaborators
-        if user.role in [User.Role.COACH, "COLLABORATOR"] or user.is_superuser:
-            access_records = PlanningEntityAccess.objects.filter(user=user)
-            skater_ids = set()
+        # 1. CHECK PERMISSIONS (Access Grants)
+        access_records = PlanningEntityAccess.objects.filter(user=user)
 
-            for record in access_records:
-                entity = record.planning_entity
-                if not entity:
-                    continue
+        for record in access_records:
+            entity = record.planning_entity
+            if not entity:
+                continue
 
-                # --- FIX: Check for Direct Skater Access ---
-                if isinstance(entity, Skater):
-                    skater_ids.add(entity.id)
-                # -------------------------------------------
-                elif hasattr(entity, "skater"):
-                    skater_ids.add(entity.skater.id)
-                elif hasattr(entity, "partner_a"):  # Team
-                    skater_ids.add(entity.partner_a.id)
-                    skater_ids.add(entity.partner_b.id)
-                elif hasattr(entity, "roster"):  # Synchro
-                    skater_ids.update(entity.roster.values_list("id", flat=True))
+            if isinstance(entity, Skater):
+                skater_ids.add(entity.id)
+            elif hasattr(entity, "skater"):
+                skater_ids.add(entity.skater.id)
+            elif hasattr(entity, "partner_a"):  # Team
+                skater_ids.add(entity.partner_a.id)
+                skater_ids.add(entity.partner_b.id)
+            elif hasattr(entity, "roster"):  # Synchro
+                skater_ids.update(entity.roster.values_list("id", flat=True))
 
-            return Skater.objects.filter(id__in=skater_ids, is_active=True).distinct()
+        # 2. CHECK IDENTITY (Am I a skater?)
+        linked_skater = Skater.objects.filter(user_account=user, is_active=True).first()
+        if linked_skater:
+            skater_ids.add(linked_skater.id)
 
-        # 2. Guardians
-        elif user.role == User.Role.GUARDIAN:
-            ct_skater = ContentType.objects.get_for_model(Skater)
-            access_records = PlanningEntityAccess.objects.filter(
-                user=user, content_type=ct_skater, access_level="GUARDIAN"
-            )
-            skater_ids = access_records.values_list("object_id", flat=True)
-            return Skater.objects.filter(id__in=skater_ids).distinct()
-
-        # 3. Skaters
-        elif user.role == User.Role.SKATER:
-            return Skater.objects.filter(user_account=user, is_active=True)
-
-        return Skater.objects.none()
+        return Skater.objects.filter(id__in=skater_ids, is_active=True).distinct()
 
 
-# ... (Rest of the file remains the same: Entity Views, Team Views, etc.) ...
 class SinglesEntityDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [permissions.IsAuthenticated, IsCoachUser]
     serializer_class = SinglesEntitySerializer

@@ -42,31 +42,32 @@ export default function AthleteSeasonDashboard() {
   useEffect(() => { fetchSkater(); }, [id, token]);
 
   // --- PERMISSIONS LOGIC ---
-  const isGuardian = user?.role === 'GUARDIAN';
-  const isSkater = user?.role === 'SKATER';
-  const isCoach = !isGuardian && !isSkater;
-  
   const accessLevel = skater?.access_level || 'COACH';
+
+  const isObserver = accessLevel === 'VIEWER' || accessLevel === 'OBSERVER';
   const isCollaborator = accessLevel === 'COLLABORATOR';
+  const isOwner = accessLevel === 'COACH' || accessLevel === 'OWNER' || accessLevel === 'MANAGER';
+  const isSkaterAccount = user?.role === 'SKATER';
+  
+  // Determine global "Coach" status (for UI layout mostly)
+  const isGlobalCoach = user?.role === 'COACH' || user?.role === 'COLLABORATOR';
+
+  // Permission Flags
+  const hasEditAccess = isOwner || isCollaborator;
+  const canDelete = isOwner;
 
   const permissions = {
       role: user?.role,
-      
-      // Can Edit? (Coaches & Collaborators)
-      canEditPlan: isCoach, 
-      canEditGoals: true,
-      canEditLogs: true,
-      canEditHealth: true,
-      canCreateCompetitions: isCoach, // Collaborators can create events? Usually yes, let's allow it.
-      canEditCompetitions: true,
-      
-      // Can Delete? (Owners Only)
-      canDelete: isCoach && !isCollaborator, // <--- NEW GLOBAL FLAG
-
-      // Specifics
-      canEditProfile: isCoach && !isCollaborator, 
-      viewGapAnalysis: isCoach,
-      readOnly: !isCoach,       
+      canEditPlan: hasEditAccess,
+      canCreateCompetitions: hasEditAccess,
+      canEditCompetitions: !isObserver, 
+      canEditGoals: !isObserver,
+      canEditLogs: !isObserver,
+      canEditHealth: !isObserver,
+      canEditProfile: isOwner, 
+      canDelete: canDelete,
+      viewGapAnalysis: isOwner || isCollaborator || isObserver,
+      readOnly: !hasEditAccess       
   };
   // ------------------------
 
@@ -75,10 +76,19 @@ export default function AthleteSeasonDashboard() {
   if (loading) return <div className="p-8">Loading...</div>;
   if (!skater) return <div className="p-8">Not found or access denied.</div>;
 
+  // --- DYNAMIC TAB LIST ---
   const tabs = ['weekly', 'yearly'];
   if (permissions.viewGapAnalysis) tabs.push('gap_analysis');
   tabs.push('goals', 'programs', 'competitions');
-  if (!isCoach && skater?.synchro_teams?.length > 0) tabs.push('synchro_logistics');
+
+  // SHOW LOGISTICS IF:
+  // 1. Skater is on a Synchro Team
+  // 2. AND User is NOT a Global Coach (Coaches use Team Dashboard)
+  // 3. AND User is NOT an Observer (Observers shouldn't see travel details via Skater view)
+  if (skater?.synchro_teams?.length > 0 && !isGlobalCoach && !isObserver) {
+      tabs.push('synchro_logistics');
+  }
+
   tabs.push('tests', 'logs', 'health', 'analytics', 'profile');
 
   return (
@@ -93,11 +103,13 @@ export default function AthleteSeasonDashboard() {
                     <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {skater.date_of_birth}</span>
                     {skater.home_club && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {skater.home_club}</span>}
                     {isCollaborator && <span className="bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded border border-indigo-200 uppercase">Collaborating</span>}
+                    {isObserver && <span className="bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded border border-amber-200 uppercase">Observer Mode</span>}
                 </div>
             </div>
         </div>
+        
         <div className="flex gap-2">
-            {isSkater ? (
+            {isSkaterAccount ? (
                 <>
                     <a href="#/settings"><Button variant="secondary" size="icon"><Settings className="h-5 w-5 text-gray-600" /></Button></a>
                     <Button variant="outline" onClick={logout}><LogOut className="h-4 w-4 mr-2" /> Log Out</Button>
@@ -117,17 +129,17 @@ export default function AthleteSeasonDashboard() {
       <div className="min-h-[400px]">
         {activeTab === 'weekly' && <WeeklyPlanTab skater={skater} readOnly={permissions.readOnly} />}
         {activeTab === 'yearly' && <YearlyPlansTab skater={skater} readOnly={permissions.readOnly} />}
-        {activeTab === 'gap_analysis' && <GapAnalysisTab skater={skater} />}
+        {activeTab === 'gap_analysis' && <GapAnalysisTab skater={skater} readOnly={permissions.readOnly} />}
         {activeTab === 'goals' && <GoalsTab skater={skater} permissions={permissions} />}
-        
-        {/* PASS PERMISSIONS TO ALL TABS */}
         {activeTab === 'programs' && <ProgramsTab skater={skater} readOnly={permissions.readOnly} permissions={permissions} />}
         {activeTab === 'competitions' && <CompetitionsTab skater={skater} permissions={permissions} readOnly={permissions.readOnly} />}
-        {activeTab === 'synchro_logistics' && <LogisticsTab skater={skater} isSynchro={true} />}
+        
+        {/* PASS READONLY AND PERMISSIONS */}
+        {activeTab === 'synchro_logistics' && <LogisticsTab skater={skater} isSynchro={true} readOnly={permissions.readOnly} permissions={permissions} />}
+
         {activeTab === 'tests' && <TestsTab skater={skater} permissions={permissions} readOnly={permissions.readOnly} />}
         {activeTab === 'logs' && <LogsTab skater={skater} permissions={permissions} />}
         {activeTab === 'health' && <HealthTab skater={skater} permissions={permissions} />}
-        
         {activeTab === 'analytics' && <AnalyticsTab skater={skater} />}
         {activeTab === 'profile' && <ProfileTab skater={skater} onUpdated={fetchSkater} readOnly={!permissions.canEditProfile} />}
       </div>

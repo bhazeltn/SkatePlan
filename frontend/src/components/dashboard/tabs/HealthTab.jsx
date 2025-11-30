@@ -6,11 +6,14 @@ import { Button } from '@/components/ui/button';
 import { InjuryModal } from '@/components/dashboard/InjuryModal';
 import { HeartPulse, Activity, AlertTriangle } from 'lucide-react';
 
-export function HealthTab({ skater, team, isSynchro, permissions }) {
+export function HealthTab({ skater, team, isSynchro, permissions }) { 
   const { token } = useAuth();
   const [injuries, setInjuries] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Permission
+  const canEdit = permissions?.canEditHealth;
+  
   let fetchUrl = '';
   if (isSynchro) fetchUrl = `/synchro/${team.id}/injuries/`;
   else if (team) fetchUrl = `/teams/${team.id}/injuries/`;
@@ -40,13 +43,16 @@ export function HealthTab({ skater, team, isSynchro, permissions }) {
             <h3 className="text-lg font-semibold">Health & Injuries</h3>
             <p className="text-sm text-muted-foreground">Track recovery and physical status</p>
         </div>
-        <InjuryModal 
-            skater={skater} 
-            team={team} 
-            isSynchro={isSynchro}
-            onSaved={fetchInjuries} 
-            permissions={permissions}
-        />
+        {/* Hide if not allowed */}
+        {canEdit && (
+            <InjuryModal 
+                skater={skater} 
+                team={team} 
+                isSynchro={isSynchro}
+                onSaved={fetchInjuries} 
+                permissions={permissions}
+            />
+        )}
       </div>
 
       {/* ACTIVE */}
@@ -82,7 +88,6 @@ export function HealthTab({ skater, team, isSynchro, permissions }) {
 }
 
 function InjuryCard({ injury, onUpdate, permissions, skater }) {
-    // Helper for Severity Color
     const getSeverityColor = (sev) => {
         if (sev === 'Severe') return 'text-red-700 bg-red-50 border-red-200';
         if (sev === 'Moderate') return 'text-amber-700 bg-amber-50 border-amber-200';
@@ -103,7 +108,6 @@ function InjuryCard({ injury, onUpdate, permissions, skater }) {
                                 <h4 className="font-bold text-gray-900">{injury.injury_type}</h4>
                                 <div className="flex items-center gap-2 mt-1">
                                     <span className="text-sm text-gray-600">{injury.body_area}</span>
-                                    {/* SEVERITY BADGE */}
                                     {injury.severity && (
                                         <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium uppercase ${getSeverityColor(injury.severity)}`}>
                                             {injury.severity}

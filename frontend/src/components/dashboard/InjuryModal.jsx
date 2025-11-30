@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { DatePicker } from '@/components/ui/date-picker';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Lock } from 'lucide-react';
 
 export function InjuryModal({ skater, team, isSynchro, injuryToEdit, onSaved, trigger, permissions }) {
   const [open, setOpen] = useState(false);
@@ -23,11 +23,15 @@ export function InjuryModal({ skater, team, isSynchro, injuryToEdit, onSaved, tr
   const [severity, setSeverity] = useState('Mild');
   const [notes, setNotes] = useState('');
   
-  // For team logs
   const [selectedSkaterId, setSelectedSkaterId] = useState('');
 
-  // Permissions: Only Owner can delete
+  // Permissions
   const canDelete = permissions?.canDelete;
+  // If permissions prop exists, use canEditHealth, otherwise default true (for safety in older contexts)
+  const canEdit = permissions ? permissions.canEditHealth : true; 
+  
+  // Effective Read Only
+  const isReadOnly = !canEdit;
 
   useEffect(() => {
       if (open) {
@@ -43,7 +47,6 @@ export function InjuryModal({ skater, team, isSynchro, injuryToEdit, onSaved, tr
           } else {
               setType(''); setArea(''); setOnset(new Date().toISOString().split('T')[0]);
               setReturnDate(''); setStatus('Active'); setSeverity('Mild'); setNotes('');
-              // Default skater selection
               if (skater) setSelectedSkaterId(skater.id);
               else if (team && !isSynchro && team.partner_a_details) setSelectedSkaterId(team.partner_a_details.id);
           }
@@ -52,6 +55,7 @@ export function InjuryModal({ skater, team, isSynchro, injuryToEdit, onSaved, tr
 
   const handleSubmit = async (e) => {
       e.preventDefault();
+      if (isReadOnly) return;
       setLoading(true);
       
       const payload = {
@@ -62,7 +66,7 @@ export function InjuryModal({ skater, team, isSynchro, injuryToEdit, onSaved, tr
           severity: severity,
           recovery_status: status,
           recovery_notes: notes,
-          skater_id: selectedSkaterId // Required for team view creation
+          skater_id: selectedSkaterId
       };
 
       try {
@@ -99,19 +103,21 @@ export function InjuryModal({ skater, team, isSynchro, injuryToEdit, onSaved, tr
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {trigger || <Button variant="destructive" className="bg-red-600 hover:bg-red-700"><AlertTriangle className="h-4 w-4 mr-2" /> Report Injury</Button>}
+        {trigger || (!isReadOnly && <Button variant="destructive" className="bg-red-600 hover:bg-red-700"><AlertTriangle className="h-4 w-4 mr-2" /> Report Injury</Button>)}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-            <DialogTitle>{injuryToEdit ? 'Update Injury' : 'Report Injury'}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+                {injuryToEdit ? 'Update Injury' : 'Report Injury'}
+                {isReadOnly && <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded border border-amber-200 flex items-center gap-1"><Lock className="h-3 w-3"/> View Only</span>}
+            </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
             
-            {/* Team Skater Selector */}
             {team && !injuryToEdit && (
                 <div className="space-y-2">
                     <Label>Athlete</Label>
-                    <select className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm" value={selectedSkaterId} onChange={(e) => setSelectedSkaterId(e.target.value)} required>
+                    <select className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm" value={selectedSkaterId} onChange={(e) => setSelectedSkaterId(e.target.value)} required disabled={isReadOnly}>
                         <option value="">Select Athlete...</option>
                         {isSynchro && team.roster ? (
                             team.roster.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)
@@ -126,28 +132,30 @@ export function InjuryModal({ skater, team, isSynchro, injuryToEdit, onSaved, tr
             )}
 
             <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2"><Label>Injury Type</Label><Input value={type} onChange={(e) => setType(e.target.value)} placeholder="e.g. Sprained Ankle" required /></div>
-                <div className="space-y-2"><Label>Body Area</Label><Input value={area} onChange={(e) => setArea(e.target.value)} placeholder="e.g. Right Ankle" required /></div>
+                <div className="space-y-2"><Label>Injury Type</Label><Input value={type} onChange={(e) => setType(e.target.value)} placeholder="e.g. Sprained Ankle" required disabled={isReadOnly} /></div>
+                <div className="space-y-2"><Label>Body Area</Label><Input value={area} onChange={(e) => setArea(e.target.value)} placeholder="e.g. Right Ankle" required disabled={isReadOnly} /></div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2"><Label>Date of Onset</Label><DatePicker date={onset} setDate={setOnset} /></div>
-                <div className="space-y-2"><Label>Severity</Label><select className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm" value={severity} onChange={(e) => setSeverity(e.target.value)}><option value="Mild">Mild</option><option value="Moderate">Moderate</option><option value="Severe">Severe</option></select></div>
+                <div className="space-y-2"><Label>Date of Onset</Label><DatePicker date={onset} setDate={setOnset} disabled={isReadOnly} /></div>
+                <div className="space-y-2"><Label>Severity</Label><select className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm" value={severity} onChange={(e) => setSeverity(e.target.value)} disabled={isReadOnly}><option value="Mild">Mild</option><option value="Moderate">Moderate</option><option value="Severe">Severe</option></select></div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2"><Label>Status</Label><select className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm font-medium" value={status} onChange={(e) => setStatus(e.target.value)}><option value="Active">Active</option><option value="Recovering">Recovering</option><option value="Resolved">Resolved</option></select></div>
-                <div className="space-y-2"><Label>Return to Sport (Est)</Label><DatePicker date={returnDate} setDate={setReturnDate} /></div>
+                <div className="space-y-2"><Label>Status</Label><select className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm" value={status} onChange={(e) => setStatus(e.target.value)} disabled={isReadOnly}><option value="Active">Active</option><option value="Recovering">Recovering</option><option value="Resolved">Resolved</option></select></div>
+                <div className="space-y-2"><Label>Return to Sport (Est)</Label><DatePicker date={returnDate} setDate={setReturnDate} disabled={isReadOnly} /></div>
             </div>
 
-            <div className="space-y-2"><Label>Recovery Notes</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Physio instructions, limitations..." /></div>
+            <div className="space-y-2"><Label>Recovery Notes</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Physio instructions, limitations..." disabled={isReadOnly} /></div>
 
-            <DialogFooter className="flex justify-between items-center">
-                {injuryToEdit && canDelete ? ( 
-                    <Button type="button" variant="destructive" onClick={handleDelete} disabled={loading}>Delete</Button>
-                ) : <div></div>}
-                <Button type="submit" disabled={loading}>{loading ? 'Saving...' : 'Save Record'}</Button>
-            </DialogFooter>
+            {!isReadOnly && (
+                <DialogFooter className="flex justify-between items-center">
+                    {injuryToEdit && canDelete ? ( 
+                        <Button type="button" variant="destructive" onClick={handleDelete} disabled={loading}>Delete</Button>
+                    ) : <div></div>}
+                    <Button type="submit" disabled={loading}>{loading ? 'Saving...' : 'Save Record'}</Button>
+                </DialogFooter>
+            )}
         </form>
       </DialogContent>
     </Dialog>

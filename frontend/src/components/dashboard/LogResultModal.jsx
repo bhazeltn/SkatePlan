@@ -47,7 +47,6 @@ export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved,
   const [videoUrl, setVideoUrl] = useState('');
 
   // Permissions
-  const isCoach = permissions?.role === 'COACH' || permissions?.role === 'COLLABORATOR';
   const canCreateComp = permissions?.canCreateCompetitions;
   const canDelete = permissions?.canDelete;
 
@@ -64,7 +63,6 @@ export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved,
               setNotes(resultToEdit.notes || '');
               setSegments(resultToEdit.segment_scores || []);
               setVideoUrl(resultToEdit.video_url || '');
-              
               setCurrentDetailSheet(resultToEdit.detail_sheet); 
               setDetailSheet(null); 
           } else {
@@ -74,8 +72,7 @@ export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved,
               else if (skater?.planning_entities?.length > 0) setSelectedEntityId(skater.planning_entities[0].id);
               setStatus('COMPLETED');
               setLevel(''); setPlacement(''); setOverallScore(''); setNotes(''); setSegments([]);
-              setVideoUrl(''); 
-              setCurrentDetailSheet(null); setDetailSheet(null);
+              setVideoUrl(''); setCurrentDetailSheet(null); setDetailSheet(null);
           }
       }
   }, [open, resultToEdit, skater, team]);
@@ -112,15 +109,10 @@ export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved,
           formData.append('segment_scores', JSON.stringify(segments));
       }
 
-      if (resultToEdit) {
-          await apiRequest(`/results/${resultToEdit.id}/`, 'PATCH', formData, token);
-      } else if (isSynchro) {
-          await apiRequest(`/synchro/${team.id}/results/`, 'POST', formData, token);
-      } else if (team) {
-          await apiRequest(`/teams/${team.id}/results/`, 'POST', formData, token);
-      } else {
-          await apiRequest(`/skaters/${skater.id}/results/`, 'POST', formData, token);
-      }
+      if (resultToEdit) await apiRequest(`/results/${resultToEdit.id}/`, 'PATCH', formData, token);
+      else if (isSynchro) await apiRequest(`/synchro/${team.id}/results/`, 'POST', formData, token);
+      else if (team) await apiRequest(`/teams/${team.id}/results/`, 'POST', formData, token);
+      else await apiRequest(`/skaters/${skater.id}/results/`, 'POST', formData, token);
       
       if (onSaved) onSaved();
   };
@@ -165,9 +157,7 @@ export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved,
           <div className="flex items-center justify-between mb-2 text-xs bg-blue-50 p-2 rounded border border-blue-100">
               <div className="flex items-center gap-2 overflow-hidden">
                   <Paperclip className="h-3 w-3 text-blue-600 flex-shrink-0" />
-                  <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-700 hover:underline truncate" title={filename}>
-                      {filename}
-                  </a>
+                  <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-700 hover:underline truncate" title={filename}>{filename}</a>
               </div>
               {!readOnly && canDelete && (
                   <Button type="button" variant="ghost" size="sm" className="h-5 w-5 p-0 text-red-400 hover:text-red-600" onClick={handleDeleteSheet}><Trash2 className="h-3 w-3" /></Button>
@@ -176,7 +166,7 @@ export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved,
       );
   };
 
-  const renderLocationSelectors = () => {
+  const renderLocationSelectors = () => { /* ... same ... */
       const countries = Country.getAllCountries(); const states = State.getStatesOfCountry(countryCode); const cities = City.getCitiesOfState(countryCode, stateCode);
       return (
           <div className="space-y-3 p-3 bg-slate-50 rounded border">
@@ -220,6 +210,7 @@ export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved,
                           {segments.map((seg) => (
                               <div key={seg.id} className="p-3 border rounded-md bg-slate-50 relative">
                                   {!readOnly && <Button type="button" variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6 text-gray-400 hover:text-red-500" onClick={() => removeSegment(seg.id)}><Trash2 className="h-3 w-3" /></Button>}
+                                  {/* ... (Segment fields - pass readOnly to inputs) ... */}
                                   <div className="grid grid-cols-2 gap-2 mb-2 pr-6">
                                       <div className="col-span-2 sm:col-span-1"><Label className="text-xs">Segment</Label><select className="flex h-8 w-full rounded-md border border-input bg-white px-2 text-xs" value={seg.name} onChange={(e) => updateSegment(seg.id, 'name', e.target.value)} disabled={readOnly}><option value="Short Program">Short Program</option><option value="Free Skate">Free Skate</option><option value="Pattern Dance">Pattern Dance</option><option value="Rhythm Dance">Rhythm Dance</option><option value="Free Dance">Free Dance</option></select></div>
                                       <div><Label className="text-xs">Place</Label><Input className="h-8 bg-white" type="number" value={seg.placement} onChange={(e) => updateSegment(seg.id, 'placement', e.target.value)} placeholder="#" disabled={readOnly} /></div>
@@ -242,7 +233,7 @@ export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved,
                                       </Button>
                                       {expandedProtocol === seg.id && (
                                           <div className="mt-2 animate-in slide-in-from-top-1 fade-in duration-200">
-                                              <ProtocolEditor elements={seg.protocol || []} onChange={(newProto) => updateProtocol(seg.id, newProto)} />
+                                              <ProtocolEditor elements={seg.protocol || []} onChange={(newProto) => updateProtocol(seg.id, newProto)} readOnly={readOnly} />
                                           </div>
                                       )}
                                   </div>
@@ -263,31 +254,25 @@ export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved,
           </div>
 
           <div className="space-y-2 mt-2"><Label>Notes</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes..." disabled={readOnly} /></div>
-          <div className="flex justify-between pt-2">
-              {!resultToEdit && !readOnly && <Button variant="ghost" onClick={() => { setStep('SEARCH'); setSelectedComp(null); }}>Back</Button>}
-              {!resultToEdit && !readOnly && <Button variant="secondary" onClick={handleSaveAndAdd} disabled={loading} className="w-2/3"><Plus className="h-4 w-4 mr-2" /> Save & Add Another</Button>}
-              {resultToEdit && !readOnly && <Button onClick={handleSave} disabled={loading} className="w-full">Save Changes</Button>}
-          </div>
+          
+          {/* FOOTER */}
+          {!readOnly && (
+              <div className="flex justify-between pt-2">
+                  {!resultToEdit && <Button variant="ghost" onClick={() => { setStep('SEARCH'); setSelectedComp(null); }}>Back</Button>}
+                  {!resultToEdit && <Button variant="secondary" onClick={handleSaveAndAdd} disabled={loading} className="w-2/3"><Plus className="h-4 w-4 mr-2" /> Save & Add Another</Button>}
+                  {resultToEdit && <Button onClick={handleSave} disabled={loading} className="w-full">Save Changes</Button>}
+              </div>
+          )}
       </div>
   );
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{trigger || <Button>Manage Events</Button>}</DialogTrigger>
-      <DialogContent className="sm:max-w-[600px]">
-        <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-                {step === 'SEARCH' ? 'Find Competition' : step === 'CREATE' ? 'New Event' : (status === 'COMPLETED' ? 'Log Result' : 'Plan Event')}
-                {readOnly && <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded border border-amber-200 flex items-center gap-1"><Lock className="h-3 w-3"/> View Only</span>}
-            </DialogTitle>
-        </DialogHeader>
-        
+      <DialogContent className="sm:max-w-[600px]"><DialogHeader><DialogTitle>{step === 'SEARCH' ? 'Find Competition' : step === 'CREATE' ? 'New Event' : (status === 'COMPLETED' ? 'Log Result' : 'Plan Event')} {readOnly && <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded border border-amber-200 ml-2">View Only</span>}</DialogTitle></DialogHeader>
         {step === 'SEARCH' && !readOnly && (
             <div className="space-y-4"><div className="flex gap-2"><Input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Search..." /><Button onClick={handleSearch} disabled={loading}><Search className="h-4 w-4" /></Button></div><div className="max-h-[200px] overflow-y-auto space-y-2 border rounded p-2">{searchResults.map(comp => (<div key={comp.id} className="flex justify-between p-2 hover:bg-slate-50 rounded items-center border-b last:border-0"><div className="text-sm"><div className="font-bold">{comp.title}</div><div className="text-xs text-gray-500">{comp.city}, {comp.province_state}</div></div><Button size="sm" variant="outline" onClick={() => { setSelectedComp(comp); setStep('LOG'); }}>Select</Button></div>))}</div>
-            {/* HIDE CREATE BUTTON FOR NON-COACHES */}
-            {canCreateComp && (
-                <div className="pt-2"><Button variant="secondary" className="w-full" onClick={() => setStep('CREATE')}><Plus className="h-4 w-4 mr-2" /> Create New Competition</Button></div>
-            )}
+            {canCreateComp && <div className="pt-2"><Button variant="secondary" className="w-full" onClick={() => setStep('CREATE')}><Plus className="h-4 w-4 mr-2" /> Create New Competition</Button></div>}
             </div>
         )}
         {step === 'CREATE' && !readOnly && (

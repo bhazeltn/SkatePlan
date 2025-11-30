@@ -203,9 +203,11 @@ class SkaterSerializer(serializers.ModelSerializer):
     has_guardian = serializers.SerializerMethodField()
     collaborators = serializers.SerializerMethodField()
 
-    # --- NEW: Access Level for Context ---
+    # --- NEW FIELD ---
+    observers = serializers.SerializerMethodField()
+    # -----------------
+
     access_level = serializers.SerializerMethodField()
-    # -------------------------------------
 
     class Meta:
         model = Skater
@@ -225,7 +227,8 @@ class SkaterSerializer(serializers.ModelSerializer):
             "guardians",
             "has_guardian",
             "collaborators",
-            "access_level",  # <--- Added
+            "observers",  # <--- Added
+            "access_level",
         )
 
     def get_planning_entities(self, obj):
@@ -293,6 +296,28 @@ class SkaterSerializer(serializers.ModelSerializer):
             )
         return results
 
+    def get_observers(self, obj):
+        from django.contrib.contenttypes.models import ContentType
+
+        ct = ContentType.objects.get_for_model(obj)
+        # Fetch Viewers/Observers
+        access_records = PlanningEntityAccess.objects.filter(
+            content_type=ct, object_id=obj.id, access_level__in=["VIEWER", "OBSERVER"]
+        ).select_related("user")
+
+        results = []
+        for record in access_records:
+            results.append(
+                {
+                    "id": record.id,
+                    "user_id": record.user.pk,
+                    "full_name": record.user.full_name,
+                    "email": record.user.email,
+                    "role": "Observer",
+                }
+            )
+        return results
+
     def get_access_level(self, obj):
         user = self.context.get("request").user
         if not user:
@@ -309,7 +334,6 @@ class SkaterSerializer(serializers.ModelSerializer):
         if access:
             return access.access_level
 
-        # Fallback for implicit owner
         return "COACH"
 
 

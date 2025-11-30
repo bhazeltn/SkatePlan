@@ -45,14 +45,12 @@ export function ProgramModal({ skater, team, isSynchro, programToEdit, onSaved, 
             setChoreo(programToEdit.choreographer || '');
             setIsActive(programToEdit.is_active);
             setElements(programToEdit.planned_elements || []);
-            
             setCurrentMusic(programToEdit.music_file);
             setAssets(programToEdit.assets || []);
         } else {
             // Create Mode
             if (team) setSelectedEntityId(team.id);
             else if (skater?.planning_entities?.length > 0) setSelectedEntityId(skater.planning_entities[0].id);
-            
             setTitle(''); setSeason('2025-2026'); setCategory('Free Skate'); 
             setMusic(''); setChoreo(''); setIsActive(true);
             setElements([]); setTotalBV(0);
@@ -96,7 +94,6 @@ export function ProgramModal({ skater, team, isSynchro, programToEdit, onSaved, 
       const formData = new FormData();
       formData.append('file', newAssetFile);
       formData.append('asset_type', newAssetType);
-      
       try {
           await apiRequest(`/programs/${programToEdit.id}/assets/`, 'POST', formData, token);
           if (onSaved) onSaved();
@@ -174,9 +171,7 @@ export function ProgramModal({ skater, team, isSynchro, programToEdit, onSaved, 
     finally { setLoading(false); }
   };
 
-  const handleArchive = async () => { 
-       setIsActive(!isActive);
-  };
+  const handleArchive = async () => { setIsActive(!isActive); };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -190,6 +185,7 @@ export function ProgramModal({ skater, team, isSynchro, programToEdit, onSaved, 
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
             
+            {/* Inputs - Disabled if ReadOnly */}
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                     <Label>Discipline</Label>
@@ -238,7 +234,6 @@ export function ProgramModal({ skater, team, isSynchro, programToEdit, onSaved, 
                 <div className="flex justify-between items-center">
                     <Label className="text-xs font-bold text-gray-500 uppercase">Visual Assets</Label>
                 </div>
-
                 {assets.length > 0 && (
                     <div className="grid grid-cols-2 gap-2 mb-3">
                         {assets.map(asset => (
@@ -254,7 +249,6 @@ export function ProgramModal({ skater, team, isSynchro, programToEdit, onSaved, 
                         ))}
                     </div>
                 )}
-
                 {!readOnly && programToEdit && (
                     <div className="flex gap-2 items-end">
                         <div className="flex-1 space-y-1">
@@ -303,7 +297,7 @@ export function ProgramModal({ skater, team, isSynchro, programToEdit, onSaved, 
                             {canDelete && (
                                 <>
                                     <Button type="button" variant="destructive" onClick={() => { if(confirm("Delete Program?")) { /* API Call */ } }}>Delete</Button>
-                                    <Button type="button" variant="outline" onClick={() => setIsActive(!isActive)}>{isActive ? 'Archive' : 'Restore'}</Button>
+                                    <Button type="button" variant="outline" onClick={handleArchive}>{isActive ? 'Archive' : 'Restore'}</Button>
                                 </>
                             )}
                         </div>

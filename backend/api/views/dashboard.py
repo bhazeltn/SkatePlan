@@ -24,7 +24,7 @@ from api.models import (
 )
 from api.serializers import SessionLogSerializer
 
-# FIX: Import IsCoachOrOwner
+# FIX: Added IsCoachOrOwner to the import list
 from api.permissions import IsCoachUser, IsCoachOrOwner
 
 
@@ -36,7 +36,10 @@ class CoachDashboardStatsView(APIView):
         user = request.user
 
         # 1. SECURITY: Fetch ONLY skaters this coach has access to
-        access_records = PlanningEntityAccess.objects.filter(user=user)
+        # EXCLUDE Observers from Stats/Red Flags
+        access_records = PlanningEntityAccess.objects.filter(user=user).exclude(
+            access_level__in=["VIEWER", "OBSERVER"]
+        )
 
         # Build map of {skater_id: access_level} for quick lookup
         skater_access_map = {}
@@ -178,11 +181,9 @@ class CoachDashboardStatsView(APIView):
         for log in recent_logs:
             if not log.athlete_season.skater:
                 continue
-
             skater_name = log.athlete_season.skater.full_name
             sid = log.athlete_season.skater.id
             is_shared = skater_access_map.get(sid) == "COLLABORATOR"
-
             activity_data.append(
                 {
                     "skater": skater_name,
@@ -214,7 +215,6 @@ class CoachDashboardStatsView(APIView):
         upcoming_comps = Competition.objects.filter(
             start_date__range=(today, two_weeks)
         ).order_by("start_date")
-
         for c in upcoming_comps:
             results = CompetitionResult.objects.filter(competition=c)
             attendees = set()

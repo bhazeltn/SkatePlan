@@ -15,7 +15,7 @@ const CATEGORIES = [
     { id: 'Mental', label: 'Mental & Self', icon: Brain, color: 'text-purple-600', bg: 'bg-purple-50' },
 ];
 
-export function GapAnalysisTab({ skater, team, isSynchro }) {
+export function GapAnalysisTab({ skater, team, isSynchro, readOnly }) {
   const { token } = useAuth();
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState([]);
@@ -66,7 +66,9 @@ export function GapAnalysisTab({ skater, team, isSynchro }) {
             <h3 className="text-lg font-semibold">Gap Analysis</h3>
             <p className="text-sm text-muted-foreground">Continuous assessment of performance gaps.</p>
         </div>
-        <Button onClick={handleSave}><Save className="h-4 w-4 mr-2" /> Save Changes</Button>
+        {!readOnly && (
+                <Button onClick={handleSave}><Save className="h-4 w-4 mr-2" /> Save Changes</Button>
+            )}
       </div>
 
       <Card className="min-h-[500px] flex flex-col">

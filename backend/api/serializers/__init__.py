@@ -1,15 +1,16 @@
 from .users import UserSerializer, RegisterSerializer, LoginSerializer
 from .core import FederationSerializer, SkatingElementSerializer
 from .skaters import (
-    SimpleSkaterSerializer,
-    SinglesEntitySerializer,
-    SoloDanceEntitySerializer,
+    SkaterSerializer,
+    SkaterUpdateSerializer,
+    RosterSkaterSerializer,
     TeamSerializer,
     SynchroTeamSerializer,
+    SimpleSkaterSerializer,
+    SimpleSynchroTeamSerializer,
+    SinglesEntitySerializer,
+    SoloDanceEntitySerializer,
     GenericPlanningEntitySerializer,
-    SkaterUpdateSerializer,
-    SkaterSerializer,
-    RosterSkaterSerializer,
     AthleteProfileSerializer,
 )
 from .planning import (

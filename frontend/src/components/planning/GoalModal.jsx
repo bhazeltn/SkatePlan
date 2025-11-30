@@ -27,6 +27,9 @@ export function GoalModal({ planId, skater, teamId, isSynchro, goal, onSaved, tr
   const [selectedEntityId, setSelectedEntityId] = useState('');
 
   const isCoach = permissions?.role === 'COACH' || permissions?.role === 'COLLABORATOR';
+  const canEdit = permissions?.canEditGoals; // False for Observer
+  const canDelete = permissions?.canDelete;  // False for Observer/Parent
+  
   // If goal is approved/active and user is not coach, it is locked
   const isLocked = !isCoach && goal && ['APPROVED', 'IN_PROGRESS', 'COMPLETED', 'ARCHIVED'].includes(goal.current_status);
 

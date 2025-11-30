@@ -7,16 +7,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { DatePicker } from '@/components/ui/date-picker';
-import { Plus, ChevronLeft, Video, FileText, Trash2 } from 'lucide-react';
+import { Plus, ChevronLeft, Video, FileText, Trash2, Lock } from 'lucide-react';
 
 const DEFAULT_TYPES = ['Skills', 'Freeskate', 'Dance', 'Artistic'];
 
-export function LogTestModal({ skater, testToEdit, onSaved, trigger, canDelete }) { // <--- Added canDelete
+export function LogTestModal({ skater, testToEdit, onSaved, trigger, canDelete, readOnly }) { // <--- Added readOnly
   const [open, setOpen] = useState(false);
   const { token } = useAuth();
   const [loading, setLoading] = useState(false);
 
-  // State
+  // ... (State same as before) ...
   const [testType, setTestType] = useState('Skills');
   const [isCustomType, setIsCustomType] = useState(false);
   const [testName, setTestName] = useState('');
@@ -24,10 +24,8 @@ export function LogTestModal({ skater, testToEdit, onSaved, trigger, canDelete }
   const [status, setStatus] = useState('COMPLETED');
   const [result, setResult] = useState('Pass');
   const [notes, setNotes] = useState('');
-
-  // Files
-  const [testSheet, setTestSheet] = useState(null); // New upload
-  const [currentTestSheet, setCurrentTestSheet] = useState(null); // Existing file URL
+  const [testSheet, setTestSheet] = useState(null);
+  const [currentTestSheet, setCurrentTestSheet] = useState(null); 
   const [videoUrl, setVideoUrl] = useState('');
 
   useEffect(() => {
@@ -47,20 +45,19 @@ export function LogTestModal({ skater, testToEdit, onSaved, trigger, canDelete }
               setResult(testToEdit.result || 'Pass');
               setNotes(testToEdit.evaluator_notes || '');
               setVideoUrl(testToEdit.video_url || '');
-              
-              setCurrentTestSheet(testToEdit.test_sheet); // Load existing
+              setCurrentTestSheet(testToEdit.test_sheet);
               setTestSheet(null); 
           } else {
               setTestType('Skills'); setIsCustomType(false); setTestName('');
               setTestDate(new Date().toISOString().split('T')[0]);
               setStatus('COMPLETED'); setResult('Pass'); setNotes('');
-              setVideoUrl(''); 
-              setCurrentTestSheet(null); setTestSheet(null);
+              setVideoUrl(''); setCurrentTestSheet(null); setTestSheet(null);
           }
       }
   }, [open, testToEdit]);
 
   const handleSave = async () => {
+      // ... (Save logic same)
       setLoading(true);
       try {
           const formData = new FormData();
@@ -73,21 +70,16 @@ export function LogTestModal({ skater, testToEdit, onSaved, trigger, canDelete }
           formData.append('video_url', videoUrl);
           if (testSheet) formData.append('test_sheet', testSheet);
 
-          if (testToEdit) {
-              await apiRequest(`/tests/${testToEdit.id}/`, 'PATCH', formData, token);
-          } else {
-              await apiRequest(`/skaters/${skater.id}/tests/`, 'POST', formData, token);
-          }
+          if (testToEdit) await apiRequest(`/tests/${testToEdit.id}/`, 'PATCH', formData, token);
+          else await apiRequest(`/skaters/${skater.id}/tests/`, 'POST', formData, token);
           
           if (onSaved) onSaved();
           setOpen(false);
-      } catch (e) { 
-          console.error(e);
-          alert("Failed to save test: " + (e.message || "Unknown error")); 
-      } finally { setLoading(false); }
+      } catch (e) { alert("Failed to save test."); } finally { setLoading(false); }
   };
 
   const handleDelete = async () => {
+      // ... (Delete logic same)
       if(!confirm("Delete this record?")) return;
       setLoading(true);
       try {
@@ -98,14 +90,14 @@ export function LogTestModal({ skater, testToEdit, onSaved, trigger, canDelete }
       finally { setLoading(false); }
   }
 
+  // ... (File handler & preview same)
   const handleDeleteSheet = async () => {
       if (!confirm("Remove test sheet?")) return;
       setLoading(true);
       try {
           const formData = new FormData();
-          formData.append('test_sheet', ''); // Clear file
+          formData.append('test_sheet', ''); 
           await apiRequest(`/tests/${testToEdit.id}/`, 'PATCH', formData, token);
-          
           setCurrentTestSheet(null);
           if (onSaved) onSaved();
       } catch (e) { alert("Failed to remove file."); }
@@ -119,13 +111,11 @@ export function LogTestModal({ skater, testToEdit, onSaved, trigger, canDelete }
           <div className="flex items-center justify-between mb-2 text-xs bg-blue-50 p-2 rounded border border-blue-100">
               <div className="flex items-center gap-2 overflow-hidden">
                   <FileText className="h-3 w-3 text-blue-600 flex-shrink-0" />
-                  <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-700 hover:underline truncate" title={filename}>
-                      {filename}
-                  </a>
+                  <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-700 hover:underline truncate" title={filename}>{filename}</a>
               </div>
-              <Button type="button" variant="ghost" size="sm" className="h-5 w-5 p-0 text-red-400 hover:text-red-600" onClick={handleDeleteSheet}>
-                  <Trash2 className="h-3 w-3" />
-              </Button>
+              {!readOnly && (
+                  <Button type="button" variant="ghost" size="sm" className="h-5 w-5 p-0 text-red-400 hover:text-red-600" onClick={handleDeleteSheet}><Trash2 className="h-3 w-3" /></Button>
+              )}
           </div>
       );
   };
@@ -137,35 +127,38 @@ export function LogTestModal({ skater, testToEdit, onSaved, trigger, canDelete }
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-            <DialogTitle>{testToEdit ? 'Edit Test Record' : 'Log Test Result'}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+                {testToEdit ? 'Edit Test Record' : 'Log Test Result'}
+                {readOnly && <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded border border-amber-200 flex items-center gap-1"><Lock className="h-3 w-3"/> View Only</span>}
+            </DialogTitle>
         </DialogHeader>
         
         <div className="space-y-4">
-            
+            {/* Inputs disabled if readOnly */}
             <div className="grid grid-cols-3 gap-4">
                 <div className="col-span-1 space-y-2">
                     <Label>Category</Label>
                     {!isCustomType ? (
-                        <select className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm" value={testType} onChange={(e) => { if (e.target.value === 'CUSTOM') { setIsCustomType(true); setTestType(''); } else { setTestType(e.target.value); } }}>
+                        <select className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm" value={testType} onChange={(e) => { if (e.target.value === 'CUSTOM') { setIsCustomType(true); setTestType(''); } else { setTestType(e.target.value); } }} disabled={readOnly}>
                             {DEFAULT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                             <option value="CUSTOM">Other...</option>
                         </select>
                     ) : (
-                        <div className="flex gap-1"><Input value={testType} onChange={(e) => setTestType(e.target.value)} placeholder="Custom..." className="h-9" autoFocus /><Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => { setIsCustomType(false); setTestType('Skills'); }}><ChevronLeft className="h-4 w-4" /></Button></div>
+                        <div className="flex gap-1"><Input value={testType} onChange={(e) => setTestType(e.target.value)} placeholder="Custom..." className="h-9" autoFocus disabled={readOnly} /><Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => { setIsCustomType(false); setTestType('Skills'); }} disabled={readOnly}><ChevronLeft className="h-4 w-4" /></Button></div>
                     )}
                 </div>
-                <div className="col-span-2 space-y-2"><Label>Test Name</Label><Input value={testName} onChange={(e) => setTestName(e.target.value)} placeholder="e.g. Gold Skills" /></div>
+                <div className="col-span-2 space-y-2"><Label>Test Name</Label><Input value={testName} onChange={(e) => setTestName(e.target.value)} placeholder="e.g. Gold Skills" disabled={readOnly} /></div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2"><Label>Status</Label><select className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm" value={status} onChange={(e) => setStatus(e.target.value)}><option value="COMPLETED">Completed</option><option value="PLANNED">Planned</option><option value="SCHEDULED">Scheduled</option><option value="WITHDRAWN">Withdrawn</option></select></div>
-                <div className="space-y-2"><Label>Date</Label><DatePicker date={testDate} setDate={setTestDate} placeholder="Select Date" /></div>
+                <div className="space-y-2"><Label>Status</Label><select className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm" value={status} onChange={(e) => setStatus(e.target.value)} disabled={readOnly}><option value="COMPLETED">Completed</option><option value="PLANNED">Planned</option><option value="SCHEDULED">Scheduled</option><option value="WITHDRAWN">Withdrawn</option></select></div>
+                <div className="space-y-2"><Label>Date</Label><DatePicker date={testDate} setDate={setTestDate} placeholder="Select Date" disabled={readOnly} /></div>
             </div>
 
             {status === 'COMPLETED' && (
                 <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
                     <Label>Result</Label>
-                    <select className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm" value={result} onChange={(e) => setResult(e.target.value)}><option value="Pass">Pass</option><option value="Honors">Pass with Honors</option><option value="Retry">Retry</option></select>
+                    <select className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm" value={result} onChange={(e) => setResult(e.target.value)} disabled={readOnly}><option value="Pass">Pass</option><option value="Honors">Pass with Honors</option><option value="Retry">Retry</option></select>
                 </div>
             )}
 
@@ -174,26 +167,28 @@ export function LogTestModal({ skater, testToEdit, onSaved, trigger, canDelete }
                 <div className="space-y-2">
                     <Label>Test Sheet (PDF)</Label>
                     <FilePreview url={currentTestSheet} />
-                    <Input type="file" accept="application/pdf,image/*" className="h-9 text-xs" onChange={(e) => setTestSheet(e.target.files[0])} />
+                    {!readOnly && <Input type="file" accept="application/pdf,image/*" className="h-9 text-xs" onChange={(e) => setTestSheet(e.target.files[0])} />}
                 </div>
                 <div className="space-y-2">
                     <Label>Video URL</Label>
                     <div className="relative">
                         <Video className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input className="pl-8" value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} placeholder="https://..." />
+                        <Input className="pl-8" value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} placeholder="https://..." disabled={readOnly} />
                     </div>
                 </div>
             </div>
 
-            <div className="space-y-2"><Label>Notes / Feedback</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Evaluator feedback..." /></div>
+            <div className="space-y-2"><Label>Notes / Feedback</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Evaluator feedback..." disabled={readOnly} /></div>
             
-            {/* FOOTER */}
-            <div className="flex justify-between pt-2">
-                {testToEdit && canDelete && ( // <--- Only show if allowed
-                    <Button variant="destructive" onClick={handleDelete} disabled={loading}>Delete</Button>
-                )}
-                <Button onClick={handleSave} disabled={loading} className={!testToEdit || !canDelete ? "w-full" : ""}>Save Record</Button>
-            </div>
+            {/* FOOTER - HIDE IF READ ONLY */}
+            {!readOnly && (
+                <div className="flex justify-between pt-2">
+                    {testToEdit && canDelete ? ( 
+                        <Button variant="destructive" onClick={handleDelete} disabled={loading}>Delete</Button>
+                    ) : <div></div>}
+                    <Button onClick={handleSave} disabled={loading} className={!testToEdit || !canDelete ? "w-full" : ""}>Save Record</Button>
+                </div>
+            )}
         </div>
       </DialogContent>
     </Dialog>

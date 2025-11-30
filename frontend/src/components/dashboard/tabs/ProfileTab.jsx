@@ -5,7 +5,7 @@ import { EditSkaterModal } from '@/components/dashboard/EditSkaterModal';
 import { EditDisciplineModal } from '@/components/dashboard/EditDisciplineModal';
 import { InviteUserModal } from '@/components/dashboard/InviteUserModal';
 import { FederationFlag } from '@/components/ui/FederationFlag';
-import { AlertTriangle, Shield, User, Mail, Users, Trash2 } from 'lucide-react'; // Added Trash2
+import { AlertTriangle, Shield, User, Mail, Users, Trash2, Eye } from 'lucide-react'; // Added Eye
 import { apiRequest } from '@/api';
 import { useAuth } from '@/AuthContext';
 
@@ -20,7 +20,6 @@ export function ProfileTab({ skater, onUpdated, readOnly }) {
       } catch (e) { alert("Failed."); }
   };
 
-  // --- NEW: Revoke Access Handler ---
   const handleRevoke = async (accessId) => {
       if (!confirm("Revoke access for this user? They will no longer see this athlete.")) return;
       try {
@@ -53,10 +52,16 @@ export function ProfileTab({ skater, onUpdated, readOnly }) {
         <CardHeader className="flex flex-row justify-between items-center pb-4 border-b">
             <CardTitle>Athlete Details</CardTitle>
             
-            {/* HIDE ACTIONS IF READ ONLY */}
+            {/* HIDE ACTIONS IF READ ONLY (Collaborators/Guardians don't see this) */}
             {!readOnly && (
                 <div className="flex gap-2">
-                    {/* Invite Collaborator Button */}
+                    {/* Invite Observer Button */}
+                    <InviteUserModal 
+                        entityType="Skater" entityId={skater.id} entityName={skater.full_name}
+                        defaultRole="OBSERVER"
+                        trigger={<Button size="sm" variant="outline"><Eye className="h-4 w-4 mr-2" /> Invite Observer</Button>}
+                    />
+
                     <InviteUserModal 
                         entityType="Skater" entityId={skater.id} entityName={skater.full_name}
                         defaultRole="COLLABORATOR"
@@ -144,7 +149,7 @@ export function ProfileTab({ skater, onUpdated, readOnly }) {
                     {/* 2. Guardian Row */}
                     <div className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-8">
                         <div className="w-32 flex items-center gap-2 text-sm font-medium text-gray-900 mt-1">
-                            <Shield className="h-4 w-4 text-purple-500" /> Parent/Guardian
+                            <Shield className="h-4 w-4 text-purple-500" /> Parent / Guardian
                         </div>
                         <div className="flex-1 space-y-2">
                             {hasGuardian ? (
@@ -177,7 +182,7 @@ export function ProfileTab({ skater, onUpdated, readOnly }) {
                         </div>
                     </div>
 
-                    {/* 3. Collaborators Row (New Section) */}
+                    {/* 3. Collaborators Row */}
                     <div className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-8 pt-4 border-t border-slate-200">
                         <div className="w-32 flex items-center gap-2 text-sm font-medium text-gray-900 mt-1">
                             <Users className="h-4 w-4 text-indigo-500" /> Coaching Staff
@@ -210,13 +215,46 @@ export function ProfileTab({ skater, onUpdated, readOnly }) {
                         </div>
                     </div>
 
+                    {/* 4. Observers Row (New) */}
+                    {!readOnly && ( // Only owner sees who is observing
+                        <div className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-8 pt-4 border-t border-slate-200">
+                            <div className="w-32 flex items-center gap-2 text-sm font-medium text-gray-900 mt-1">
+                                <Eye className="h-4 w-4 text-slate-500" /> Observers
+                            </div>
+                            <div className="flex-1 space-y-2">
+                                {skater.observers && skater.observers.length > 0 ? (
+                                    skater.observers.map((obs) => (
+                                        <div key={obs.id} className="flex items-center justify-between text-sm bg-white p-2 rounded border border-slate-200 shadow-sm">
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-medium text-gray-900">{obs.full_name}</span>
+                                                <span className="text-[10px] font-bold text-slate-600 px-1.5 py-0.5 bg-slate-100 border border-slate-200 rounded uppercase">Observer</span>
+                                            </div>
+                                            <div className="flex items-center gap-4">
+                                                <span className="font-mono text-gray-400 text-xs hidden sm:inline">{obs.email}</span>
+                                                <button 
+                                                    onClick={() => handleRevoke(obs.id)}
+                                                    className="text-gray-400 hover:text-red-600 transition-colors"
+                                                    title="Revoke Access"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <span className="text-sm text-gray-400 italic">No observers linked</span>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
                 </div>
             </div>
 
         </CardContent>
       </Card>
-
-      {/* Disciplines */}
+      
+      {/* ... (Rest of file: Disciplines, Danger Zone) ... */}
       <Card>
           <CardHeader className="flex flex-row justify-between items-center">
               <CardTitle>Disciplines & Levels</CardTitle>
@@ -234,7 +272,6 @@ export function ProfileTab({ skater, onUpdated, readOnly }) {
           </CardContent>
       </Card>
 
-      {/* Danger Zone */}
       {!readOnly && (
           <Card className="border-red-100">
               <CardHeader className="bg-red-50/50 border-b border-red-100"><CardTitle className="text-red-800 flex items-center gap-2"><AlertTriangle className="h-5 w-5" /> Danger Zone</CardTitle></CardHeader>

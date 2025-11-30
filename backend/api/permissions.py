@@ -1,6 +1,6 @@
 from rest_framework import permissions
-from .models import (
-    PlanningEntityAccess,
+from api.services import get_access_role
+from api.models import (
     Skater,
     Team,
     SynchroTeam,
@@ -9,93 +9,72 @@ from .models import (
     Goal,
     CompetitionResult,
     SkaterTest,
-    YearlyPlan,
 )
 
 
 class IsCoachUser(permissions.BasePermission):
+    """
+    Global Role Check. Used for broad list views where queryset filtering handles security.
+    """
+
     def has_permission(self, request, view):
         if not request.user or not request.user.is_authenticated:
             return False
+        # Allow if they have a 'staff' role globally, OR if they are a Skater/Guardian
+        # relying on object-level permissions later.
+        # Actually, for "Create Team", we restrict to Global Coaches.
         return (
-            request.user.role in ["COACH", "COLLABORATOR"] or request.user.is_superuser
+            request.user.role in ["COACH", "COLLABORATOR", "MANAGER"]
+            or request.user.is_superuser
         )
 
 
 class IsCoachOrOwner(permissions.BasePermission):
-    def has_object_permission(self, request, view, obj):
-        if request.user.is_superuser:
-            return True
+    """
+    Context-Aware Permission.
+    Delegates to api.services.get_access_role to determine relationship.
+    """
 
-        # --- RESOLVE TARGET ENTITY ---
-        target_entity = None
+    def has_object_permission(self, request, view, obj):
+        # 1. Resolve the "Real" Entity from the object (e.g. Log -> Skater)
+        entity = obj
         if isinstance(obj, (Skater, Team, SynchroTeam)):
-            target_entity = obj
+            entity = obj
         elif hasattr(obj, "skater") and obj.skater:
-            target_entity = obj.skater
-        elif hasattr(obj, "athlete_season") and obj.athlete_season:
-            if obj.athlete_season.skater:
-                target_entity = obj.athlete_season.skater
-            elif obj.athlete_season.planning_entity:
-                target_entity = obj.athlete_season.planning_entity
+            entity = obj.skater
         elif hasattr(obj, "planning_entity") and obj.planning_entity:
             entity = obj.planning_entity
-            if hasattr(entity, "skater") and entity.skater:
-                target_entity = entity.skater
-            elif isinstance(entity, (Team, SynchroTeam)):
-                target_entity = entity
+            if hasattr(entity, "skater"):
+                entity = entity.skater  # Unwrap Singles/Dance
+        elif hasattr(obj, "athlete_season") and obj.athlete_season:
+            if obj.athlete_season.skater:
+                entity = obj.athlete_season.skater
+            elif obj.athlete_season.planning_entity:
+                entity = obj.athlete_season.planning_entity
 
-        if not target_entity:
+        # 2. Ask Service for Role
+        role = get_access_role(request.user, entity)
+
+        # No role? Deny.
+        if not role:
             return False
 
-        # --- PERMISSION CHECKS ---
-        if (
-            isinstance(target_entity, Skater)
-            and target_entity.user_account == request.user
-        ):
-            if isinstance(obj, Skater) and request.method == "DELETE":
-                return False
-            return True
+        # 3. Apply Rules
 
-        from django.contrib.contenttypes.models import ContentType
+        # DELETE: Only Owners/Coaches
+        if request.method == "DELETE":
+            return role in ["OWNER", "COACH"]
 
-        ct = ContentType.objects.get_for_model(target_entity)
+        # WRITE (POST/PUT/PATCH):
+        if request.method in ["POST", "PUT", "PATCH"]:
+            # Guardians/Skaters have limited write access (Logs/Goals/Injuries)
+            if role in ["GUARDIAN", "OWNER"] and isinstance(
+                obj, (SessionLog, InjuryLog, Goal, CompetitionResult, SkaterTest)
+            ):
+                return True  # Special exception for "Data Entry" models
 
-        access = PlanningEntityAccess.objects.filter(
-            user=request.user, content_type=ct, object_id=target_entity.id
-        ).first()
+            # Otherwise, standard Staff Write Access
+            return role in ["OWNER", "COACH", "COLLABORATOR", "MANAGER"]
 
-        if access:
-            level = access.access_level
-
-            # 1. OWNER / MANAGER (Full Access)
-            if level in ["COACH", "MANAGER", "OWNER"]:
-                return True
-
-            # 2. COLLABORATOR (Edit, No Delete, No YTP Create)
-            if level == "COLLABORATOR":
-                if request.method == "DELETE":
-                    return False
-
-                # Explicitly block creating Yearly Plans (POST)
-                # (Note: Creation is often handled in the View, but this protects object-level ops)
-                if isinstance(obj, YearlyPlan) and request.method == "POST":
-                    return False
-
-                return True
-
-            # 3. GUARDIAN / VIEWER (Read Only + Specific Write)
-            if level in ["GUARDIAN", "VIEWER", "OBSERVER"]:
-                if request.method in permissions.SAFE_METHODS:
-                    return True
-
-                if level == "GUARDIAN" and isinstance(
-                    obj, (SessionLog, InjuryLog, Goal, CompetitionResult, SkaterTest)
-                ):
-                    if request.method == "DELETE":
-                        return False
-                    return True
-
-                return False
-
-        return False
+        # READ (GET): Everyone with a role (including OBSERVER/VIEWER/GUARDIAN)
+        return True

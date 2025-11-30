@@ -15,12 +15,17 @@ export function InviteUserModal({ entityType, entityId, entityName, trigger, ska
   const [success, setSuccess] = useState(false);
   
   const [email, setEmail] = useState('');
-  // FIX 1: Default to GUARDIAN
-  const [role, setRole] = useState(defaultRole || 'GUARDIAN');
+  
+  // FIX: Default Logic
+  const smartDefault = defaultRole || (entityType === 'Skater' ? 'GUARDIAN' : 'COLLABORATOR');
+  const [role, setRole] = useState(smartDefault);
 
   useEffect(() => {
-      if (open && defaultRole) setRole(defaultRole);
-  }, [open, defaultRole]);
+      if (open) {
+          const resetRole = defaultRole || (entityType === 'Skater' ? 'GUARDIAN' : 'COLLABORATOR');
+          setRole(resetRole);
+      }
+  }, [open, defaultRole, entityType]);
 
   const getAge = (dobString) => {
       if (!dobString) return 18; 
@@ -49,8 +54,8 @@ export function InviteUserModal({ entityType, entityId, entityName, trigger, ska
       
       setSuccess(true);
       setTimeout(() => {
-          // FIX 2: Reset to GUARDIAN
-          setOpen(false); setSuccess(false); setEmail(''); setRole(defaultRole || 'GUARDIAN');
+          setOpen(false); setSuccess(false); setEmail('');
+          setRole(defaultRole || (entityType === 'Skater' ? 'GUARDIAN' : 'COLLABORATOR'));
       }, 2000);
     } catch (err) {
       alert(err.message || "Failed to send invitation.");
@@ -62,7 +67,6 @@ export function InviteUserModal({ entityType, entityId, entityName, trigger, ska
   const getRoles = () => {
       if (entityType === 'Skater') {
           const roles = [
-              // FIX 3: Value is GUARDIAN
               { value: 'GUARDIAN', label: 'Parent / Guardian (Schedule + Logs)' },
               { value: 'COLLABORATOR', label: 'Collaborating Coach' },
               { value: 'OBSERVER', label: 'Observer (Read Only)' }
@@ -96,15 +100,12 @@ export function InviteUserModal({ entityType, entityId, entityName, trigger, ska
             </div>
         ) : (
             <form onSubmit={handleSubmit} className="space-y-4 py-2">
-                
-                {/* COMPLIANCE WARNINGS */}
                 {isYoungMinor && role === 'ATHLETE' && (
                     <div className="bg-red-50 border border-red-200 p-3 rounded text-red-800 text-xs flex gap-2">
                         <ShieldAlert className="h-4 w-4 shrink-0" />
                         <p><strong>Restricted:</strong> Athletes under 13 cannot have direct accounts. Please invite a Parent/Guardian.</p>
                     </div>
                 )}
-
                 {isMatureMinor && role === 'ATHLETE' && !hasGuardian && (
                     <div className="bg-blue-50 border border-blue-200 p-3 rounded text-blue-800 text-xs flex gap-2">
                         <Info className="h-4 w-4 shrink-0" />

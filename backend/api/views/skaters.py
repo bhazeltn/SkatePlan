@@ -2,6 +2,7 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from django.contrib.contenttypes.models import ContentType
 from datetime import date
+from api.services import get_accessible_skaters
 
 from api.models import (
     Skater,
@@ -146,33 +147,7 @@ class RosterView(generics.ListAPIView):
     serializer_class = RosterSkaterSerializer
 
     def get_queryset(self):
-        user = self.request.user
-        skater_ids = set()
-
-        # 1. CHECK PERMISSIONS (Access Grants)
-        access_records = PlanningEntityAccess.objects.filter(user=user)
-
-        for record in access_records:
-            entity = record.planning_entity
-            if not entity:
-                continue
-
-            if isinstance(entity, Skater):
-                skater_ids.add(entity.id)
-            elif hasattr(entity, "skater"):
-                skater_ids.add(entity.skater.id)
-            elif hasattr(entity, "partner_a"):  # Team
-                skater_ids.add(entity.partner_a.id)
-                skater_ids.add(entity.partner_b.id)
-            elif hasattr(entity, "roster"):  # Synchro
-                skater_ids.update(entity.roster.values_list("id", flat=True))
-
-        # 2. CHECK IDENTITY (Am I a skater?)
-        linked_skater = Skater.objects.filter(user_account=user, is_active=True).first()
-        if linked_skater:
-            skater_ids.add(linked_skater.id)
-
-        return Skater.objects.filter(id__in=skater_ids, is_active=True).distinct()
+        return get_accessible_skaters(self.request.user)
 
 
 class SinglesEntityDetailView(generics.RetrieveUpdateDestroyAPIView):

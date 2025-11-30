@@ -8,7 +8,6 @@ from api.models import (
     GapAnalysis,
     PlanningEntityAccess,
 )
-
 from django.contrib.contenttypes.models import ContentType
 from api.services import get_access_role
 
@@ -20,6 +19,9 @@ class AthleteSeasonSerializer(serializers.ModelSerializer):
 
 
 class MacrocycleSerializer(serializers.ModelSerializer):
+    # FIX: Mark as read-only so validation doesn't fail when missing from payload
+    yearly_plan = serializers.PrimaryKeyRelatedField(read_only=True)
+
     class Meta:
         model = Macrocycle
         fields = "__all__"
@@ -41,6 +43,7 @@ class YearlyPlanSerializer(serializers.ModelSerializer):
             "id",
             "coach_owner",
             "planning_entity",
+            "title",
             "peak_type",
             "primary_season_goal",
             "created_at",
@@ -56,11 +59,16 @@ class YearlyPlanSerializer(serializers.ModelSerializer):
         return str(obj.planning_entity)
 
     def get_discipline_name(self, obj):
+        if obj.title:
+            return obj.title
+
         if obj.planning_entity:
             if hasattr(obj.planning_entity, "team_name"):
                 return obj.planning_entity.team_name
             if hasattr(obj.planning_entity, "name"):
                 return obj.planning_entity.name
+            if obj.planning_entity.__class__.__name__ == "SinglesEntity":
+                return "Singles"
         return "General"
 
     def get_dashboard_url(self, obj):
@@ -78,20 +86,16 @@ class YearlyPlanSerializer(serializers.ModelSerializer):
         if not user:
             return None
 
-        # 1. If user is the plan owner (Creator), they are COACH/OWNER
         if obj.coach_owner == user:
             return "OWNER"
 
-        # 2. Resolve the Target Entity (Skater/Team)
         target = obj.planning_entity
         if not target:
             return None
 
-        # Unwrap Singles/Dance entities to the Skater
         if hasattr(target, "skater"):
             target = target.skater
 
-        # 3. Use Service
         return get_access_role(user, target)
 
 
@@ -125,8 +129,8 @@ class GoalSerializer(serializers.ModelSerializer):
             "discipline",
             "coach_review_notes",
         )
-        # NOTE: current_status is NOT read-only so Coaches can update it.
-        read_only_fields = ("created_by", "updated_by")
+        # FIX: Ensure internal fields are read-only
+        read_only_fields = ("created_by", "updated_by", "content_type", "object_id")
 
     def get_created_by_name(self, obj):
         return obj.created_by.full_name if obj.created_by else "System"
@@ -143,7 +147,6 @@ class GoalSerializer(serializers.ModelSerializer):
         return "General"
 
     def validate(self, data):
-        # Lock Logic: Non-coaches cannot edit locked goals
         if self.instance:
             user = self.context["request"].user
             if user.role in ["GUARDIAN", "SKATER"]:
@@ -156,13 +159,10 @@ class GoalSerializer(serializers.ModelSerializer):
         return data
 
     def update(self, instance, validated_data):
-        # Permission Logic for Status Changes
         user = self.context["request"].user
-
         if user.role in ["GUARDIAN", "SKATER"]:
             if "current_status" in validated_data:
                 validated_data.pop("current_status")
-
         return super().update(instance, validated_data)
 
 

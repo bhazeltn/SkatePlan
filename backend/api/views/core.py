@@ -2,6 +2,7 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.shortcuts import get_object_or_404
+from django.db.models import Q
 
 from api.models import Federation, SkatingElement, PlanningEntityAccess
 from api.serializers import FederationSerializer, SkatingElementSerializer
@@ -11,13 +12,32 @@ from api.services import get_access_role
 class FederationList(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = FederationSerializer
-    queryset = Federation.objects.all().order_by("name")
+    queryset = Federation.objects.all().order_by("iso_code")
 
 
 class SkatingElementList(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = SkatingElementSerializer
-    queryset = SkatingElement.objects.all().order_by("element_name")
+
+    def get_queryset(self):
+        queryset = SkatingElement.objects.all().order_by(
+            "abbreviation"
+        )  # Sort by code usually better for lookup
+
+        # 1. Search Filter
+        search = self.request.query_params.get("search")
+        if search:
+            queryset = queryset.filter(
+                Q(element_name__icontains=search) | Q(abbreviation__icontains=search)
+            )
+
+        # 2. Category Filter (JUMP, SPIN, STEP)
+        category = self.request.query_params.get("category")
+        if category:
+            # Use iexact to handle 'Jump' vs 'JUMP' gracefully
+            queryset = queryset.filter(discipline_type__iexact=category)
+
+        return queryset
 
 
 class RevokeAccessView(APIView):

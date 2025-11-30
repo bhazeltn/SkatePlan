@@ -30,14 +30,12 @@ from api.services import get_accessible_skaters, get_access_role
 
 # --- 1. COACH DASHBOARD AGGREGATOR ---
 class CoachDashboardStatsView(APIView):
-    # This view is specific to the logged-in Coach's operational view.
-    # IsCoachUser is appropriate here (Global Coach Role required).
     permission_classes = [permissions.IsAuthenticated, IsCoachUser]
 
     def get(self, request):
         user = request.user
 
-        # 1. SECURITY: Fetch ONLY operational skaters (Owned + Collab, NO Observers)
+        # 1. SECURITY: Fetch ONLY operational skaters (Owned + Collab)
         skaters = get_accessible_skaters(user, filter_mode="OPERATIONAL")
 
         today = date.today()
@@ -58,7 +56,6 @@ class CoachDashboardStatsView(APIView):
         start_of_week = today - timedelta(days=today.weekday())
 
         for skater in skaters:
-            # Check role for this specific skater to flag collaborations
             role = get_access_role(user, skater)
             is_shared = role == "COLLABORATOR"
 
@@ -74,6 +71,7 @@ class CoachDashboardStatsView(APIView):
                             "id": skater.id,
                             "issue": f"No Plan for {season.season}",
                             "is_shared": is_shared,
+                            "link": f"#/skater/{skater.id}?tab=yearly",  # <--- Link to Yearly
                         }
                     )
                 else:
@@ -93,6 +91,7 @@ class CoachDashboardStatsView(APIView):
                                 "id": skater.id,
                                 "issue": f"Unplanned Week",
                                 "is_shared": is_shared,
+                                "link": f"#/skater/{skater.id}?tab=weekly",  # <--- Link to Weekly
                             }
                         )
 
@@ -120,22 +119,31 @@ class CoachDashboardStatsView(APIView):
             formatted = []
             for g in goal_list:
                 name = "Unknown"
-                skater_id = None
+                link = "#/"
+                is_shared = False
+
+                # Logic to determine Link & Badge
                 if g.assignee_skater:
                     name = g.assignee_skater.full_name
-                    skater_id = g.assignee_skater.id
-                elif g.planning_entity and hasattr(g.planning_entity, "skater"):
-                    name = g.planning_entity.skater.full_name
-                    skater_id = g.planning_entity.skater.id
-
-                is_shared = False
-                if skater_id:
-                    # Resolve role for the skater associated with the goal
-                    # (We fetch the object from the 'skaters' queryset to avoid DB hit if possible,
-                    # but get_access_role handles lookups efficiently)
-                    # For simplicity in this loop:
-                    role = get_access_role(user, skaters.filter(id=skater_id).first())
+                    link = f"#/skater/{g.assignee_skater.id}?tab=goals"
+                    role = get_access_role(user, g.assignee_skater)
                     is_shared = role == "COLLABORATOR"
+
+                elif g.planning_entity:
+                    entity = g.planning_entity
+                    if hasattr(entity, "skater"):
+                        name = entity.skater.full_name
+                        link = f"#/skater/{entity.skater.id}?tab=goals"
+                        role = get_access_role(user, entity.skater)
+                        is_shared = role == "COLLABORATOR"
+                    elif hasattr(entity, "team_name"):
+                        name = entity.team_name
+                        if hasattr(entity, "roster"):  # Synchro
+                            link = f"#/synchro/{entity.id}?tab=goals"
+                        else:  # Team
+                            link = f"#/team/{entity.id}?tab=goals"
+                        role = get_access_role(user, entity)
+                        is_shared = role == "COLLABORATOR"
 
                 formatted.append(
                     {
@@ -143,6 +151,7 @@ class CoachDashboardStatsView(APIView):
                         "due": g.target_date,
                         "skater_name": name,
                         "is_shared": is_shared,
+                        "link": link,
                     }
                 )
             return formatted
@@ -194,6 +203,7 @@ class CoachDashboardStatsView(APIView):
                     "who": t.skater.full_name,
                     "date": t.test_date,
                     "is_shared": is_shared,
+                    "link": f"#/skater/{t.skater.id}?tab=tests",
                 }
             )
 
@@ -204,6 +214,9 @@ class CoachDashboardStatsView(APIView):
         for c in upcoming_comps:
             results = CompetitionResult.objects.filter(competition=c)
             attendees = set()
+            # Simple link to first attendee found, or just skater 1
+            first_link = "#/"
+
             for r in results:
                 if r.planning_entity:
                     if (
@@ -211,10 +224,20 @@ class CoachDashboardStatsView(APIView):
                         and r.planning_entity.skater in skaters
                     ):
                         attendees.add(r.planning_entity.skater.full_name)
+                        if first_link == "#/":
+                            first_link = f"#/skater/{r.planning_entity.skater.id}?tab=competitions"
                     elif hasattr(r.planning_entity, "team_name"):
-                        # Only include teams if they are relevant?
-                        # For simplicity, if the team is in the results, we list it.
                         attendees.add(r.planning_entity.team_name)
+                        if first_link == "#/":
+                            if hasattr(r.planning_entity, "roster"):
+                                first_link = (
+                                    f"#/synchro/{r.planning_entity.id}?tab=competitions"
+                                )
+                            else:
+                                first_link = (
+                                    f"#/team/{r.planning_entity.id}?tab=competitions"
+                                )
+
             if attendees:
                 agenda_items.append(
                     {
@@ -223,6 +246,7 @@ class CoachDashboardStatsView(APIView):
                         "who": ", ".join(list(attendees)),
                         "date": c.start_date,
                         "is_shared": False,
+                        "link": first_link,
                     }
                 )
 
@@ -240,6 +264,7 @@ class CoachDashboardStatsView(APIView):
                             "date": i.date_of_onset,
                             "is_shared": get_access_role(user, i.skater)
                             == "COLLABORATOR",
+                            "link": f"#/skater/{i.skater.id}?tab=health",  # <--- Link to Health
                         }
                         for i in active_injuries
                     ],
@@ -251,6 +276,96 @@ class CoachDashboardStatsView(APIView):
                 "agenda": agenda_items,
             }
         )
+
+
+# --- 2. SKATER STATS ---
+class SkaterStatsView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsCoachOrOwner]
+
+    def get(self, request, skater_id):
+        skater = get_object_or_404(Skater, id=skater_id)
+
+        # Manual Permission Check
+        self.check_object_permissions(request, skater)
+
+        entity_ids = [
+            e.id
+            for e in list(skater.singles_entities.all())
+            + list(skater.solodance_entities.all())
+            + list(skater.teams_as_partner_a.all())
+            + list(skater.teams_as_partner_b.all())
+        ]
+
+        all_results = (
+            CompetitionResult.objects.filter(
+                object_id__in=entity_ids, status=CompetitionResult.Status.COMPLETED
+            )
+            .select_related("competition")
+            .order_by("competition__start_date")
+        )
+
+        active_seasons = AthleteSeason.objects.filter(skater=skater, is_active=True)
+        total_sessions = SessionLog.objects.filter(
+            athlete_season__in=active_seasons
+        ).count()
+
+        season_name = (
+            active_seasons.last().season if active_seasons.exists() else "Current"
+        )
+
+        return calculate_stats_response(all_results, total_sessions, season_name)
+
+
+# --- 3. TEAM STATS ---
+class TeamStatsView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsCoachOrOwner]
+
+    def get(self, request, team_id):
+        team = get_object_or_404(Team, id=team_id)
+        self.check_object_permissions(request, team)
+
+        ct = ContentType.objects.get_for_model(Team)
+        all_results = (
+            CompetitionResult.objects.filter(
+                content_type=ct,
+                object_id=team_id,
+                status=CompetitionResult.Status.COMPLETED,
+            )
+            .select_related("competition")
+            .order_by("competition__start_date")
+        )
+
+        total_sessions = SessionLog.objects.filter(
+            content_type=ct, object_id=team_id
+        ).count()
+
+        return calculate_stats_response(all_results, total_sessions, "Current")
+
+
+# --- 4. SYNCHRO STATS ---
+class SynchroStatsView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsCoachOrOwner]
+
+    def get(self, request, team_id):
+        team = get_object_or_404(SynchroTeam, id=team_id)
+        self.check_object_permissions(request, team)
+
+        ct = ContentType.objects.get_for_model(SynchroTeam)
+        all_results = (
+            CompetitionResult.objects.filter(
+                content_type=ct,
+                object_id=team_id,
+                status=CompetitionResult.Status.COMPLETED,
+            )
+            .select_related("competition")
+            .order_by("competition__start_date")
+        )
+
+        total_sessions = SessionLog.objects.filter(
+            content_type=ct, object_id=team_id
+        ).count()
+
+        return calculate_stats_response(all_results, total_sessions, "Current")
 
 
 # --- HELPER FOR STATS ---
@@ -365,95 +480,3 @@ def calculate_stats_response(all_results, total_sessions, season_name):
             "history": history,
         }
     )
-
-
-# --- 2. SKATER STATS ---
-class SkaterStatsView(APIView):
-    permission_classes = [permissions.IsAuthenticated, IsCoachOrOwner]
-
-    def get(self, request, skater_id):
-        skater = get_object_or_404(Skater, id=skater_id)
-
-        # Manual Permission Check
-        self.check_object_permissions(request, skater)
-
-        entity_ids = [
-            e.id
-            for e in list(skater.singles_entities.all())
-            + list(skater.solodance_entities.all())
-            + list(skater.teams_as_partner_a.all())
-            + list(skater.teams_as_partner_b.all())
-        ]
-
-        all_results = (
-            CompetitionResult.objects.filter(
-                object_id__in=entity_ids, status=CompetitionResult.Status.COMPLETED
-            )
-            .select_related("competition")
-            .order_by("competition__start_date")
-        )
-
-        active_seasons = AthleteSeason.objects.filter(skater=skater, is_active=True)
-        total_sessions = SessionLog.objects.filter(
-            athlete_season__in=active_seasons
-        ).count()
-
-        season_name = (
-            active_seasons.last().season if active_seasons.exists() else "Current"
-        )
-
-        return calculate_stats_response(all_results, total_sessions, season_name)
-
-
-# --- 3. TEAM STATS ---
-class TeamStatsView(APIView):
-    # FIX: Use Context-Aware permission
-    permission_classes = [permissions.IsAuthenticated, IsCoachOrOwner]
-
-    def get(self, request, team_id):
-        team = get_object_or_404(Team, id=team_id)
-        self.check_object_permissions(request, team)
-
-        ct = ContentType.objects.get_for_model(Team)
-        all_results = (
-            CompetitionResult.objects.filter(
-                content_type=ct,
-                object_id=team_id,
-                status=CompetitionResult.Status.COMPLETED,
-            )
-            .select_related("competition")
-            .order_by("competition__start_date")
-        )
-
-        total_sessions = SessionLog.objects.filter(
-            content_type=ct, object_id=team_id
-        ).count()
-
-        return calculate_stats_response(all_results, total_sessions, "Current")
-
-
-# --- 4. SYNCHRO STATS ---
-class SynchroStatsView(APIView):
-    # FIX: Use Context-Aware permission
-    permission_classes = [permissions.IsAuthenticated, IsCoachOrOwner]
-
-    def get(self, request, team_id):
-        team = get_object_or_404(SynchroTeam, id=team_id)
-        self.check_object_permissions(request, team)
-
-        ct = ContentType.objects.get_for_model(SynchroTeam)
-        all_results = (
-            CompetitionResult.objects.filter(
-                content_type=ct,
-                object_id=team_id,
-                status=CompetitionResult.Status.COMPLETED,
-            )
-            .select_related("competition")
-            .order_by("competition__start_date")
-        )
-
-        total_sessions = SessionLog.objects.filter(
-            content_type=ct, object_id=team_id
-        ).count()
-
-        return calculate_stats_response(all_results, total_sessions, "Current")

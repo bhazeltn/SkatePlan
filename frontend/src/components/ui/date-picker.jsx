@@ -2,7 +2,7 @@ import * as React from "react"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 
-export function DatePicker({ date, setDate, className, placeholder }) {
+export function DatePicker({ date, setDate, className, placeholder, ...props }) {
   return (
     <div className="relative w-full">
       <Input
@@ -11,9 +11,10 @@ export function DatePicker({ date, setDate, className, placeholder }) {
         onChange={(e) => setDate(e.target.value)}
         className={cn(
           "w-full block",
-          !date && "text-muted-foreground", // Greys out text if empty, similar to placeholder
+          !date && "text-muted-foreground", 
           className
         )}
+        {...props}
       />
     </div>
   )

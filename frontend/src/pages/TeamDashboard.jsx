@@ -6,23 +6,21 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, ArrowLeft, AlertTriangle, Handshake, Briefcase, Eye, UserCheck, Trash2 } from 'lucide-react';
 import { FederationFlag } from '@/components/ui/FederationFlag';
-import { useAccessControl } from '@/hooks/useAccessControl';
-
-// Components
 import { EditTeamModal } from '@/features/profiles/components/EditTeamModal';
 import { InviteUserModal } from '@/features/profiles/components/InviteUserModal';
+import { useAccessControl } from '@/hooks/useAccessControl';
 
 // Tabs
-import { WeeklyPlanTab } from '@/features/planning/components/WeeklyPlanTab';
 import { YearlyPlansTab } from '@/features/planning/components/YearlyPlansTab';
-import { GapAnalysisTab } from '@/features/planning/components/GapAnalysisTab';
 import { GoalsTab } from '@/features/performance/components/GoalsTab';
 import { ProgramsTab } from '@/features/performance/components/ProgramsTab';
 import { CompetitionsTab } from '@/features/performance/components/CompetitionsTab';
-import { AnalyticsTab } from '@/features/performance/components/AnalyticsTab';
 import { LogsTab } from '@/features/health/components/LogsTab';
 import { HealthTab } from '@/features/health/components/HealthTab';
+import { AnalyticsTab } from '@/features/performance/components/AnalyticsTab';
+import { GapAnalysisTab } from '@/features/planning/components/GapAnalysisTab';
 import { LogisticsTab } from '@/features/logistics/components/LogisticsTab';
+import { WeeklyPlanTab } from '@/features/planning/components/WeeklyPlanTab';
 
 export default function TeamDashboard() {
   const { id } = useParams();
@@ -80,7 +78,10 @@ export default function TeamDashboard() {
             <div>
                 <h1 className="text-3xl font-bold text-gray-900">{team.team_name}</h1>
                 <div className="flex items-center gap-3 text-muted-foreground mt-1">
-                    <span className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded text-xs font-bold uppercase">{team.discipline}</span>
+                    {/* FIX: Use team.name for "Ice Dance" instead of "ICE_DANCE" */}
+                    <span className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded text-xs font-bold">
+                        {team.name}
+                    </span>
                     <span>{team.current_level}</span>
                     <FederationFlag federation={team.federation} />
 
@@ -123,7 +124,7 @@ export default function TeamDashboard() {
                     {perms.canEditProfile && (
                         <div className="flex gap-2">
                             <InviteUserModal entityType="Team" entityId={team.id} entityName={team.team_name} trigger={<Button size="sm" variant="outline">Invite Staff</Button>} />
-                            <EditTeamModal team={team} onSaved={fetchData} />
+                            <EditTeamModal team={team} onSaved={fetchTeam} />
                         </div>
                     )}
                 </CardHeader>

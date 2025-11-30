@@ -7,9 +7,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { DatePicker } from '@/components/ui/date-picker';
-import { Plus, Star, Zap, Smile, Users, Check, X, Clock, Lock } from 'lucide-react';
+import { Plus, Star, Zap, Smile, Users, Check, X, Clock, Lock, MapPin } from 'lucide-react';
 
-const MOODS = ["🔥", "🙂", "😐", "😓", "😡", "🤕"];
+// Emoji Definitions
+const MOODS = [
+    { emoji: "🔥", label: "Fired Up / High Energy" },
+    { emoji: "🙂", label: "Happy / Good" },
+    { emoji: "😐", label: "Neutral / Okay" },
+    { emoji: "😓", label: "Tired / Stressed" },
+    { emoji: "😡", label: "Frustrated / Angry" },
+    { emoji: "🤕", label: "Injured / Pain" }
+];
 
 export function LogSessionModal({ skater, team, isSynchro, logToEdit, onLogCreated, trigger, permissions }) {
   const [open, setOpen] = useState(false);
@@ -18,12 +26,19 @@ export function LogSessionModal({ skater, team, isSynchro, logToEdit, onLogCreat
 
   // Form State
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [time, setTime] = useState('');      // <--- New
+  const [location, setLocation] = useState(''); // <--- New
+  const [type, setType] = useState('ON_ICE');   // <--- New
   const [selectedEntityId, setSelectedEntityId] = useState('');
+  
+  // Ratings
   const [rating, setRating] = useState(3);
   const [energy, setEnergy] = useState(3);
   const [mood, setMood] = useState('🙂');
   const [mentalFocus, setMentalFocus] = useState('');
   const [attendanceList, setAttendanceList] = useState([]);
+
+  // Split Notes State
   const [coachNotes, setCoachNotes] = useState('');
   const [skaterNotes, setSkaterNotes] = useState('');
 
@@ -36,7 +51,12 @@ export function LogSessionModal({ skater, team, isSynchro, logToEdit, onLogCreat
   useEffect(() => {
       if (open) {
           if (logToEdit) {
+              // --- EDIT MODE ---
               setDate(logToEdit.session_date);
+              setTime(logToEdit.session_time || '');
+              setLocation(logToEdit.location || '');
+              setType(logToEdit.session_type || 'ON_ICE');
+              
               setRating(logToEdit.session_rating || 3);
               setEnergy(logToEdit.energy_stamina || 3);
               setMood(logToEdit.sentiment_emoji || '🙂');
@@ -45,7 +65,10 @@ export function LogSessionModal({ skater, team, isSynchro, logToEdit, onLogCreat
               setSkaterNotes(logToEdit.skater_notes || '');
               setAttendanceList(logToEdit.attendance || []);
           } else {
+              // --- CREATE MODE ---
               setDate(new Date().toISOString().split('T')[0]);
+              // Default time to now rounded to nearest hour? Or just empty.
+              setTime(''); setLocation(''); setType('ON_ICE');
               setRating(3); setEnergy(3); setMood('🙂'); 
               setCoachNotes(''); setSkaterNotes(''); setMentalFocus('');
               if (team) {
@@ -90,6 +113,9 @@ export function LogSessionModal({ skater, team, isSynchro, logToEdit, onLogCreat
       }
       const payload = {
         session_date: date,
+        session_time: time || null,
+        location: location,
+        session_type: type,
         planning_entity_id: selectedEntityId,
         planning_entity_type: entityType,
         session_rating: rating,
@@ -148,7 +174,7 @@ export function LogSessionModal({ skater, team, isSynchro, logToEdit, onLogCreat
       <DialogTrigger asChild>
         {trigger || <Button><Plus className="h-4 w-4 mr-2" /> Log Session</Button>}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px] max-h-[85vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
               {logToEdit ? 'Edit Log' : 'Log Training Session'}
@@ -157,18 +183,36 @@ export function LogSessionModal({ skater, team, isSynchro, logToEdit, onLogCreat
           <DialogDescription>Record details and wellbeing.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-           <div className="grid grid-cols-2 gap-4">
+           
+           {/* Context Row */}
+           <div className="grid grid-cols-2 gap-4 p-3 bg-slate-50 rounded border">
+                <div className="space-y-2">
+                    <Label>Discipline</Label>
+                    {team ? (
+                        <Input value={team.team_name} disabled className="bg-white text-slate-500 text-xs h-8" />
+                    ) : (
+                        <select className="flex h-8 w-full rounded-md border bg-white px-3 py-1 text-xs" value={selectedEntityId} onChange={(e) => setSelectedEntityId(e.target.value)} disabled={!!logToEdit || !canEdit}>
+                            {skater?.planning_entities?.map((entity) => (<option key={entity.id} value={entity.id}>{entity.name}</option>))}
+                        </select>
+                    )}
+                </div>
+                <div className="space-y-2">
+                     <Label>Session Type</Label>
+                     <select className="flex h-8 w-full rounded-md border bg-white px-3 py-1 text-xs" value={type} onChange={(e) => setType(e.target.value)} disabled={!canEdit}>
+                         <option value="ON_ICE">On Ice</option>
+                         <option value="OFF_ICE">Off Ice</option>
+                         <option value="COMPETITION">Competition</option>
+                         <option value="CLASS">Class / Dance</option>
+                         <option value="OTHER">Other</option>
+                     </select>
+                </div>
+           </div>
+
+           {/* Date/Time/Loc Row */}
+           <div className="grid grid-cols-3 gap-2">
              <div className="space-y-2"><Label>Date</Label><DatePicker date={date} setDate={setDate} disabled={!canEdit} /></div>
-             <div className="space-y-2">
-                <Label>Discipline</Label>
-                {team ? (
-                    <Input value={team.team_name} disabled className="bg-slate-50 text-slate-500" />
-                ) : (
-                    <select className="flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm" value={selectedEntityId} onChange={(e) => setSelectedEntityId(e.target.value)} disabled={!!logToEdit || !canEdit}>
-                        {skater?.planning_entities?.map((entity) => (<option key={entity.id} value={entity.id}>{entity.name}</option>))}
-                    </select>
-                )}
-             </div>
+             <div className="space-y-2"><Label>Time</Label><Input type="time" value={time} onChange={(e) => setTime(e.target.value)} disabled={!canEdit} /></div>
+             <div className="space-y-2"><Label>Location</Label><Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Rink A" disabled={!canEdit} /></div>
           </div>
 
           {attendanceList.length > 0 && (
@@ -201,7 +245,18 @@ export function LogSessionModal({ skater, team, isSynchro, logToEdit, onLogCreat
           <div className="space-y-2">
              <Label className="flex items-center gap-2"><Smile className="h-4 w-4" /> Mental State</Label>
              <div className="flex justify-between bg-slate-50 p-2 rounded-md border mb-2">
-                {MOODS.map(m => (<button key={m} type="button" onClick={() => canEdit && setMood(m)} disabled={!canEdit} className={`text-2xl hover:scale-125 transition-transform px-2 ${mood === m ? 'scale-125 bg-white shadow-sm rounded-full' : 'opacity-60'}`}>{m}</button>))}
+                {MOODS.map(m => (
+                    <button 
+                        key={m.emoji} 
+                        type="button" 
+                        onClick={() => canEdit && setMood(m.emoji)} 
+                        disabled={!canEdit} 
+                        title={m.label} // <--- Tooltip
+                        className={`text-2xl hover:scale-125 transition-transform px-2 ${mood === m.emoji ? 'scale-125 bg-white shadow-sm rounded-full' : 'opacity-60'}`}
+                    >
+                        {m.emoji}
+                    </button>
+                ))}
              </div>
              <Input value={mentalFocus} onChange={(e) => setMentalFocus(e.target.value)} placeholder="Focus notes..." disabled={!canEdit} />
           </div>

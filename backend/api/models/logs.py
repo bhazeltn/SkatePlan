@@ -15,6 +15,23 @@ class SessionLog(models.Model):
 
     id = models.AutoField(primary_key=True)
     session_date = models.DateField(default=date.today)
+
+    # --- NEW CONTEXT FIELDS ---
+    session_time = models.TimeField(null=True, blank=True)
+    location = models.CharField(max_length=100, blank=True, null=True)
+
+    class SessionType(models.TextChoices):
+        ON_ICE = "ON_ICE", "On Ice"
+        OFF_ICE = "OFF_ICE", "Off Ice"
+        COMPETITION = "COMPETITION", "Competition"
+        CLASS = "CLASS", "Class / Dance"
+        OTHER = "OTHER", "Other"
+
+    session_type = models.CharField(
+        max_length=20, choices=SessionType.choices, default=SessionType.ON_ICE
+    )
+    # --------------------------
+
     author = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, related_name="authored_session_logs"
     )
@@ -51,7 +68,7 @@ class SessionLog(models.Model):
         return f"Log for {self.planning_entity} on {self.session_date}"
 
     class Meta:
-        ordering = ["-session_date"]
+        ordering = ["-session_date", "-session_time"]  # Ordered by date then time
 
 
 class InjuryLog(models.Model):

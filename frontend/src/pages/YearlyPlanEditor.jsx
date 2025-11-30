@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/features/auth/AuthContext';
 import { apiRequest } from '@/api';
-import { useAccessControl } from '@/hooks/useAccessControl';
+import { useAccessControl } from '@/hooks/useAccessControl'; // <--- Hook
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,23 +21,28 @@ import { GapAnalysisCard } from '@/features/planning/components/GapAnalysisCard'
 const formatDate = (d) => new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 
 export default function YearlyPlanEditor() {
-  const { token, user } = useAuth();
+  const { token } = useAuth();
   const [plan, setPlan] = useState(null);
   const [loading, setLoading] = useState(true);
   const [goals, setGoals] = useState([]);
   
+  // --- NEW STATE: Title ---
+  const [planName, setPlanName] = useState('');
+  
   const planId = window.location.hash.split('/')[2];
   
   // --- PERMISSIONS ---
-  // usage: plan has an 'access_level' field from the serializer
   const perms = useAccessControl(plan);
   const readOnly = perms.readOnlyStructure;
+  const canDelete = perms.canDelete;
   // -------------------
 
   const fetchPlan = async () => {
     try {
       const data = await apiRequest(`/ytps/${planId}/`, 'GET', null, token);
       setPlan(data);
+      // Init title
+      setPlanName(data.title || '');
     } catch (err) {
       console.error("Error fetching plan:", err);
     } finally {
@@ -60,9 +65,13 @@ export default function YearlyPlanEditor() {
   const handleUpdateDetails = async () => {
     try {
       await apiRequest(`/ytps/${planId}/`, 'PATCH', {
+        title: planName, // <--- Send Title
         peak_type: plan.peak_type,
         primary_season_goal: plan.primary_season_goal
       }, token);
+      
+      // Re-fetch to update header/breadcrumbs if needed
+      fetchPlan();
       alert("Plan details saved.");
     } catch (err) {
       alert("Failed to save details.");
@@ -99,16 +108,21 @@ export default function YearlyPlanEditor() {
   if (loading) return <div className="p-8">Loading plan...</div>;
   if (!plan) return <div className="p-8">Plan not found.</div>;
 
+  // --- SMART DEFAULTS (Fixed) ---
   const sortedCycles = plan.macrocycles?.sort((a, b) => new Date(a.phase_start) - new Date(b.phase_start)) || [];
+  
+  // Extract Season Object safely (it's an array now)
+  const activeSeason = plan.season_info && plan.season_info.length > 0 ? plan.season_info[0] : {};
 
   let defaultStart = '';
   if (sortedCycles.length > 0) {
       const lastPhase = sortedCycles[sortedCycles.length - 1];
       defaultStart = getNextDay(lastPhase.phase_end);
   } else {
-      defaultStart = plan.season_info?.start_date || '';
+      defaultStart = activeSeason.start_date || '';
   }
-  const defaultEnd = plan.season_info?.end_date || '';
+  const defaultEnd = activeSeason.end_date || '';
+  // ------------------------------
 
   return (
     <div className="p-8 min-h-screen bg-gray-50">
@@ -123,6 +137,7 @@ export default function YearlyPlanEditor() {
             </a>
             <div>
                 <div className="flex items-center gap-2">
+                    {/* Use the dynamic display name (Title or Discipline) */}
                     <h1 className="text-3xl font-bold text-gray-900">{plan.discipline_name} Plan</h1>
                     {perms.isObserver && <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded border border-amber-200 flex items-center gap-1"><Lock className="h-3 w-3"/> View Only</span>}
                     {perms.isCollaborator && <span className="text-xs bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded border border-indigo-200 flex items-center gap-1">Collaborator</span>}
@@ -134,8 +149,7 @@ export default function YearlyPlanEditor() {
         {/* ACTIONS - Hide if Read Only */}
         {!readOnly && (
             <div className="flex gap-2">
-                {/* Only Owner can Delete */}
-                {perms.canDelete && (
+                {canDelete && (
                     <Button variant="destructive" onClick={handleDeletePlan}>
                         <Trash2 className="h-4 w-4 mr-2" /> Delete Plan
                     </Button>
@@ -147,11 +161,23 @@ export default function YearlyPlanEditor() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        {/* LEFT COLUMN */}
+        {/* LEFT COLUMN: Strategy & Analysis */}
         <div className="lg:col-span-1 space-y-6">
+            
             <Card>
                 <CardHeader><CardTitle>Plan Strategy</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
+                    {/* Title Input */}
+                    <div className="space-y-2">
+                        <Label>Plan Name (Optional)</Label>
+                        <Input 
+                            value={planName} 
+                            onChange={(e) => setPlanName(e.target.value)} 
+                            placeholder="e.g. Road to Gold" 
+                            disabled={readOnly} 
+                        />
+                    </div>
+
                     <div className="space-y-2">
                         <Label>Peaking Strategy</Label>
                         <select
@@ -250,8 +276,8 @@ export default function YearlyPlanEditor() {
                         <MacrocycleModal 
                             planId={plan.id} 
                             onSaved={fetchPlan} 
-                            defaultStartDate={defaultStart}
-                            defaultEndDate={defaultEnd}
+                            defaultStartDate={defaultStart} // Smart Default
+                            defaultEndDate={defaultEnd}     // Smart Default
                             readOnly={readOnly}
                         />
                     )}

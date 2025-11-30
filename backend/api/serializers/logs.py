@@ -12,6 +12,9 @@ class SessionLogSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "session_date",
+            "session_time",  # <--- Added
+            "location",  # <--- Added
+            "session_type",  # <--- Added
             "discipline_name",
             "author_name",
             "session_rating",

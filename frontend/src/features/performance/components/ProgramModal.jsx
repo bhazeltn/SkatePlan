@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, Music, User, Archive, FileText, Image, Paperclip, Trash2, X, Lock, Upload } from 'lucide-react';
+import { Plus, Music, User, Archive, FileText, Image, Paperclip, Trash2, X, Lock, Upload, Check } from 'lucide-react';
 import { ProgramElementRow } from './ProgramElementRow';
 
 export function ProgramModal({ skater, team, isSynchro, programToEdit, onSaved, trigger, readOnly, permissions }) {
@@ -28,6 +28,8 @@ export function ProgramModal({ skater, team, isSynchro, programToEdit, onSaved, 
   const [musicFile, setMusicFile] = useState(null);
   const [currentMusic, setCurrentMusic] = useState(null);
   const [assets, setAssets] = useState([]);
+  
+  // New Asset State
   const [newAssetFile, setNewAssetFile] = useState(null);
   const [newAssetType, setNewAssetType] = useState('COSTUME');
 
@@ -45,12 +47,14 @@ export function ProgramModal({ skater, team, isSynchro, programToEdit, onSaved, 
             setChoreo(programToEdit.choreographer || '');
             setIsActive(programToEdit.is_active);
             setElements(programToEdit.planned_elements || []);
+            
             setCurrentMusic(programToEdit.music_file);
             setAssets(programToEdit.assets || []);
         } else {
             // Create Mode
             if (team) setSelectedEntityId(team.id);
             else if (skater?.planning_entities?.length > 0) setSelectedEntityId(skater.planning_entities[0].id);
+            
             setTitle(''); setSeason('2025-2026'); setCategory('Free Skate'); 
             setMusic(''); setChoreo(''); setIsActive(true);
             setElements([]); setTotalBV(0);
@@ -89,13 +93,16 @@ export function ProgramModal({ skater, team, isSynchro, programToEdit, onSaved, 
   };
 
   const handleUploadAsset = async () => {
+      // This is for IMMEDIATE upload (Edit Mode)
       if (!newAssetFile || !programToEdit) return;
       setLoading(true);
       const formData = new FormData();
       formData.append('file', newAssetFile);
       formData.append('asset_type', newAssetType);
+      
       try {
-          await apiRequest(`/programs/${programToEdit.id}/assets/`, 'POST', formData, token);
+          const newAsset = await apiRequest(`/programs/${programToEdit.id}/assets/`, 'POST', formData, token);
+          setAssets([...assets, newAsset]);
           if (onSaved) onSaved();
           alert("Asset uploaded!");
           setNewAssetFile(null);
@@ -151,24 +158,38 @@ export function ProgramModal({ skater, team, isSynchro, programToEdit, onSaved, 
     if (musicFile) formData.append('music_file', musicFile);
 
     try {
-      let url = '';
+      let programId = programToEdit?.id;
+      let result = null;
+
+      // 1. Save Program Data
       if (programToEdit) {
-        url = `/programs/${programToEdit.id}/`;
-        await apiRequest(url, 'PATCH', formData, token);
+        result = await apiRequest(`/programs/${programId}/`, 'PATCH', formData, token);
       } else if (isSynchro) {
-          url = `/synchro/${team.id}/programs/`;
-          await apiRequest(url, 'POST', formData, token);
+          result = await apiRequest(`/synchro/${team.id}/programs/`, 'POST', formData, token);
       } else if (team) {
-        url = `/teams/${team.id}/programs/`;
-        await apiRequest(url, 'POST', formData, token);
+          result = await apiRequest(`/teams/${team.id}/programs/`, 'POST', formData, token);
       } else {
-        url = `/skaters/${skater.id}/programs/`;
-        await apiRequest(url, 'POST', formData, token);
+          result = await apiRequest(`/skaters/${skater.id}/programs/`, 'POST', formData, token);
       }
+      
+      programId = result.id;
+
+      // 2. Handle Pending Asset (Create Mode)
+      if (!programToEdit && newAssetFile && programId) {
+          const assetData = new FormData();
+          assetData.append('file', newAssetFile);
+          assetData.append('asset_type', newAssetType);
+          await apiRequest(`/programs/${programId}/assets/`, 'POST', assetData, token);
+      }
+
       if (onSaved) onSaved();
       setOpen(false);
-    } catch (err) { alert('Failed to save program.'); } 
-    finally { setLoading(false); }
+    } catch (err) { 
+        console.error(err);
+        alert('Failed to save program.'); 
+    } finally { 
+        setLoading(false); 
+    }
   };
 
   const handleArchive = async () => { setIsActive(!isActive); };
@@ -185,7 +206,6 @@ export function ProgramModal({ skater, team, isSynchro, programToEdit, onSaved, 
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
             
-            {/* Inputs - Disabled if ReadOnly */}
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                     <Label>Discipline</Label>
@@ -234,6 +254,7 @@ export function ProgramModal({ skater, team, isSynchro, programToEdit, onSaved, 
                 <div className="flex justify-between items-center">
                     <Label className="text-xs font-bold text-gray-500 uppercase">Visual Assets</Label>
                 </div>
+
                 {assets.length > 0 && (
                     <div className="grid grid-cols-2 gap-2 mb-3">
                         {assets.map(asset => (
@@ -249,7 +270,9 @@ export function ProgramModal({ skater, team, isSynchro, programToEdit, onSaved, 
                         ))}
                     </div>
                 )}
-                {!readOnly && programToEdit && (
+
+                {/* UPLOAD CONTROLS - VISIBLE FOR CREATE OR EDIT */}
+                {!readOnly && (
                     <div className="flex gap-2 items-end">
                         <div className="flex-1 space-y-1">
                             <Label className="text-[10px]">Add File</Label>
@@ -264,7 +287,15 @@ export function ProgramModal({ skater, team, isSynchro, programToEdit, onSaved, 
                                 <option value="OTHER">Other</option>
                             </select>
                         </div>
-                        <Button type="button" size="sm" className="h-8" onClick={handleUploadAsset} disabled={!newAssetFile}>Upload</Button>
+                        
+                        {/* BUTTON LOGIC: Immediate Upload if Editing, Badge if Creating */}
+                        {programToEdit ? (
+                            <Button type="button" size="sm" className="h-8" onClick={handleUploadAsset} disabled={!newAssetFile}>Upload</Button>
+                        ) : (
+                             <Button type="button" size="sm" variant="ghost" className="h-8 text-xs text-gray-400 cursor-default hover:bg-transparent" disabled>
+                                 {newAssetFile ? <span className="text-blue-600 flex items-center"><Check className="h-3 w-3 mr-1"/> Will Upload</span> : "Save to Add"}
+                             </Button>
+                        )}
                     </div>
                 )}
             </div>
@@ -296,8 +327,8 @@ export function ProgramModal({ skater, team, isSynchro, programToEdit, onSaved, 
                         <div className="flex gap-2">
                             {canDelete && (
                                 <>
-                                    <Button type="button" variant="destructive" onClick={() => { if(confirm("Delete Program?")) { /* API Call */ } }}>Delete</Button>
-                                    <Button type="button" variant="outline" onClick={handleArchive}>{isActive ? 'Archive' : 'Restore'}</Button>
+                                    <Button type="button" variant="destructive" onClick={() => { if(confirm("Delete Program?")) { /* API Call handled in parent for delete? No, usually handled here. */ } }}>Delete</Button>
+                                    <Button type="button" variant="outline" onClick={() => setIsActive(!isActive)}>{isActive ? 'Archive' : 'Restore'}</Button>
                                 </>
                             )}
                         </div>

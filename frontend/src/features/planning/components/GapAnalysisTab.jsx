@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/features/auth/AuthContext';
 import { apiRequest } from '@/api';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Trash2, Save, Target, ArrowRight, Brain, Zap, Palette, Dumbbell } from 'lucide-react';
-import { GoalModal } from '@/features/performance/components/GoalModal';
+import { Input } from '@/components/ui/input'; // Added Input
+import { Plus, Trash2, Save, Zap, Palette, Dumbbell, Brain } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 
 const CATEGORIES = [
@@ -31,7 +31,10 @@ export function GapAnalysisTab({ skater, team, isSynchro, readOnly }) {
     try {
       setLoading(true);
       const data = await apiRequest(fetchUrl, 'GET', null, token);
-      setItems(data.elements || []);
+      // FIX: Read from elements_status
+      let loadedItems = data.elements_status;
+      if (!Array.isArray(loadedItems)) loadedItems = []; // Handle legacy dict or null
+      setItems(loadedItems);
     } catch (err) { console.error(err); } 
     finally { setLoading(false); }
   };
@@ -39,17 +42,22 @@ export function GapAnalysisTab({ skater, team, isSynchro, readOnly }) {
   useEffect(() => { if (skater || team) fetchAnalysis(); }, [skater, team, token]);
 
   const handleAddItem = () => {
-      setItems([...items, { id: Date.now(), category: activeTab, benchmark: '', current: '', strategy: '' }]);
+      // Schema: category, name (Element), current, goal (Benchmark), strategy
+      setItems([...items, { id: Date.now(), category: activeTab, name: '', current: '', goal: '', strategy: '' }]);
   };
+  
   const handleUpdateItem = (id, field, value) => {
       setItems(items.map(item => item.id === id ? { ...item, [field]: value } : item));
   };
+  
   const handleDeleteItem = (id) => {
       setItems(items.filter(item => item.id !== id));
   };
+  
   const handleSave = async () => {
       try {
-          await apiRequest(fetchUrl, 'PATCH', { elements: items }, token);
+          // FIX: Save to elements_status
+          await apiRequest(fetchUrl, 'PATCH', { elements_status: items }, token);
           alert("Analysis saved!");
       } catch (e) { alert("Failed to save."); }
   };
@@ -67,18 +75,18 @@ export function GapAnalysisTab({ skater, team, isSynchro, readOnly }) {
             <p className="text-sm text-muted-foreground">Continuous assessment of performance gaps.</p>
         </div>
         {!readOnly && (
-                <Button onClick={handleSave}><Save className="h-4 w-4 mr-2" /> Save Changes</Button>
-            )}
+             <Button onClick={handleSave}><Save className="h-4 w-4 mr-2" /> Save Changes</Button>
+        )}
       </div>
 
       <Card className="min-h-[500px] flex flex-col">
           {/* Tab Bar */}
-          <div className="flex border-b">
+          <div className="flex border-b overflow-x-auto">
               {CATEGORIES.map(cat => (
                   <button
                       key={cat.id}
                       onClick={() => setActiveTab(cat.id)}
-                      className={`flex-1 py-4 text-sm font-medium flex items-center justify-center gap-2 border-b-2 transition-colors ${
+                      className={`flex-1 min-w-[120px] py-4 text-sm font-medium flex items-center justify-center gap-2 border-b-2 transition-colors ${
                           activeTab === cat.id 
                               ? `border-indigo-500 text-indigo-700 bg-indigo-50/50` 
                               : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-slate-50'
@@ -99,45 +107,45 @@ export function GapAnalysisTab({ skater, team, isSynchro, readOnly }) {
                   )}
 
                   {filteredItems.map((item) => (
-                      <div key={item.id} className="grid grid-cols-1 md:grid-cols-12 gap-4 p-5 bg-white rounded-lg border shadow-sm relative group">
-                          <button onClick={() => handleDeleteItem(item.id)} className="absolute top-3 right-3 p-1 text-gray-300 hover:text-red-500 transition-colors">
-                              <Trash2 className="h-4 w-4" />
-                          </button>
+                      <div key={item.id} className="grid grid-cols-1 lg:grid-cols-12 gap-4 p-5 bg-white rounded-lg border shadow-sm relative group">
+                          {!readOnly && (
+                              <button onClick={() => handleDeleteItem(item.id)} className="absolute top-3 right-3 p-1 text-gray-300 hover:text-red-500 transition-colors">
+                                  <Trash2 className="h-4 w-4" />
+                              </button>
+                          )}
                           
-                          {/* Benchmark */}
-                          <div className="md:col-span-4 space-y-1.5">
-                              <Label className="text-[10px] font-bold uppercase text-gray-500 tracking-wider">Benchmark / Goal</Label>
-                              <Textarea className="min-h-[80px] text-sm bg-slate-50 border-slate-200 resize-none" value={item.benchmark} onChange={(e) => handleUpdateItem(item.id, 'benchmark', e.target.value)} placeholder="Gold standard..." />
+                          {/* Top Row: Element Name */}
+                          <div className="lg:col-span-12 space-y-1">
+                               <Label className="text-[10px] font-bold uppercase text-gray-500">Element / Area</Label>
+                               <Input className="font-bold" value={item.name} onChange={(e) => handleUpdateItem(item.id, 'name', e.target.value)} placeholder="e.g. Double Axel" disabled={readOnly} />
                           </div>
-                          {/* Current */}
-                          <div className="md:col-span-4 space-y-1.5">
+
+                          {/* Current State */}
+                          <div className="lg:col-span-6 space-y-1.5">
                               <Label className="text-[10px] font-bold uppercase text-gray-500 tracking-wider">Current State</Label>
-                              <Textarea className="min-h-[80px] text-sm bg-white border-slate-200 resize-none" value={item.current} onChange={(e) => handleUpdateItem(item.id, 'current', e.target.value)} placeholder="Current reality..." />
+                              <Textarea className="min-h-[60px] text-sm bg-slate-50 border-slate-200 resize-none" value={item.current} onChange={(e) => handleUpdateItem(item.id, 'current', e.target.value)} placeholder="Current reality..." disabled={readOnly} />
                           </div>
+
+                          {/* Benchmark / Goal */}
+                          <div className="lg:col-span-6 space-y-1.5">
+                              <Label className="text-[10px] font-bold uppercase text-gray-500 tracking-wider">Benchmark / Goal</Label>
+                              <Textarea className="min-h-[60px] text-sm bg-white border-slate-200 resize-none" value={item.goal} onChange={(e) => handleUpdateItem(item.id, 'goal', e.target.value)} placeholder="Target standard..." disabled={readOnly} />
+                          </div>
+                          
                           {/* Strategy */}
-                          <div className="md:col-span-4 space-y-1.5 flex flex-col h-full">
-                              <Label className="text-[10px] font-bold uppercase text-indigo-600 tracking-wider">Strategy</Label>
-                              <Textarea className="min-h-[80px] text-sm bg-indigo-50/50 border-indigo-100 resize-none focus:border-indigo-300" value={item.strategy} onChange={(e) => handleUpdateItem(item.id, 'strategy', e.target.value)} placeholder="Action plan..." />
-                              
-                              <div className="mt-2 flex justify-end">
-                                  <GoalModal 
-                                      skaterId={skater?.id} teamId={team?.id} isSynchro={isSynchro} // <--- Pass Context
-                                      defaultValues={{
-                                          title: `Improve ${activeTab}: ${item.benchmark.slice(0, 20)}...`,
-                                          description: `Strategy: ${item.strategy}\n\nGap Analysis:\nTarget: ${item.benchmark}\nCurrent: ${item.current}`,
-                                          type: 'Technical'
-                                      }}
-                                      trigger={<Button variant="ghost" size="sm" className="text-xs h-7 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50"><ArrowRight className="h-3 w-3 mr-1" /> Create Goal</Button>}
-                                  />
-                              </div>
+                          <div className="lg:col-span-12 space-y-1.5">
+                              <Label className="text-[10px] font-bold uppercase text-indigo-600 tracking-wider">Strategy / Action Plan</Label>
+                              <Textarea className="min-h-[60px] text-sm bg-indigo-50/50 border-indigo-100 resize-none focus:border-indigo-300" value={item.strategy} onChange={(e) => handleUpdateItem(item.id, 'strategy', e.target.value)} placeholder="Action steps..." disabled={readOnly} />
                           </div>
                       </div>
                   ))}
               </div>
 
-              <div className="mt-6 text-center">
-                  <Button variant="outline" onClick={handleAddItem} className="w-full border-dashed text-gray-500 hover:text-gray-800 hover:bg-slate-50"><Plus className="h-4 w-4 mr-2" /> Add {activeTab} Gap</Button>
-              </div>
+              {!readOnly && (
+                  <div className="mt-6 text-center">
+                      <Button variant="outline" onClick={handleAddItem} className="w-full border-dashed text-gray-500 hover:text-gray-800 hover:bg-slate-50"><Plus className="h-4 w-4 mr-2" /> Add {activeTab} Gap</Button>
+                  </div>
+              )}
           </CardContent>
       </Card>
     </div>

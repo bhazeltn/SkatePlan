@@ -1,83 +1,82 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/features/auth/AuthContext';
 import { apiRequest } from '@/api';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { DatePicker } from '@/components/ui/date-picker';
 import { Pencil } from 'lucide-react';
 
-export function EditSeasonModal({ season, onUpdated }) {
+export function EditSeasonModal({ season, onUpdated, trigger }) {
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
   const { token } = useAuth();
+  const [loading, setLoading] = useState(false);
 
-  // Form State
-  const [name, setName] = useState(season.season || '');
-  const [startDate, setStartDate] = useState(season.start_date || '');
-  const [endDate, setEndDate] = useState(season.end_date || '');
+  const [name, setName] = useState('');
+  const [start, setStart] = useState('');
+  const [end, setEnd] = useState('');
+
+  // FIX: Sync state with the passed 'season' prop whenever it changes or modal opens
+  useEffect(() => {
+    if (season) {
+        setName(season.season || '');
+        setStart(season.start_date || '');
+        setEnd(season.end_date || '');
+    }
+  }, [season, open]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!season || !season.id) {
+        alert("Error: Cannot identify season to edit.");
+        return;
+    }
+
     setLoading(true);
     try {
-      await apiRequest(`/seasons/${season.id}/`, 'PATCH', {
-        season: name,
-        start_date: startDate,
-        end_date: endDate
-      }, token);
-      
-      onUpdated();
-      setOpen(false);
-    } catch (err) {
-      alert('Failed to update season.');
+        await apiRequest(`/seasons/${season.id}/`, 'PATCH', {
+            season: name,
+            start_date: start,
+            end_date: end
+        }, token);
+        
+        if (onUpdated) onUpdated();
+        setOpen(false);
+    } catch (e) {
+        alert("Failed to update season.");
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-6 w-6 ml-2">
-            <Pencil className="h-3 w-3 text-gray-400 hover:text-brand-blue" />
-        </Button>
+        {trigger || <Button variant="ghost" size="icon"><Pencil className="h-4 w-4" /></Button>}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Edit Season Dates</DialogTitle>
-          <DialogDescription>
-            Customize the start and end dates for this training season.
-          </DialogDescription>
+            <DialogTitle>Edit Season Details</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label>Season Name</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-                <Label>Start Date</Label>
-                <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+                <Label>Season Name</Label>
+                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. 2024-2025" required />
             </div>
-            <div className="space-y-2">
-                <Label>End Date</Label>
-                <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+            <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <Label>Start Date</Label>
+                    <DatePicker date={start} setDate={setStart} />
+                </div>
+                <div className="space-y-2">
+                    <Label>End Date</Label>
+                    <DatePicker date={end} setDate={setEnd} />
+                </div>
             </div>
-          </div>
-          <DialogFooter>
-            <Button type="submit" disabled={loading}>
-              {loading ? 'Saving...' : 'Save Changes'}
+            <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? 'Saving...' : 'Save Changes'}
             </Button>
-          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

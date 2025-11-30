@@ -11,8 +11,8 @@ import { Lock } from 'lucide-react';
 
 export function GoalModal({ planId, skater, teamId, isSynchro, goal, onSaved, trigger, permissions }) {
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
   const { token } = useAuth();
+  const [loading, setLoading] = useState(false);
 
   // Form State
   const [title, setTitle] = useState('');
@@ -22,16 +22,24 @@ export function GoalModal({ planId, skater, teamId, isSynchro, goal, onSaved, tr
   const [status, setStatus] = useState('IN_PROGRESS');
   const [startDate, setStartDate] = useState('');
   const [targetDate, setTargetDate] = useState('');
-  
-  // Discipline Selection (for Multi-Discipline Skaters)
   const [selectedEntityId, setSelectedEntityId] = useState('');
 
-  const isCoach = permissions?.role === 'COACH' || permissions?.role === 'COLLABORATOR';
-  const canEdit = permissions?.canEditGoals; // False for Observer
-  const canDelete = permissions?.canDelete;  // False for Observer/Parent
+  // --- PERMISSIONS ---
+  // 1. Can I Edit? (Observer = False, Everyone Else = True)
+  const canEdit = permissions?.canEditGoals;
   
-  // If goal is approved/active and user is not coach, it is locked
-  const isLocked = !isCoach && goal && ['APPROVED', 'IN_PROGRESS', 'COMPLETED', 'ARCHIVED'].includes(goal.current_status);
+  // 2. Can I Delete? (Owner = True, Everyone Else = False)
+  const canDelete = permissions?.canDelete;
+
+  // 3. Is this a Coach? (For Status Locking logic)
+  const isCoachRole = permissions?.role === 'COACH' || permissions?.role === 'COLLABORATOR';
+
+  // 4. Is the Goal Locked? (Approved/Completed goals are locked for Non-Coaches)
+  const isLockedStatus = !isCoachRole && goal && ['APPROVED', 'IN_PROGRESS', 'COMPLETED', 'ARCHIVED'].includes(goal.current_status);
+
+  // 5. Effective Read Only State
+  const isReadOnly = !canEdit || isLockedStatus;
+  // -------------------
 
   useEffect(() => {
     if (open) {
@@ -43,7 +51,7 @@ export function GoalModal({ planId, skater, teamId, isSynchro, goal, onSaved, tr
             setStatus(goal.current_status || 'IN_PROGRESS');
             setStartDate(goal.start_date || '');
             setTargetDate(goal.target_date || '');
-            // We don't set entity ID here because we can't move a goal between entities easily
+            // entity ID is not editable on existing goals
         } else {
             setTitle('');
             setType('Outcome');
@@ -53,7 +61,7 @@ export function GoalModal({ planId, skater, teamId, isSynchro, goal, onSaved, tr
             setStartDate('');
             setTargetDate('');
             
-            // Default Entity Selection
+            // Default Entity Selection (for Skaters with multiple disciplines)
             if (skater?.planning_entities?.length > 0) {
                 setSelectedEntityId(skater.planning_entities[0].id);
             }
@@ -63,6 +71,7 @@ export function GoalModal({ planId, skater, teamId, isSynchro, goal, onSaved, tr
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isReadOnly) return;
     setLoading(true);
     
     const payload = {
@@ -73,28 +82,23 @@ export function GoalModal({ planId, skater, teamId, isSynchro, goal, onSaved, tr
       current_status: status,
       start_date: startDate ? startDate : null,
       target_date: targetDate ? targetDate : null,
-      planning_entity_id: selectedEntityId // Send chosen discipline
+      planning_entity_id: selectedEntityId 
     };
 
     try {
       if (goal) {
         await apiRequest(`/goals/${goal.id}/`, 'PATCH', payload, token);
       } else {
-        if (isSynchro) {
-             await apiRequest(`/synchro/${teamId}/goals/`, 'POST', payload, token);
-        } else if (teamId) {
-             await apiRequest(`/teams/${teamId}/goals/`, 'POST', payload, token);
-        } else if (planId) {
-            await apiRequest(`/ytps/${planId}/goals/`, 'POST', payload, token);
-        } else if (skater) {
-            await apiRequest(`/skaters/${skater.id}/goals/`, 'POST', payload, token);
-        }
+        if (isSynchro) await apiRequest(`/synchro/${teamId}/goals/`, 'POST', payload, token);
+        else if (teamId) await apiRequest(`/teams/${teamId}/goals/`, 'POST', payload, token);
+        else if (planId) await apiRequest(`/ytps/${planId}/goals/`, 'POST', payload, token);
+        else if (skater) await apiRequest(`/skaters/${skater.id}/goals/`, 'POST', payload, token);
       }
       
       if (onSaved) onSaved();
       setOpen(false);
     } catch (err) {
-      // Handle backend validation error for locked goals
+      // Handle backend permission/validation errors nicely
       let msg = "Failed to save goal.";
       if (err.message && err.message.includes("cannot edit")) msg = err.message;
       alert(msg);
@@ -104,7 +108,7 @@ export function GoalModal({ planId, skater, teamId, isSynchro, goal, onSaved, tr
   };
 
   const handleDelete = async () => {
-    if (!confirm("Are you sure you want to delete this goal?")) return;
+    if (!confirm("Delete this goal?")) return;
     setLoading(true);
     try {
         await apiRequest(`/goals/${goal.id}/`, 'DELETE', null, token);
@@ -120,18 +124,18 @@ export function GoalModal({ planId, skater, teamId, isSynchro, goal, onSaved, tr
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {trigger || <Button size="sm" variant="outline">Add Goal</Button>}
+        {trigger || (canEdit && <Button size="sm" variant="outline">Add Goal</Button>)}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
               {goal ? 'Edit Goal' : 'Add Goal'}
-              {isLocked && <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded border border-amber-200 flex items-center gap-1"><Lock className="h-3 w-3"/> Locked by Coach</span>}
+              {isReadOnly && <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded border border-amber-200 flex items-center gap-1"><Lock className="h-3 w-3"/> {canEdit ? 'Locked' : 'View Only'}</span>}
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           
-          {/* DISCIPLINE SELECTOR (Only on Create for Skaters) */}
+          {/* Discipline Selector (Create Only) */}
           {!goal && skater && skater.planning_entities && skater.planning_entities.length > 1 && (
               <div className="space-y-2">
                   <Label>Discipline / Context</Label>
@@ -139,6 +143,7 @@ export function GoalModal({ planId, skater, teamId, isSynchro, goal, onSaved, tr
                       className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm"
                       value={selectedEntityId}
                       onChange={(e) => setSelectedEntityId(e.target.value)}
+                      disabled={isReadOnly}
                   >
                       {skater.planning_entities.map(ent => (
                           <option key={ent.id} value={ent.id}>{ent.name} ({ent.current_level || 'No Level'})</option>
@@ -149,30 +154,30 @@ export function GoalModal({ planId, skater, teamId, isSynchro, goal, onSaved, tr
 
           <div className="space-y-2">
               <Label>Goal Title</Label>
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Qualify for Nationals" required disabled={isLocked} />
+              <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Qualify for Nationals" required disabled={isReadOnly} />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-             <div className="space-y-2"><Label>Start Date</Label><DatePicker date={startDate} setDate={setStartDate} placeholder="Start" disabled={isLocked} /></div>
-             <div className="space-y-2"><Label>Target Date</Label><DatePicker date={targetDate} setDate={setTargetDate} placeholder="Deadline" disabled={isLocked} /></div>
+             <div className="space-y-2"><Label>Start Date</Label><DatePicker date={startDate} setDate={setStartDate} placeholder="Start" disabled={isReadOnly} /></div>
+             <div className="space-y-2"><Label>Target Date</Label><DatePicker date={targetDate} setDate={setTargetDate} placeholder="Deadline" disabled={isReadOnly} /></div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                   <Label>Type</Label>
-                  <select className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm" value={type} onChange={(e) => setType(e.target.value)} disabled={isLocked}>
+                  <select className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm" value={type} onChange={(e) => setType(e.target.value)} disabled={isReadOnly}>
                       <option value="Outcome">Outcome</option><option value="Technical">Technical</option><option value="Process">Process</option>
                   </select>
               </div>
               <div className="space-y-2">
                   <Label>Timeframe</Label>
-                  <select className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm" value={timeframe} onChange={(e) => setTimeframe(e.target.value)} disabled={isLocked}>
+                  <select className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm" value={timeframe} onChange={(e) => setTimeframe(e.target.value)} disabled={isReadOnly}>
                       <option value="Short Term">Short Term</option><option value="Season">Season</option><option value="Long Term">Long Term</option>
                   </select>
               </div>
           </div>
 
-          {/* Status - Only Coach can change if already approved, or on Edit */}
+          {/* Status - Only Coaches can change (unless creating new) */}
           {goal && (
             <div className="space-y-2">
                 <Label>Status</Label>
@@ -180,7 +185,7 @@ export function GoalModal({ planId, skater, teamId, isSynchro, goal, onSaved, tr
                     className="flex h-9 w-full rounded-md border border-input bg-white px-3 text-sm" 
                     value={status} 
                     onChange={(e) => setStatus(e.target.value)}
-                    disabled={!isCoach} // Strict: Only coach changes status
+                    disabled={!isCoachRole} // Strict: Only coach changes status
                 >
                     <option value="DRAFT">Draft</option>
                     <option value="PENDING">Pending Approval</option>
@@ -189,12 +194,13 @@ export function GoalModal({ planId, skater, teamId, isSynchro, goal, onSaved, tr
                     <option value="COMPLETED">Completed</option>
                     <option value="ARCHIVED">Archived</option>
                 </select>
+                {!isCoachRole && <p className="text-[10px] text-muted-foreground">Only a coach can update status.</p>}
             </div>
           )}
 
-          <div className="space-y-2"><Label>Description</Label><Textarea value={description} onChange={(e) => setDescription(e.target.value)} disabled={isLocked} /></div>
+          <div className="space-y-2"><Label>Description</Label><Textarea value={description} onChange={(e) => setDescription(e.target.value)} disabled={isReadOnly} /></div>
           
-          {/* METADATA FOOTER */}
+          {/* Metadata Footer */}
           {goal && (
               <div className="text-[10px] text-gray-400 border-t pt-2 mt-4 flex justify-between">
                   <span>Created by {goal.created_by_name}</span>
@@ -202,9 +208,17 @@ export function GoalModal({ planId, skater, teamId, isSynchro, goal, onSaved, tr
               </div>
           )}
 
+          {/* Footer Actions - Conditionally Rendered */}
           <DialogFooter className="flex justify-between items-center">
-            {goal && !isLocked && <Button type="button" variant="destructive" onClick={handleDelete} disabled={loading} className="mr-auto">Delete</Button>}
-            {!isLocked && <Button type="submit" disabled={loading}>Save Goal</Button>}
+            {/* DELETE: Only if canDelete is true */}
+            {goal && canDelete ? (
+                <Button type="button" variant="destructive" onClick={handleDelete} disabled={loading} className="mr-auto">Delete</Button>
+            ) : <div></div>}
+
+            {/* SAVE: Only if not ReadOnly */}
+            {!isReadOnly && (
+                <Button type="submit" disabled={loading}>Save Goal</Button>
+            )}
           </DialogFooter>
         </form>
       </DialogContent>

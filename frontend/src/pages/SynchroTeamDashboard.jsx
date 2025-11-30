@@ -4,9 +4,10 @@ import { useAuth } from '@/AuthContext';
 import { apiRequest } from '@/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, Calendar, ArrowLeft, Trash2, UserCheck, Eye, Lock } from 'lucide-react';
+import { Users, Calendar, ArrowLeft, Trash2, UserCheck, Eye, Handshake } from 'lucide-react';
 import { FederationFlag } from '@/components/ui/FederationFlag';
 import { InviteUserModal } from '@/components/dashboard/InviteUserModal';
+import { useAccessControl } from '@/hooks/useAccessControl'; // <--- Hook
 
 // Tabs
 import { SynchroRosterTab } from '@/components/dashboard/tabs/SynchroRosterTab';
@@ -39,40 +40,12 @@ export default function SynchroTeamDashboard() {
 
   useEffect(() => { fetchTeam(); }, [id, token]);
 
+  // --- PERMISSIONS ---
+  const perms = useAccessControl(team);
+  // -------------------
+
   if (loading) return <div className="p-8">Loading team...</div>;
   if (!team) return <div className="p-8">Team not found.</div>;
-
-  // --- PERMISSIONS LOGIC ---
-  const accessLevel = team.access_level || 'COACH';
-  
-  const isObserver = accessLevel === 'VIEWER' || accessLevel === 'OBSERVER';
-  const isCollaborator = accessLevel === 'COLLABORATOR';
-  const isOwner = accessLevel === 'COACH' || accessLevel === 'OWNER' || accessLevel === 'MANAGER';
-  
-  // "Edit Access" means Owner or Collaborator
-  const hasEditAccess = isOwner || isCollaborator;
-
-  const permissions = {
-      role: user?.role,
-      canEditPlan: hasEditAccess,
-      canEditGoals: hasEditAccess,
-      canEditLogs: hasEditAccess,
-      canEditHealth: hasEditAccess,
-      canCreateCompetitions: hasEditAccess,
-      canEditCompetitions: hasEditAccess, // Observers can't edit team results
-      canDelete: isOwner, // Only Owner can delete
-      viewGapAnalysis: hasEditAccess || isObserver, 
-      readOnly: !hasEditAccess       
-  };
-  // ------------------------
-
-  const handleRevoke = async (accessId) => {
-      if (!confirm("Revoke access?")) return;
-      try {
-          await apiRequest(`/access/${accessId}/revoke/`, 'DELETE', null, token);
-          fetchTeam();
-      } catch (e) { alert("Failed."); }
-  };
 
   const tabs = ['roster', 'yearly', 'gap_analysis', 'goals', 'programs', 'competitions', 'logistics', 'logs', 'health', 'analytics', 'profile'];
   const formatTabLabel = (str) => str.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
@@ -87,41 +60,15 @@ export default function SynchroTeamDashboard() {
                 <div className="flex gap-3 text-sm text-muted-foreground mt-1 items-center">
                     <FederationFlag federation={team.federation} />
                     <span className="border-l pl-3 ml-1">Synchro ({team.level})</span>
-                    
-                    {/* STATUS BADGES */}
-                    {isCollaborator && <span className="bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded border border-indigo-200 uppercase">Collaborating</span>}
-                    {isObserver && <span className="bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded border border-amber-200 uppercase">Observer Mode</span>}
+                    {/* BADGES */}
+                    {perms.isCollaborator && <span className="bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded border border-indigo-200 uppercase flex items-center gap-1"><Handshake className="h-3 w-3"/> Collaborating</span>}
+                    {perms.isObserver && <span className="bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded border border-amber-200 uppercase flex items-center gap-1"><Eye className="h-3 w-3"/> Observer</span>}
                 </div>
-                
-                {/* STAFF LIST (Hidden for Observer) */}
-                {!isObserver && (
-                    <div className="flex flex-wrap gap-2 mt-3">
-                        {team.collaborators && team.collaborators.map(c => (
-                            <div key={c.id} className="flex items-center gap-1 text-xs bg-white border border-purple-100 px-2 py-1 rounded-full text-purple-700">
-                                <UserCheck className="h-3 w-3" /> 
-                                <span className="font-bold mr-1">{c.role}:</span> {c.full_name}
-                                {isOwner && (
-                                    <button onClick={() => handleRevoke(c.id)} className="ml-1 text-purple-300 hover:text-red-500"><Trash2 className="h-3 w-3" /></button>
-                                )}
-                            </div>
-                        ))}
-                        {team.observers && team.observers.map(c => (
-                             <div key={c.id} className="flex items-center gap-1 text-xs bg-white border border-gray-200 px-2 py-1 rounded-full text-gray-600">
-                                <Eye className="h-3 w-3" /> 
-                                <span className="font-bold mr-1">Observer:</span> {c.full_name}
-                                {isOwner && (
-                                    <button onClick={() => handleRevoke(c.id)} className="ml-1 text-gray-300 hover:text-red-500"><Trash2 className="h-3 w-3" /></button>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                )}
             </div>
         </div>
-        
         <div className="flex gap-2">
             <a href="#/"><Button variant="outline"><ArrowLeft className="h-4 w-4 mr-2" /> Back</Button></a>
-            {isOwner && (
+            {perms.isOwner && (
                 <InviteUserModal 
                     entityType="SynchroTeam" entityId={team.id} entityName={team.team_name}
                     trigger={<Button variant="outline">Invite Staff</Button>}
@@ -137,18 +84,19 @@ export default function SynchroTeamDashboard() {
       </div>
 
       <div className="min-h-[400px]">
-        {/* PASS PERMISSIONS & READONLY TO ALL TABS */}
-        {activeTab === 'roster' && <SynchroRosterTab team={team} readOnly={permissions.readOnly} />}
-        {activeTab === 'yearly' && <YearlyPlansTab isSynchro={true} team={team} readOnly={permissions.readOnly} />}
-        {activeTab === 'gap_analysis' && <GapAnalysisTab isSynchro={true} team={team} readOnly={permissions.readOnly} />}
-        {activeTab === 'goals' && <GoalsTab isSynchro={true} team={team} permissions={permissions} />}
-        {activeTab === 'programs' && <ProgramsTab isSynchro={true} team={team} readOnly={permissions.readOnly} permissions={permissions} />}
-        {activeTab === 'competitions' && <CompetitionsTab isSynchro={true} team={team} readOnly={permissions.readOnly} permissions={permissions} />}
-        {activeTab === 'logistics' && <LogisticsTab isSynchro={true} team={team} readOnly={permissions.readOnly} />}
-        {activeTab === 'logs' && <LogsTab isSynchro={true} team={team} permissions={permissions} />}
-        {activeTab === 'health' && <HealthTab isSynchro={true} team={team} permissions={permissions} />}
+        {/* PASS PERMISSIONS */}
+        {activeTab === 'roster' && <SynchroRosterTab team={team} readOnly={perms.readOnlyStructure} />}
+        {activeTab === 'yearly' && <YearlyPlansTab isSynchro={true} team={team} readOnly={perms.readOnlyStructure} permissions={perms} />}
+        {activeTab === 'gap_analysis' && <GapAnalysisTab isSynchro={true} team={team} readOnly={perms.readOnlyStructure} />}
+        {activeTab === 'goals' && <GoalsTab isSynchro={true} team={team} permissions={perms} />}
+        {activeTab === 'programs' && <ProgramsTab isSynchro={true} team={team} readOnly={perms.readOnlyStructure} permissions={perms} />}
+        {activeTab === 'competitions' && <CompetitionsTab isSynchro={true} team={team} readOnly={perms.readOnlyStructure} permissions={perms} />}
+        {activeTab === 'logistics' && <LogisticsTab isSynchro={true} team={team} readOnly={perms.readOnlyStructure} />}
+        {activeTab === 'logs' && <LogsTab isSynchro={true} team={team} permissions={perms} />}
+        {activeTab === 'health' && <HealthTab isSynchro={true} team={team} permissions={perms} />}
         {activeTab === 'analytics' && <AnalyticsTab isSynchro={true} team={team} />}
-        {activeTab === 'profile' && <SynchroProfileTab team={team} onUpdated={fetchTeam} readOnly={!permissions.canDelete} />} 
+        
+        {activeTab === 'profile' && <SynchroProfileTab team={team} onUpdated={fetchTeam} readOnly={!perms.canDelete} />}
       </div>
     </div>
   );

@@ -3,9 +3,10 @@ import { useParams } from 'react-router-dom';
 import { useAuth } from '@/AuthContext';
 import { apiRequest } from '@/api';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Consolidate imports if needed, or keep separate
 import { User, Calendar, MapPin, ArrowLeft, LogOut, Settings } from 'lucide-react';
 import { FederationFlag } from '@/components/ui/FederationFlag';
+import { useAccessControl } from '@/hooks/useAccessControl'; // <--- IMPORT HOOK
 
 // Tabs
 import { WeeklyPlanTab } from '@/components/dashboard/tabs/WeeklyPlanTab';
@@ -41,35 +42,9 @@ export default function AthleteSeasonDashboard() {
 
   useEffect(() => { fetchSkater(); }, [id, token]);
 
-  // --- PERMISSIONS LOGIC ---
-  const accessLevel = skater?.access_level || 'COACH';
-
-  const isObserver = accessLevel === 'VIEWER' || accessLevel === 'OBSERVER';
-  const isCollaborator = accessLevel === 'COLLABORATOR';
-  const isOwner = accessLevel === 'COACH' || accessLevel === 'OWNER' || accessLevel === 'MANAGER';
-  const isSkaterAccount = user?.role === 'SKATER';
-  
-  // Determine global "Coach" status (for UI layout mostly)
-  const isGlobalCoach = user?.role === 'COACH' || user?.role === 'COLLABORATOR';
-
-  // Permission Flags
-  const hasEditAccess = isOwner || isCollaborator;
-  const canDelete = isOwner;
-
-  const permissions = {
-      role: user?.role,
-      canEditPlan: hasEditAccess,
-      canCreateCompetitions: hasEditAccess,
-      canEditCompetitions: !isObserver, 
-      canEditGoals: !isObserver,
-      canEditLogs: !isObserver,
-      canEditHealth: !isObserver,
-      canEditProfile: isOwner, 
-      canDelete: canDelete,
-      viewGapAnalysis: isOwner || isCollaborator || isObserver,
-      readOnly: !hasEditAccess       
-  };
-  // ------------------------
+  // --- USE THE HOOK ---
+  const perms = useAccessControl(skater); 
+  // -------------------
 
   const formatTabLabel = (str) => str.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
 
@@ -78,14 +53,14 @@ export default function AthleteSeasonDashboard() {
 
   // --- DYNAMIC TAB LIST ---
   const tabs = ['weekly', 'yearly'];
-  if (permissions.viewGapAnalysis) tabs.push('gap_analysis');
+  
+  // Use hook flags
+  if (perms.viewGapAnalysis) tabs.push('gap_analysis');
+  
   tabs.push('goals', 'programs', 'competitions');
 
-  // SHOW LOGISTICS IF:
-  // 1. Skater is on a Synchro Team
-  // 2. AND User is NOT a Global Coach (Coaches use Team Dashboard)
-  // 3. AND User is NOT an Observer (Observers shouldn't see travel details via Skater view)
-  if (skater?.synchro_teams?.length > 0 && !isGlobalCoach && !isObserver) {
+  // Logic: Show logistics if Skater is on Synchro Team AND (User is not Coach OR is Observer)
+  if (skater?.synchro_teams?.length > 0 && (!perms.isOwner || perms.isObserver)) {
       tabs.push('synchro_logistics');
   }
 
@@ -102,14 +77,16 @@ export default function AthleteSeasonDashboard() {
                     <FederationFlag federation={skater.federation} />
                     <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {skater.date_of_birth}</span>
                     {skater.home_club && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {skater.home_club}</span>}
-                    {isCollaborator && <span className="bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded border border-indigo-200 uppercase">Collaborating</span>}
-                    {isObserver && <span className="bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded border border-amber-200 uppercase">Observer Mode</span>}
+                    
+                    {/* STATUS BADGES FROM HOOK */}
+                    {perms.isCollaborator && <span className="bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded border border-indigo-200 uppercase">Collaborating</span>}
+                    {perms.isObserver && <span className="bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded border border-amber-200 uppercase">Observer Mode</span>}
                 </div>
             </div>
         </div>
         
         <div className="flex gap-2">
-            {isSkaterAccount ? (
+            {perms.isSelf ? (
                 <>
                     <a href="#/settings"><Button variant="secondary" size="icon"><Settings className="h-5 w-5 text-gray-600" /></Button></a>
                     <Button variant="outline" onClick={logout}><LogOut className="h-4 w-4 mr-2" /> Log Out</Button>
@@ -127,21 +104,28 @@ export default function AthleteSeasonDashboard() {
       </div>
 
       <div className="min-h-[400px]">
-        {activeTab === 'weekly' && <WeeklyPlanTab skater={skater} readOnly={permissions.readOnly} />}
-        {activeTab === 'yearly' && <YearlyPlansTab skater={skater} readOnly={permissions.readOnly} />}
-        {activeTab === 'gap_analysis' && <GapAnalysisTab skater={skater} readOnly={permissions.readOnly} />}
-        {activeTab === 'goals' && <GoalsTab skater={skater} permissions={permissions} />}
-        {activeTab === 'programs' && <ProgramsTab skater={skater} readOnly={permissions.readOnly} permissions={permissions} />}
-        {activeTab === 'competitions' && <CompetitionsTab skater={skater} permissions={permissions} readOnly={permissions.readOnly} />}
+        {/* Pass 'perms' object to everything. Tabs extract what they need. */}
+        {/* 'readOnly' is passed explicitly for backward compatibility with simple tabs */}
         
-        {/* PASS READONLY AND PERMISSIONS */}
-        {activeTab === 'synchro_logistics' && <LogisticsTab skater={skater} isSynchro={true} readOnly={permissions.readOnly} permissions={permissions} />}
+        {activeTab === 'weekly' && <WeeklyPlanTab skater={skater} readOnly={perms.readOnlyStructure} permissions={perms} />}
+        {activeTab === 'yearly' && <YearlyPlansTab skater={skater} readOnly={perms.readOnlyStructure} permissions={perms} />}
+        {activeTab === 'gap_analysis' && <GapAnalysisTab skater={skater} readOnly={perms.readOnlyStructure} />}
+        
+        {activeTab === 'goals' && <GoalsTab skater={skater} permissions={perms} />}
+        {activeTab === 'programs' && <ProgramsTab skater={skater} readOnly={perms.readOnlyStructure} permissions={perms} />}
+        
+        {/* Competitions: readOnly is FALSE because Parents can edit results. Use perms inside. */}
+        {activeTab === 'competitions' && <CompetitionsTab skater={skater} permissions={perms} readOnly={false} />}
+        
+        {activeTab === 'synchro_logistics' && <LogisticsTab skater={skater} isSynchro={true} readOnly={perms.readOnlyStructure} permissions={perms} />}
 
-        {activeTab === 'tests' && <TestsTab skater={skater} permissions={permissions} readOnly={permissions.readOnly} />}
-        {activeTab === 'logs' && <LogsTab skater={skater} permissions={permissions} />}
-        {activeTab === 'health' && <HealthTab skater={skater} permissions={permissions} />}
+        {activeTab === 'tests' && <TestsTab skater={skater} permissions={perms} readOnly={false} />}
+        {activeTab === 'logs' && <LogsTab skater={skater} permissions={perms} />}
+        {activeTab === 'health' && <HealthTab skater={skater} permissions={perms} />}
         {activeTab === 'analytics' && <AnalyticsTab skater={skater} />}
-        {activeTab === 'profile' && <ProfileTab skater={skater} onUpdated={fetchSkater} readOnly={!permissions.canEditProfile} />}
+        
+        {/* Profile: Strict readOnly based on canEditProfile */}
+        {activeTab === 'profile' && <ProfileTab skater={skater} onUpdated={fetchSkater} readOnly={!perms.canEditProfile} permissions={perms} />}
       </div>
     </div>
   );

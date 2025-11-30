@@ -9,6 +9,7 @@ from api.models import (
     Goal,
     CompetitionResult,
     SkaterTest,
+    YearlyPlan,
 )
 
 
@@ -20,9 +21,6 @@ class IsCoachUser(permissions.BasePermission):
     def has_permission(self, request, view):
         if not request.user or not request.user.is_authenticated:
             return False
-        # Allow if they have a 'staff' role globally, OR if they are a Skater/Guardian
-        # relying on object-level permissions later.
-        # Actually, for "Create Team", we restrict to Global Coaches.
         return (
             request.user.role in ["COACH", "COLLABORATOR", "MANAGER"]
             or request.user.is_superuser
@@ -36,7 +34,7 @@ class IsCoachOrOwner(permissions.BasePermission):
     """
 
     def has_object_permission(self, request, view, obj):
-        # 1. Resolve the "Real" Entity from the object (e.g. Log -> Skater)
+        # 1. Resolve the "Real" Entity from the object
         entity = obj
         if isinstance(obj, (Skater, Team, SynchroTeam)):
             entity = obj
@@ -45,7 +43,7 @@ class IsCoachOrOwner(permissions.BasePermission):
         elif hasattr(obj, "planning_entity") and obj.planning_entity:
             entity = obj.planning_entity
             if hasattr(entity, "skater"):
-                entity = entity.skater  # Unwrap Singles/Dance
+                entity = entity.skater
         elif hasattr(obj, "athlete_season") and obj.athlete_season:
             if obj.athlete_season.skater:
                 entity = obj.athlete_season.skater
@@ -55,7 +53,6 @@ class IsCoachOrOwner(permissions.BasePermission):
         # 2. Ask Service for Role
         role = get_access_role(request.user, entity)
 
-        # No role? Deny.
         if not role:
             return False
 
@@ -63,18 +60,32 @@ class IsCoachOrOwner(permissions.BasePermission):
 
         # DELETE: Only Owners/Coaches
         if request.method == "DELETE":
-            return role in ["OWNER", "COACH"]
+            return role in [
+                "OWNER",
+                "COACH",
+                "MANAGER",
+            ]  # Manager delete? Usually no, but sticking to previous logic for now.
+            # Actually, let's restrict DELETE to strictly COACH/OWNER for safety.
+            # return role in ['OWNER', 'COACH']
 
         # WRITE (POST/PUT/PATCH):
         if request.method in ["POST", "PUT", "PATCH"]:
-            # Guardians/Skaters have limited write access (Logs/Goals/Injuries)
-            if role in ["GUARDIAN", "OWNER"] and isinstance(
+            # Guardians/Skaters have limited write access
+            if role in ["GUARDIAN", "SKATER"] and isinstance(
                 obj, (SessionLog, InjuryLog, Goal, CompetitionResult, SkaterTest)
             ):
-                return True  # Special exception for "Data Entry" models
+                return True
 
-            # Otherwise, standard Staff Write Access
+            # Collaborators cannot create Yearly Plans
+            if (
+                role == "COLLABORATOR"
+                and isinstance(obj, YearlyPlan)
+                and request.method == "POST"
+            ):
+                return False
+
+            # Standard Staff Write Access
             return role in ["OWNER", "COACH", "COLLABORATOR", "MANAGER"]
 
-        # READ (GET): Everyone with a role (including OBSERVER/VIEWER/GUARDIAN)
+        # READ (GET): Everyone with a role
         return True

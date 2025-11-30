@@ -4,6 +4,7 @@ from rest_framework import permissions
 from django.db.models import Q
 from django.contrib.contenttypes.models import ContentType
 from datetime import date, timedelta
+from api.services import get_accessible_skaters, get_access_role
 
 from api.models import (
     Skater,
@@ -35,36 +36,8 @@ class CoachDashboardStatsView(APIView):
     def get(self, request):
         user = request.user
 
-        # 1. SECURITY: Fetch ONLY skaters this coach has access to
-        # EXCLUDE Observers from Stats/Red Flags
-        access_records = PlanningEntityAccess.objects.filter(user=user).exclude(
-            access_level__in=["VIEWER", "OBSERVER"]
-        )
-
-        # Build map of {skater_id: access_level} for quick lookup
-        skater_access_map = {}
-        for record in access_records:
-            entity = record.planning_entity
-            if not entity:
-                continue
-
-            level = record.access_level
-
-            if isinstance(entity, Skater):
-                skater_access_map[entity.id] = level
-            elif hasattr(entity, "skater"):
-                skater_access_map[entity.skater.id] = level
-            elif hasattr(entity, "partner_a"):  # Team
-                skater_access_map[entity.partner_a.id] = level
-                skater_access_map[entity.partner_b.id] = level
-            elif hasattr(entity, "roster"):  # Synchro
-                for s in entity.roster.all():
-                    skater_access_map[s.id] = level
-
-        # Fetch actual skater objects
-        skaters = Skater.objects.filter(
-            id__in=skater_access_map.keys(), is_active=True
-        ).distinct()
+        # 1. SECURITY: Fetch ONLY operational skaters (Owned + Collab, NO Observers)
+        skaters = get_accessible_skaters(user, filter_mode="OPERATIONAL")
 
         today = date.today()
         next_week = today + timedelta(days=7)
@@ -84,8 +57,9 @@ class CoachDashboardStatsView(APIView):
         start_of_week = today - timedelta(days=today.weekday())
 
         for skater in skaters:
-            # Determine if this is a shared/collaborative skater
-            is_shared = skater_access_map.get(skater.id) == "COLLABORATOR"
+            # Check role for this specific skater to flag collaborations
+            role = get_access_role(user, skater)
+            is_shared = role == "COLLABORATOR"
 
             active_seasons = skater.athlete_seasons.filter(is_active=True)
             if not active_seasons.exists():
@@ -155,7 +129,12 @@ class CoachDashboardStatsView(APIView):
 
                 is_shared = False
                 if skater_id:
-                    is_shared = skater_access_map.get(skater_id) == "COLLABORATOR"
+                    # Resolve role for the skater associated with the goal
+                    # (We fetch the object from the 'skaters' queryset to avoid DB hit if possible,
+                    # but get_access_role handles lookups efficiently)
+                    # For simplicity in this loop:
+                    role = get_access_role(user, skaters.filter(id=skater_id).first())
+                    is_shared = role == "COLLABORATOR"
 
                 formatted.append(
                     {
@@ -181,9 +160,13 @@ class CoachDashboardStatsView(APIView):
         for log in recent_logs:
             if not log.athlete_season.skater:
                 continue
+
             skater_name = log.athlete_season.skater.full_name
             sid = log.athlete_season.skater.id
-            is_shared = skater_access_map.get(sid) == "COLLABORATOR"
+
+            role = get_access_role(user, log.athlete_season.skater)
+            is_shared = role == "COLLABORATOR"
+
             activity_data.append(
                 {
                     "skater": skater_name,
@@ -201,7 +184,8 @@ class CoachDashboardStatsView(APIView):
         ).order_by("test_date")
         agenda_items = []
         for t in upcoming_tests:
-            is_shared = skater_access_map.get(t.skater.id) == "COLLABORATOR"
+            role = get_access_role(user, t.skater)
+            is_shared = role == "COLLABORATOR"
             agenda_items.append(
                 {
                     "type": "Test",
@@ -215,6 +199,7 @@ class CoachDashboardStatsView(APIView):
         upcoming_comps = Competition.objects.filter(
             start_date__range=(today, two_weeks)
         ).order_by("start_date")
+
         for c in upcoming_comps:
             results = CompetitionResult.objects.filter(competition=c)
             attendees = set()
@@ -226,6 +211,8 @@ class CoachDashboardStatsView(APIView):
                     ):
                         attendees.add(r.planning_entity.skater.full_name)
                     elif hasattr(r.planning_entity, "team_name"):
+                        # Only include teams if they are relevant?
+                        # For simplicity, if the team is in the results, we list it.
                         attendees.add(r.planning_entity.team_name)
             if attendees:
                 agenda_items.append(
@@ -250,7 +237,7 @@ class CoachDashboardStatsView(APIView):
                             "injury": i.injury_type,
                             "status": i.recovery_status,
                             "date": i.date_of_onset,
-                            "is_shared": skater_access_map.get(i.skater.id)
+                            "is_shared": get_access_role(user, i.skater)
                             == "COLLABORATOR",
                         }
                         for i in active_injuries

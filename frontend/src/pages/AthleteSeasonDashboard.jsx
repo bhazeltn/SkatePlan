@@ -42,19 +42,32 @@ export default function AthleteSeasonDashboard() {
 
   useEffect(() => { fetchSkater(); }, [id, token]);
 
+  // --- CENTRALIZED PERMISSIONS ---
   const perms = useAccessControl(skater);
+  // -------------------------------
 
   const formatTabLabel = (str) => str.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
 
   if (loading) return <div className="p-8">Loading...</div>;
   if (!skater) return <div className="p-8">Not found or access denied.</div>;
 
+  // --- DYNAMIC TAB LIST ---
   const tabs = ['weekly'];
+  
   if (perms.canViewYearlyPlan) tabs.push('yearly');
   if (perms.canViewGapAnalysis) tabs.push('gap_analysis');
   if (perms.canViewPerformance) tabs.push('goals', 'programs', 'competitions');
-  if (skater?.synchro_teams?.length > 0 && perms.canViewLogistics) tabs.push('synchro_logistics');
+
+  // Logic: Show logistics ONLY if:
+  // 1. Skater is actually on a Synchro Team
+  // 2. AND User is NOT Staff (Coaches use Team Dashboard)
+  // 3. BUT Observers/Guardians/Skaters DO need to see it here.
+  if (skater?.synchro_teams?.length > 0 && !perms.isStaff) {
+      tabs.push('synchro_logistics');
+  }
+
   if (perms.canViewHealth) tabs.push('tests', 'logs', 'health', 'analytics');
+  
   tabs.push('profile');
 
   return (
@@ -64,28 +77,12 @@ export default function AthleteSeasonDashboard() {
              <div className="h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 border-2 border-white shadow-sm"><User className="h-8 w-8" /></div>
             <div>
                 <h1 className="text-3xl font-bold text-gray-900">{skater.full_name}</h1>
-                <div className="flex flex-wrap gap-3 text-sm text-muted-foreground mt-1 items-center">
-                    
-                    {/* 1. Disciplines (Filtered by Backend) */}
-                    <div className="flex items-center gap-2">
-                        {skater.planning_entities && skater.planning_entities.length > 0 ? (
-                            skater.planning_entities.map((ent, i) => (
-                                <span key={i} className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200 text-xs font-bold">
-                                    {ent.name} <span className="font-normal text-slate-500">({ent.current_level || '-'})</span>
-                                </span>
-                            ))
-                        ) : (
-                            <span className="text-xs italic text-gray-400">No Discipline</span>
-                        )}
-                    </div>
-
-                    {/* 2. Flag */}
+                <div className="flex gap-3 text-sm text-muted-foreground mt-1 items-center">
                     <FederationFlag federation={skater.federation} />
-
-                    {/* 3. Club */}
-                    {skater.home_club && <span className="flex items-center gap-1 text-gray-400 border-l pl-3 ml-1"><MapPin className="h-3 w-3" /> {skater.home_club}</span>}
+                    <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {skater.date_of_birth}</span>
+                    {skater.home_club && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {skater.home_club}</span>}
                     
-                    {/* 4. Badges */}
+                    {/* STATUS BADGES */}
                     {perms.isCollaborator && <span className="bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded border border-indigo-200 uppercase flex items-center gap-1"><Handshake className="h-3 w-3"/> Collaborating</span>}
                     {perms.isObserver && <span className="bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded border border-amber-200 uppercase flex items-center gap-1"><Eye className="h-3 w-3"/> Observer</span>}
                 </div>
@@ -111,17 +108,24 @@ export default function AthleteSeasonDashboard() {
       </div>
 
       <div className="min-h-[400px]">
+        {/* PASS PERMISSIONS & READONLY TO ALL TABS */}
         {activeTab === 'weekly' && <WeeklyPlanTab skater={skater} readOnly={perms.readOnlyStructure} permissions={perms} />}
         {activeTab === 'yearly' && <YearlyPlansTab skater={skater} readOnly={perms.readOnlyStructure} permissions={perms} />}
         {activeTab === 'gap_analysis' && <GapAnalysisTab skater={skater} readOnly={perms.readOnlyStructure} />}
+        
         {activeTab === 'goals' && <GoalsTab skater={skater} permissions={perms} />}
         {activeTab === 'programs' && <ProgramsTab skater={skater} readOnly={perms.readOnlyStructure} permissions={perms} />}
+        {/* Competitions: readOnly is passed as !canEdit because Parents CAN edit results but not structure */}
         {activeTab === 'competitions' && <CompetitionsTab skater={skater} permissions={perms} readOnly={!perms.canEditCompetitions} />}
+        
         {activeTab === 'synchro_logistics' && <LogisticsTab skater={skater} isSynchro={true} readOnly={perms.readOnlyStructure} permissions={perms} />}
+
         {activeTab === 'tests' && <TestsTab skater={skater} permissions={perms} readOnly={!perms.canEditCompetitions} />}
         {activeTab === 'logs' && <LogsTab skater={skater} permissions={perms} />}
         {activeTab === 'health' && <HealthTab skater={skater} permissions={perms} />}
         {activeTab === 'analytics' && <AnalyticsTab skater={skater} />}
+        
+        {/* Profile: Strict readOnly based on canEditProfile (Owner Only) */}
         {activeTab === 'profile' && <ProfileTab skater={skater} onUpdated={fetchSkater} readOnly={!perms.canEditProfile} permissions={perms} />}
       </div>
     </div>

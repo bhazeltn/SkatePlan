@@ -3,10 +3,10 @@ import { useParams } from 'react-router-dom';
 import { useAuth } from '@/AuthContext';
 import { apiRequest } from '@/api';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Consolidate imports if needed, or keep separate
-import { User, Calendar, MapPin, ArrowLeft, LogOut, Settings } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { User, Calendar, MapPin, ArrowLeft, LogOut, Settings, Handshake, Eye } from 'lucide-react';
 import { FederationFlag } from '@/components/ui/FederationFlag';
-import { useAccessControl } from '@/hooks/useAccessControl'; // <--- IMPORT HOOK
+import { useAccessControl } from '@/hooks/useAccessControl';
 
 // Tabs
 import { WeeklyPlanTab } from '@/components/dashboard/tabs/WeeklyPlanTab';
@@ -42,9 +42,9 @@ export default function AthleteSeasonDashboard() {
 
   useEffect(() => { fetchSkater(); }, [id, token]);
 
-  // --- USE THE HOOK ---
-  const perms = useAccessControl(skater); 
-  // -------------------
+  // --- CENTRALIZED PERMISSIONS ---
+  const perms = useAccessControl(skater);
+  // -------------------------------
 
   const formatTabLabel = (str) => str.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
 
@@ -52,19 +52,20 @@ export default function AthleteSeasonDashboard() {
   if (!skater) return <div className="p-8">Not found or access denied.</div>;
 
   // --- DYNAMIC TAB LIST ---
-  const tabs = ['weekly', 'yearly'];
+  const tabs = ['weekly'];
   
-  // Use hook flags
-  if (perms.viewGapAnalysis) tabs.push('gap_analysis');
-  
-  tabs.push('goals', 'programs', 'competitions');
+  if (perms.canViewYearlyPlan) tabs.push('yearly');
+  if (perms.canViewGapAnalysis) tabs.push('gap_analysis');
+  if (perms.canViewPerformance) tabs.push('goals', 'programs', 'competitions');
 
   // Logic: Show logistics if Skater is on Synchro Team AND (User is not Coach OR is Observer)
-  if (skater?.synchro_teams?.length > 0 && (!perms.isOwner || perms.isObserver)) {
+  if (skater?.synchro_teams?.length > 0 && perms.canViewLogistics) {
       tabs.push('synchro_logistics');
   }
 
-  tabs.push('tests', 'logs', 'health', 'analytics', 'profile');
+  if (perms.canViewHealth) tabs.push('tests', 'logs', 'health', 'analytics');
+  
+  tabs.push('profile');
 
   return (
     <div className="p-8 min-h-screen bg-gray-50">
@@ -78,9 +79,9 @@ export default function AthleteSeasonDashboard() {
                     <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {skater.date_of_birth}</span>
                     {skater.home_club && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {skater.home_club}</span>}
                     
-                    {/* STATUS BADGES FROM HOOK */}
-                    {perms.isCollaborator && <span className="bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded border border-indigo-200 uppercase">Collaborating</span>}
-                    {perms.isObserver && <span className="bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded border border-amber-200 uppercase">Observer Mode</span>}
+                    {/* STATUS BADGES */}
+                    {perms.isCollaborator && <span className="bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded border border-indigo-200 uppercase flex items-center gap-1"><Handshake className="h-3 w-3"/> Collaborating</span>}
+                    {perms.isObserver && <span className="bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded border border-amber-200 uppercase flex items-center gap-1"><Eye className="h-3 w-3"/> Observer</span>}
                 </div>
             </div>
         </div>
@@ -104,27 +105,24 @@ export default function AthleteSeasonDashboard() {
       </div>
 
       <div className="min-h-[400px]">
-        {/* Pass 'perms' object to everything. Tabs extract what they need. */}
-        {/* 'readOnly' is passed explicitly for backward compatibility with simple tabs */}
-        
+        {/* PASS PERMISSIONS & READONLY TO ALL TABS */}
         {activeTab === 'weekly' && <WeeklyPlanTab skater={skater} readOnly={perms.readOnlyStructure} permissions={perms} />}
         {activeTab === 'yearly' && <YearlyPlansTab skater={skater} readOnly={perms.readOnlyStructure} permissions={perms} />}
         {activeTab === 'gap_analysis' && <GapAnalysisTab skater={skater} readOnly={perms.readOnlyStructure} />}
         
         {activeTab === 'goals' && <GoalsTab skater={skater} permissions={perms} />}
         {activeTab === 'programs' && <ProgramsTab skater={skater} readOnly={perms.readOnlyStructure} permissions={perms} />}
-        
-        {/* Competitions: readOnly is FALSE because Parents can edit results. Use perms inside. */}
-        {activeTab === 'competitions' && <CompetitionsTab skater={skater} permissions={perms} readOnly={false} />}
+        {/* Competitions: readOnly is passed as !canEdit because Parents CAN edit results but not structure */}
+        {activeTab === 'competitions' && <CompetitionsTab skater={skater} permissions={perms} readOnly={!perms.canEditCompetitions} />}
         
         {activeTab === 'synchro_logistics' && <LogisticsTab skater={skater} isSynchro={true} readOnly={perms.readOnlyStructure} permissions={perms} />}
 
-        {activeTab === 'tests' && <TestsTab skater={skater} permissions={perms} readOnly={false} />}
+        {activeTab === 'tests' && <TestsTab skater={skater} permissions={perms} readOnly={!perms.canEditCompetitions} />}
         {activeTab === 'logs' && <LogsTab skater={skater} permissions={perms} />}
         {activeTab === 'health' && <HealthTab skater={skater} permissions={perms} />}
         {activeTab === 'analytics' && <AnalyticsTab skater={skater} />}
         
-        {/* Profile: Strict readOnly based on canEditProfile */}
+        {/* Profile: Strict readOnly based on canEditProfile (Owner Only) */}
         {activeTab === 'profile' && <ProfileTab skater={skater} onUpdated={fetchSkater} readOnly={!perms.canEditProfile} permissions={perms} />}
       </div>
     </div>

@@ -2,7 +2,6 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from django.contrib.contenttypes.models import ContentType
 from datetime import date
-from api.services import get_accessible_skaters
 
 from api.models import (
     Skater,
@@ -26,6 +25,7 @@ from api.serializers import (
     SoloDanceEntitySerializer,
 )
 from api.permissions import IsCoachUser, IsCoachOrOwner
+from api.services import get_accessible_skaters  # <--- Import Service
 
 # --- SKATERS ---
 
@@ -35,7 +35,7 @@ class CreateSkaterView(generics.CreateAPIView):
     serializer_class = SkaterSerializer
 
     def create(self, request, *args, **kwargs):
-        # 1. Validate Inputs
+        # (Keep existing creation logic exactly as is)
         full_name = request.data.get("full_name")
         dob_str = request.data.get("date_of_birth")
         discipline = request.data.get("discipline", "SINGLES")
@@ -55,7 +55,6 @@ class CreateSkaterView(generics.CreateAPIView):
                 {"error": "Invalid date format."}, status=status.HTTP_400_BAD_REQUEST
             )
 
-        # 2. Check Duplicates
         potential_matches = Skater.objects.filter(date_of_birth=dob)
         for skater in potential_matches:
             if skater.full_name.lower() == full_name.lower():
@@ -68,7 +67,6 @@ class CreateSkaterView(generics.CreateAPIView):
                     status=status.HTTP_409_CONFLICT,
                 )
 
-        # 3. Create Skater
         federation_obj = None
         if federation_id:
             try:
@@ -84,7 +82,6 @@ class CreateSkaterView(generics.CreateAPIView):
             federation=federation_obj,
         )
 
-        # 4. Create Entity
         entity = None
         if discipline == "SINGLES":
             entity = SinglesEntity.objects.create(
@@ -102,14 +99,12 @@ class CreateSkaterView(generics.CreateAPIView):
                 skater=skater, current_level=level, federation=federation_obj
             )
 
-        # 5. Grant Permissions (Coach Access)
         PlanningEntityAccess.objects.create(
             user=request.user,
             access_level=PlanningEntityAccess.AccessLevel.COACH,
             planning_entity=entity,
         )
 
-        # 6. Auto-Create Season
         today = date.today()
         start_year = today.year if today.month >= 7 else today.year - 1
         season_name = f"{start_year}-{start_year + 1}"
@@ -122,7 +117,6 @@ class CreateSkaterView(generics.CreateAPIView):
             primary_coach=request.user,
         )
 
-        # 7. Auto-Create Yearly Plan
         ct = ContentType.objects.get_for_model(entity)
         ytp = YearlyPlan.objects.create(
             coach_owner=request.user,
@@ -147,9 +141,13 @@ class RosterView(generics.ListAPIView):
     serializer_class = RosterSkaterSerializer
 
     def get_queryset(self):
-        return get_accessible_skaters(self.request.user)
+        # --- REFACTORED: Use Service ---
+        # Returns all accessible skaters (Owned, Collab, Observed, Self)
+        return get_accessible_skaters(self.request.user, filter_mode="ALL")
 
 
+# --- ENTITY DETAILS ---
+# (Keep these exactly as is)
 class SinglesEntityDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [permissions.IsAuthenticated, IsCoachUser]
     serializer_class = SinglesEntitySerializer
@@ -174,6 +172,7 @@ class SynchroTeamDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = SynchroTeam.objects.all()
 
 
+# --- TEAMS (PAIRS/DANCE) ---
 class CreateTeamView(generics.CreateAPIView):
     permission_classes = [permissions.IsAuthenticated, IsCoachUser]
     serializer_class = TeamSerializer
@@ -206,17 +205,20 @@ class CreateTeamView(generics.CreateAPIView):
 
 
 class TeamListView(generics.ListAPIView):
-    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    # CHANGED: Allow Observers to see teams they watch
+    permission_classes = [permissions.IsAuthenticated]
     serializer_class = TeamSerializer
 
     def get_queryset(self):
         ct = ContentType.objects.get_for_model(Team)
+        # Fetch all teams where user has ANY access record (Coach, Collab, Observer)
         ids = PlanningEntityAccess.objects.filter(
             user=self.request.user, content_type=ct
         ).values_list("object_id", flat=True)
         return Team.objects.filter(id__in=ids)
 
 
+# --- SYNCHRO ---
 class CreateSynchroTeamView(generics.CreateAPIView):
     permission_classes = [permissions.IsAuthenticated, IsCoachUser]
     serializer_class = SynchroTeamSerializer
@@ -249,7 +251,8 @@ class CreateSynchroTeamView(generics.CreateAPIView):
 
 
 class SynchroTeamListView(generics.ListAPIView):
-    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    # CHANGED: Allow Observers to see teams they watch
+    permission_classes = [permissions.IsAuthenticated]
     serializer_class = SynchroTeamSerializer
 
     def get_queryset(self):

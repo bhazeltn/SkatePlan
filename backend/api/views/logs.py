@@ -1,5 +1,5 @@
 from rest_framework import generics, permissions, status
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError, PermissionDenied
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from datetime import date
@@ -16,6 +16,7 @@ from api.models import (
 )
 from api.serializers import SessionLogSerializer, InjuryLogSerializer
 from api.permissions import IsCoachUser, IsCoachOrOwner
+from api.services import get_access_role
 
 # --- SESSION LOGS ---
 
@@ -27,6 +28,12 @@ class SessionLogListCreateView(generics.ListCreateAPIView):
     def get_queryset(self):
         skater_id = self.kwargs["skater_id"]
         skater = Skater.objects.get(id=skater_id)
+
+        # --- SECURITY: Check Access to Skater ---
+        role = get_access_role(self.request.user, skater)
+        if not role:
+            return SessionLog.objects.none()
+        # ----------------------------------------
 
         # 1. Individual Seasons
         season_query = Q(skater=skater)
@@ -56,6 +63,12 @@ class SessionLogListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         skater_id = self.kwargs["skater_id"]
         skater = Skater.objects.get(id=skater_id)
+
+        # --- SECURITY: Block Observers ---
+        role = get_access_role(self.request.user, skater)
+        if role in ["VIEWER", "OBSERVER"]:
+            raise PermissionDenied("Observers cannot create logs.")
+        # ---------------------------------
 
         # Auto-find or create active season
         active_season = AthleteSeason.objects.filter(
@@ -106,8 +119,13 @@ class SessionLogListCreateByTeamView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         team_id = self.kwargs["team_id"]
+        team = Team.objects.get(id=team_id)
+
+        # Security Check
+        if not get_access_role(self.request.user, team):
+            return SessionLog.objects.none()
+
         ct = ContentType.objects.get_for_model(Team)
-        # Find seasons for this team
         return SessionLog.objects.filter(
             athlete_season__content_type=ct, athlete_season__object_id=team_id
         ).order_by("-session_date")
@@ -115,9 +133,13 @@ class SessionLogListCreateByTeamView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         team_id = self.kwargs["team_id"]
         team = Team.objects.get(id=team_id)
+
+        role = get_access_role(self.request.user, team)
+        if role in ["VIEWER", "OBSERVER"]:
+            raise PermissionDenied("Observers cannot create logs.")
+
         ct = ContentType.objects.get_for_model(Team)
 
-        # Find active season for team
         active_season = AthleteSeason.objects.filter(
             content_type=ct, object_id=team_id, is_active=True
         ).last()
@@ -139,6 +161,11 @@ class SynchroSessionLogListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         team_id = self.kwargs["team_id"]
+        team = SynchroTeam.objects.get(id=team_id)
+
+        if not get_access_role(self.request.user, team):
+            return SessionLog.objects.none()
+
         ct = ContentType.objects.get_for_model(SynchroTeam)
         return SessionLog.objects.filter(
             athlete_season__content_type=ct, athlete_season__object_id=team_id
@@ -147,6 +174,11 @@ class SynchroSessionLogListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         team_id = self.kwargs["team_id"]
         team = SynchroTeam.objects.get(id=team_id)
+
+        role = get_access_role(self.request.user, team)
+        if role in ["VIEWER", "OBSERVER"]:
+            raise PermissionDenied("Observers cannot create logs.")
+
         ct = ContentType.objects.get_for_model(SynchroTeam)
 
         active_season = AthleteSeason.objects.filter(
@@ -176,12 +208,22 @@ class InjuryLogListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         skater_id = self.kwargs["skater_id"]
+        skater = Skater.objects.get(id=skater_id)
+
+        if not get_access_role(self.request.user, skater):
+            return InjuryLog.objects.none()
+
         return InjuryLog.objects.filter(skater_id=skater_id).order_by(
             "return_to_sport_date", "-date_of_onset"
         )
 
     def perform_create(self, serializer):
         skater = Skater.objects.get(id=self.kwargs["skater_id"])
+
+        role = get_access_role(self.request.user, skater)
+        if role in ["VIEWER", "OBSERVER"]:
+            raise PermissionDenied("Observers cannot report injuries.")
+
         status_val = self.request.data.get("recovery_status", "Active")
         serializer.save(skater=skater, recovery_status=status_val)
 
@@ -192,9 +234,6 @@ class InjuryLogDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = InjuryLog.objects.all()
 
 
-# --- MISSING TEAM INJURY VIEWS (Restores Imports) ---
-
-
 class InjuryLogListCreateByTeamView(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated, IsCoachUser]
     serializer_class = InjuryLogSerializer
@@ -203,6 +242,9 @@ class InjuryLogListCreateByTeamView(generics.ListCreateAPIView):
         team_id = self.kwargs["team_id"]
         try:
             team = Team.objects.get(id=team_id)
+            if not get_access_role(self.request.user, team):
+                return InjuryLog.objects.none()
+
             skaters = [team.partner_a, team.partner_b]
             return InjuryLog.objects.filter(skater__in=skaters).order_by(
                 "-date_of_onset"
@@ -211,7 +253,6 @@ class InjuryLogListCreateByTeamView(generics.ListCreateAPIView):
             return InjuryLog.objects.none()
 
     def perform_create(self, serializer):
-        # Require 'skater_id' in body since injury is skater-specific
         skater_id = self.request.data.get("skater_id")
         if not skater_id:
             raise ValidationError(
@@ -219,6 +260,15 @@ class InjuryLogListCreateByTeamView(generics.ListCreateAPIView):
             )
 
         skater = Skater.objects.get(id=skater_id)
+
+        # Check access on the TEAM or SKATER
+        team_id = self.kwargs["team_id"]
+        team = Team.objects.get(id=team_id)
+
+        role = get_access_role(self.request.user, team)
+        if role in ["VIEWER", "OBSERVER"]:
+            raise PermissionDenied("Observers cannot report injuries.")
+
         status_val = self.request.data.get("recovery_status", "Active")
         serializer.save(skater=skater, recovery_status=status_val)
 
@@ -231,6 +281,9 @@ class SynchroInjuryLogListCreateView(generics.ListCreateAPIView):
         team_id = self.kwargs["team_id"]
         try:
             team = SynchroTeam.objects.get(id=team_id)
+            if not get_access_role(self.request.user, team):
+                return InjuryLog.objects.none()
+
             skaters = team.roster.all()
             return InjuryLog.objects.filter(skater__in=skaters).order_by(
                 "-date_of_onset"
@@ -246,5 +299,13 @@ class SynchroInjuryLogListCreateView(generics.ListCreateAPIView):
             )
 
         skater = Skater.objects.get(id=skater_id)
+
+        team_id = self.kwargs["team_id"]
+        team = SynchroTeam.objects.get(id=team_id)
+
+        role = get_access_role(self.request.user, team)
+        if role in ["VIEWER", "OBSERVER"]:
+            raise PermissionDenied("Observers cannot report injuries.")
+
         status_val = self.request.data.get("recovery_status", "Active")
         serializer.save(skater=skater, recovery_status=status_val)

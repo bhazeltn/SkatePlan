@@ -2,25 +2,12 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.authtoken.models import Token
-from django.contrib.auth import get_user_model
-from api.serializers import UserSerializer, RegisterSerializer, LoginSerializer
-
-User = get_user_model()
+from api.serializers import RegisterSerializer, LoginSerializer, UserSerializer
 
 
 class RegisterView(generics.CreateAPIView):
     permission_classes = [permissions.AllowAny]
     serializer_class = RegisterSerializer
-
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user = serializer.save()
-        token, created = Token.objects.get_or_create(user=user)
-        return Response(
-            {"user": UserSerializer(user).data, "token": token.key},
-            status=status.HTTP_201_CREATED,
-        )
 
 
 class LoginView(APIView):
@@ -31,10 +18,18 @@ class LoginView(APIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data["user"]
         token, created = Token.objects.get_or_create(user=user)
-        return Response({"user": UserSerializer(user).data, "token": token.key})
+        return Response(
+            {
+                "token": token.key,
+                "user_id": user.pk,
+                "role": user.role,
+                "email": user.email,
+                "full_name": user.full_name,
+            }
+        )
 
 
-class UserProfileView(generics.RetrieveUpdateDestroyAPIView):
+class UserProfileView(generics.RetrieveAPIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = UserSerializer
 

@@ -8,101 +8,109 @@ import { useAuth } from '@/AuthContext';
 export function useAccessControl(entity) {
     const { user } = useAuth();
 
-    // Safety check: If data isn't loaded, return "locked down" state
+    // Safety check
     if (!user || !entity) {
         return {
             role: 'NONE',
             isOwner: false,
             isCollaborator: false,
+            isManager: false,
             isObserver: false,
             isGuardian: false,
             isSelf: false,
             canEditStructure: false,
             canEditData: false,
             canDelete: false,
-            
-            // UI Flags
-            canEditPlan: false,
-            canCreateCompetitions: false,
-            canEditCompetitions: false,
-            canEditGoals: false,
-            canEditLogs: false,
-            canEditHealth: false,
-            canEditProfile: false,
-            viewGapAnalysis: false,
-            
-            // Global Read Only
+            canViewYearlyPlan: false,
+            canViewGapAnalysis: false,
+            canViewPerformance: false,
+            canViewLogistics: false,
+            canViewHealth: false,
             readOnlyStructure: true,
             readOnlyData: true
         };
     }
 
     // 1. Determine Contextual Role
-    // We prioritize the 'access_level' field from the API (Roster/Team serializers)
     let role = entity.access_level;
 
     // Fallback: Identity Check (Am I this skater?)
-    // Note: 'user.skater_id' comes from UserSerializer
     if (user.role === 'SKATER' && user.skater_id === entity.id && !role) {
         role = 'SKATER_OWNER';
     }
 
-    // Fallback: Legacy Owner Check (if access_level is missing)
-    // If I am a Coach and I see this skater but have no access record, I'm likely the creator/owner.
+    // Fallback: Legacy Owner Check
     if (!role && (user.role === 'COACH' || user.is_superuser)) {
         role = 'COACH';
     }
 
     // 2. Define Role Groups
-    const isOwner = role === 'COACH' || role === 'OWNER' || role === 'MANAGER'; // Managers usually treated as Owners for day-to-day
-    const isCollaborator = role === 'COLLABORATOR';
-    const isStaff = isOwner || isCollaborator;
+    const isOwner = role === 'COACH' || role === 'OWNER'; // Head Coach
+    const isCollaborator = role === 'COLLABORATOR';       // Asst Coach (Tech focus)
+    const isManager = role === 'MANAGER';                 // Team Manager (Logistics focus)
+    
+    const isStaff = isOwner || isCollaborator || isManager;
     
     const isObserver = role === 'VIEWER' || role === 'OBSERVER';
     const isGuardian = role === 'GUARDIAN';
     const isSelf = role === 'SKATER_OWNER' || (user.role === 'SKATER' && user.skater_id === entity.id);
+    const isFamily = isGuardian || isSelf;
 
     // 3. Calculate Capabilities
 
+    // Who can see "Training Tech" (YTP, Gap, Goals, Programs)?
+    // Owners, Collaborators, Observers, and Family (except Gap Analysis)
+    const isTechViewer = isOwner || isCollaborator || isObserver || isFamily;
+
     return {
-        // Raw Role
         role,
-        
-        // Groups
         isOwner,
         isCollaborator,
+        isManager,
         isObserver,
         isGuardian,
         isSelf,
         isStaff,
 
-        // --- STRUCTURE PERMISSIONS (Plans, Programs, Roster) ---
-        // Only Staff can change the training structure.
-        canEditStructure: isStaff,
+        // --- TAB VISIBILITY FLAGS ---
         
-        // --- DATA PERMISSIONS (Logs, Goals, Health) ---
-        // Staff + Family + Athlete can contribute data.
-        // Only Observers are strictly locked out.
-        canEditData: isStaff || isGuardian || isSelf,
+        // Yearly Plan: Staff (except Managers) + Observers + Family
+        canViewYearlyPlan: isTechViewer && !isManager,
+        
+        // Gap Analysis: ONLY Tech Staff + Observers (Hidden from Family & Managers)
+        canViewGapAnalysis: isOwner || isCollaborator || isObserver,
+        
+        // Performance (Goals/Programs/Comps): Tech Staff + Observers + Family
+        canViewPerformance: isTechViewer && !isManager,
+        
+        // Logistics: Everyone involved (Staff, Observers, Family)
+        canViewLogistics: true, 
 
-        // --- DESTRUCTIVE PERMISSIONS ---
-        // Only the true Owner/Head Coach can delete the entity or major plans.
+        // Health/Logs: Tech Staff + Observers + Family
+        canViewHealth: isTechViewer && !isManager,
+
+        // --- EDIT PERMISSIONS ---
+        
+        // Structure (Plan/Roster): Only Owners and Collaborators
+        canEditStructure: isOwner || isCollaborator,
+        
+        // Data (Logs/Goals): Tech Staff (inc. Collab) + Family
+        canEditData: isOwner || isCollaborator || isFamily,
+        
+        // Destructive: Only Owner
         canDelete: isOwner,
 
-        // --- SPECIFIC UI FLAGS (Mapped to Tabs) ---
-        canEditPlan: isStaff,
-        canCreateCompetitions: isStaff,
-        // Parents/Skaters can edit results (upload protocols), but Observers cannot
-        canEditCompetitions: !isObserver, 
-        canEditGoals: !isObserver,
-        canEditLogs: !isObserver,
-        canEditHealth: !isObserver,
-        canEditProfile: isOwner, // Only Owner invites staff/parents
-        
-        viewGapAnalysis: isStaff || isObserver, // Visible to staff and mentors
+        // --- SPECIFIC UI FLAGS ---
+        canEditPlan: isOwner || isCollaborator,
+        canCreateCompetitions: isOwner || isCollaborator,
+        canEditCompetitions: (isOwner || isCollaborator || isFamily),
+        canEditGoals: (isOwner || isCollaborator || isFamily),
+        canEditLogs: (isOwner || isCollaborator || isFamily),
+        canEditHealth: (isOwner || isCollaborator || isFamily),
+        canEditProfile: isOwner, // Only Owner invites staff
         
         // Global "View Only" flags
-        readOnlyStructure: !isStaff, // Passed to Plans/Programs
-        readOnlyData: isObserver // Passed to Logs/Health if needed
+        readOnlyStructure: !(isOwner || isCollaborator), 
+        readOnlyData: isObserver // Observers can never edit data
     };
 }

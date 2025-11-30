@@ -1,6 +1,7 @@
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404
 from django.contrib.contenttypes.models import ContentType
 from django.core.mail import send_mail
@@ -9,10 +10,10 @@ from django.db import transaction
 from django.conf import settings
 from django.contrib.auth import authenticate
 import uuid
-from datetime import date
+from datetime import date, timedelta
 
 from api.models import Invitation, User, Skater, Team, SynchroTeam, PlanningEntityAccess
-from api.serializers import UserSerializer
+from api.services import get_access_role
 
 
 class SendInviteView(APIView):
@@ -27,7 +28,7 @@ class SendInviteView(APIView):
         if not email or not role:
             return Response({"error": "Email and Role required"}, status=400)
 
-        # Find Target
+        # 1. Find Target
         target = None
         if entity_type == "Skater":
             target = get_object_or_404(Skater, id=entity_id)
@@ -39,7 +40,17 @@ class SendInviteView(APIView):
         if not target:
             return Response({"error": "Target not found"}, status=404)
 
-        # Compliance Check
+        # 2. SECURITY CHECK: Can this user invite people?
+        # Only Owners, Head Coaches, or Managers can grow the team/staff.
+        # Collaborators and Observers CANNOT invite others.
+        user_role = get_access_role(request.user, target)
+
+        if user_role not in ["OWNER", "COACH", "MANAGER"]:
+            raise PermissionDenied(
+                "You do not have permission to invite users to this entity."
+            )
+
+        # 3. Compliance Check (Minors)
         if role == "ATHLETE" and entity_type == "Skater":
             if target.date_of_birth:
                 today = date.today()
@@ -58,6 +69,7 @@ class SendInviteView(APIView):
                         status=400,
                     )
 
+        # 4. Create Invitation
         invite = Invitation.objects.create(
             email=email,
             sender=request.user,
@@ -67,7 +79,7 @@ class SendInviteView(APIView):
             token=str(uuid.uuid4()),
         )
 
-        # Send Email
+        # 5. Send Email
         base_url = settings.FRONTEND_URL.rstrip("/")
         accept_link = f"{base_url}/#/accept-invite/{invite.token}"
 
@@ -104,6 +116,7 @@ class AcceptInviteView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def validate_requirements(self, invite):
+        # SafeSport Logic for Minors
         if invite.role == "ATHLETE" and isinstance(invite.target_entity, Skater):
             skater = invite.target_entity
             if skater.date_of_birth:
@@ -136,7 +149,6 @@ class AcceptInviteView(APIView):
                 {"error": error_msg, "code": "DEPENDENCY_ERROR"}, status=400
             )
 
-        # Check if user exists
         user_exists = User.objects.filter(email=invite.email).exists()
 
         return Response(
@@ -164,6 +176,7 @@ class AcceptInviteView(APIView):
         final_role = invite.role
         user_role = final_role
 
+        # Map Context Roles to Global User Roles
         if final_role == "PARENT":
             user_role = User.Role.GUARDIAN
         elif final_role == "ATHLETE":
@@ -178,12 +191,14 @@ class AcceptInviteView(APIView):
         existing_user = User.objects.filter(email=invite.email).first()
 
         if existing_user:
+            # Login Check
             user = authenticate(email=invite.email, password=password)
             if not user:
                 return Response(
                     {"error": "Invalid password for existing account."}, status=401
                 )
         else:
+            # Create New
             if not password or len(password) < 6:
                 return Response(
                     {"error": "Password must be at least 6 characters"}, status=400
@@ -200,6 +215,7 @@ class AcceptInviteView(APIView):
         # --- 3. ASSIGN PERMISSIONS ---
         entity = invite.target_entity
 
+        # Link Skater Profile directly
         if (invite.role == "ATHLETE" or invite.role == "SKATER") and hasattr(
             entity, "user_account"
         ):
@@ -207,6 +223,7 @@ class AcceptInviteView(APIView):
                 entity.user_account = user
                 entity.save()
 
+        # Grant Access Record
         elif final_role in [
             "GUARDIAN",
             "PARENT",
@@ -220,7 +237,6 @@ class AcceptInviteView(APIView):
             elif final_role in ["COLLABORATOR", "MANAGER", "OBSERVER"]:
                 access_level = final_role
 
-            # FIX: Use content_type and object_id explicitly for GenericForeignKey filtering
             ct = ContentType.objects.get_for_model(entity)
             PlanningEntityAccess.objects.get_or_create(
                 user=user,

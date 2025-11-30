@@ -1,77 +1,49 @@
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
-from api.models import Federation, SkatingElement
-from api.serializers import FederationSerializer, SkatingElementSerializer
-from django.db.models import Q
 from rest_framework.views import APIView
 from django.shortcuts import get_object_or_404
-from api.models import PlanningEntityAccess
-from api.permissions import IsCoachUser
+
+from api.models import Federation, SkatingElement, PlanningEntityAccess
+from api.serializers import FederationSerializer, SkatingElementSerializer
+from api.services import get_access_role
 
 
 class FederationList(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = FederationSerializer
-    queryset = Federation.objects.all().order_by("code")
+    queryset = Federation.objects.all().order_by("name")
 
 
 class SkatingElementList(generics.ListAPIView):
-    """
-    Searchable list of skating elements.
-    Usage: /api/elements/?search=Lutz&category=JUMP
-    """
-
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = SkatingElementSerializer
-
-    def get_queryset(self):
-        queryset = SkatingElement.objects.all()
-        search = self.request.query_params.get("search")
-        category = self.request.query_params.get("category")
-
-        if search:
-            queryset = queryset.filter(
-                Q(element_name__icontains=search) | Q(abbreviation__icontains=search)
-            )
-
-        if category:
-            queryset = queryset.filter(discipline_type=category)
-
-        return queryset.order_by("element_name")[:20]  # Limit to 20 for speed
+    queryset = SkatingElement.objects.all().order_by("element_name")
 
 
 class RevokeAccessView(APIView):
     """
     Allows a Coach/Owner to remove a Collaborator or Guardian.
+    Also allows a user to 'Leave' (Revoke their own access).
     """
 
-    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    permission_classes = [permissions.IsAuthenticated]
 
     def delete(self, request, pk):
         access_record = get_object_or_404(PlanningEntityAccess, pk=pk)
 
-        # Security Check: Can I revoke this?
-        # I must be the OWNER/COACH of the entity this record belongs to.
-        # Or I must be revoking my OWN access (leaving).
+        # 1. Self-Revoke (Leaving)
+        if access_record.user == request.user:
+            access_record.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
 
-        is_self_revoke = access_record.user == request.user
-
-        # Check if requestor is the "Owner" of the target entity
-        is_owner = False
+        # 2. Owner Revoke (Firing)
         target = access_record.planning_entity
 
-        # Look for an Owner/Coach record for this requester on the same entity
-        from django.contrib.contenttypes.models import ContentType
+        # Check role on the target entity
+        role = get_access_role(request.user, target)
 
-        ct = ContentType.objects.get_for_model(target)
-        owner_record = PlanningEntityAccess.objects.filter(
-            user=request.user,
-            content_type=ct,
-            object_id=target.id,
-            access_level__in=["COACH", "OWNER", "MANAGER"],
-        ).exists()
-
-        if is_self_revoke or owner_record:
+        # Only Owners, Managers, or Global Coaches (if configured) can revoke
+        if role in ["OWNER", "COACH", "MANAGER"]:
             access_record.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
 

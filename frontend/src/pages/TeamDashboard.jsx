@@ -4,11 +4,11 @@ import { useAuth } from '@/AuthContext';
 import { apiRequest } from '@/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, ArrowLeft, AlertTriangle, Handshake, Eye, UserCheck, Trash2 } from 'lucide-react';
+import { Users, ArrowLeft, AlertTriangle, Handshake, Briefcase, Eye, UserCheck, Trash2 } from 'lucide-react';
 import { FederationFlag } from '@/components/ui/FederationFlag';
 import { EditTeamModal } from '@/components/dashboard/EditTeamModal';
 import { InviteUserModal } from '@/components/dashboard/InviteUserModal';
-import { useAccessControl } from '@/hooks/useAccessControl'; // <--- Hook
+import { useAccessControl } from '@/hooks/useAccessControl';
 
 // Tabs
 import { YearlyPlansTab } from '@/components/dashboard/tabs/YearlyPlansTab';
@@ -20,10 +20,11 @@ import { HealthTab } from '@/components/dashboard/tabs/HealthTab';
 import { AnalyticsTab } from '@/components/dashboard/tabs/AnalyticsTab';
 import { GapAnalysisTab } from '@/components/dashboard/tabs/GapAnalysisTab';
 import { LogisticsTab } from '@/components/dashboard/tabs/LogisticsTab';
+import { WeeklyPlanTab } from '@/components/dashboard/tabs/WeeklyPlanTab';
 
 export default function TeamDashboard() {
   const { id } = useParams();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [team, setTeam] = useState(null);
   const [activeTab, setActiveTab] = useState('goals');
   const [loading, setLoading] = useState(true);
@@ -61,27 +62,36 @@ export default function TeamDashboard() {
   if (loading) return <div className="p-8">Loading...</div>;
   if (!team) return <div className="p-8">Team not found.</div>;
 
-  const tabs = ['weekly', 'yearly', 'gap_analysis', 'goals', 'programs', 'competitions', 'logistics', 'logs', 'health', 'analytics', 'profile'];
+  const tabs = ['weekly'];
+  if (perms.canViewYearlyPlan) tabs.push('yearly');
+  if (perms.canViewGapAnalysis) tabs.push('gap_analysis');
+  if (perms.canViewPerformance) tabs.push('goals', 'programs', 'competitions');
+  if (perms.canViewLogistics) tabs.push('logistics');
+  if (perms.canViewHealth) tabs.push('logs', 'health', 'analytics');
+  tabs.push('profile');
 
   return (
     <div className="p-8 min-h-screen bg-gray-50">
       <div className="flex justify-between items-start mb-8">
         <div className="flex items-center gap-4">
-             <div className="h-16 w-16 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 border-2 border-white shadow-sm"><Users className="h-8 w-8" /></div>
+            <div className="h-16 w-16 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 border-2 border-white shadow-sm"><Users className="h-8 w-8" /></div>
             <div>
                 <h1 className="text-3xl font-bold text-gray-900">{team.team_name}</h1>
                 <div className="flex items-center gap-3 text-muted-foreground mt-1">
                     <span className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded text-xs font-bold uppercase">{team.discipline}</span>
                     <span>{team.current_level}</span>
                     <FederationFlag federation={team.federation} />
-                    
+
                     {/* BADGES */}
                     {perms.isCollaborator && <span className="bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded border border-indigo-200 uppercase flex items-center gap-1"><Handshake className="h-3 w-3"/> Collaborating</span>}
+                    {perms.isManager && <span className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded border border-green-200 uppercase flex items-center gap-1"><Briefcase className="h-3 w-3"/> Manager</span>}
                     {perms.isObserver && <span className="bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded border border-amber-200 uppercase flex items-center gap-1"><Eye className="h-3 w-3"/> Observer</span>}
                 </div>
             </div>
         </div>
-        <a href="#/"><Button variant="outline"><ArrowLeft className="h-4 w-4 mr-2" /> Back to Dashboard</Button></a>
+        <div className="flex gap-2">
+            <a href="#/"><Button variant="outline"><ArrowLeft className="h-4 w-4 mr-2" /> Back to Dashboard</Button></a>
+        </div>
       </div>
 
       <div className="flex space-x-2 border-b mb-6 overflow-x-auto no-scrollbar">
@@ -91,7 +101,6 @@ export default function TeamDashboard() {
       </div>
 
       <div className="min-h-[400px]">
-        {/* PASS PERMISSIONS & READONLY */}
         {activeTab === 'weekly' && <WeeklyPlanTab team={team} readOnly={perms.readOnlyStructure} permissions={perms} />}
         {activeTab === 'yearly' && <YearlyPlansTab team={team} readOnly={perms.readOnlyStructure} permissions={perms} />}
         {activeTab === 'gap_analysis' && <GapAnalysisTab team={team} readOnly={perms.readOnlyStructure} />}
@@ -108,11 +117,11 @@ export default function TeamDashboard() {
               <Card>
                 <CardHeader className="flex flex-row justify-between items-center">
                     <CardTitle>Team Details</CardTitle>
-                    {/* Invite/Edit only for Owner */}
-                    {perms.isOwner && (
+                    {/* Invite/Edit only for Owner/Staff who can edit Profile */}
+                    {perms.canEditProfile && (
                         <div className="flex gap-2">
                             <InviteUserModal entityType="Team" entityId={team.id} entityName={team.team_name} trigger={<Button size="sm" variant="outline">Invite Staff</Button>} />
-                            <EditTeamModal team={team} onSaved={fetchTeam} />
+                            <EditTeamModal team={team} onSaved={fetchData} />
                         </div>
                     )}
                 </CardHeader>

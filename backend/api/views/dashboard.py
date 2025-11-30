@@ -1,10 +1,10 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import permissions
+from django.shortcuts import get_object_or_404
 from django.db.models import Q
 from django.contrib.contenttypes.models import ContentType
 from datetime import date, timedelta
-from api.services import get_accessible_skaters, get_access_role
 
 from api.models import (
     Skater,
@@ -24,13 +24,14 @@ from api.models import (
     User,
 )
 from api.serializers import SessionLogSerializer
-
-# FIX: Added IsCoachOrOwner to the import list
 from api.permissions import IsCoachUser, IsCoachOrOwner
+from api.services import get_accessible_skaters, get_access_role
 
 
 # --- 1. COACH DASHBOARD AGGREGATOR ---
 class CoachDashboardStatsView(APIView):
+    # This view is specific to the logged-in Coach's operational view.
+    # IsCoachUser is appropriate here (Global Coach Role required).
     permission_classes = [permissions.IsAuthenticated, IsCoachUser]
 
     def get(self, request):
@@ -371,7 +372,7 @@ class SkaterStatsView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsCoachOrOwner]
 
     def get(self, request, skater_id):
-        skater = Skater.objects.get(id=skater_id)
+        skater = get_object_or_404(Skater, id=skater_id)
 
         # Manual Permission Check
         self.check_object_permissions(request, skater)
@@ -406,9 +407,13 @@ class SkaterStatsView(APIView):
 
 # --- 3. TEAM STATS ---
 class TeamStatsView(APIView):
-    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    # FIX: Use Context-Aware permission
+    permission_classes = [permissions.IsAuthenticated, IsCoachOrOwner]
 
     def get(self, request, team_id):
+        team = get_object_or_404(Team, id=team_id)
+        self.check_object_permissions(request, team)
+
         ct = ContentType.objects.get_for_model(Team)
         all_results = (
             CompetitionResult.objects.filter(
@@ -429,9 +434,13 @@ class TeamStatsView(APIView):
 
 # --- 4. SYNCHRO STATS ---
 class SynchroStatsView(APIView):
-    permission_classes = [permissions.IsAuthenticated, IsCoachUser]
+    # FIX: Use Context-Aware permission
+    permission_classes = [permissions.IsAuthenticated, IsCoachOrOwner]
 
     def get(self, request, team_id):
+        team = get_object_or_404(SynchroTeam, id=team_id)
+        self.check_object_permissions(request, team)
+
         ct = ContentType.objects.get_for_model(SynchroTeam)
         all_results = (
             CompetitionResult.objects.filter(

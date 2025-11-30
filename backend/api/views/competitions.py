@@ -1,6 +1,6 @@
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError, PermissionDenied
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from datetime import date
@@ -25,6 +25,7 @@ from api.serializers import (
     ProgramAssetSerializer,
 )
 from api.permissions import IsCoachUser, IsCoachOrOwner
+from api.services import get_access_role
 
 
 class CompetitionListCreateView(generics.ListCreateAPIView):
@@ -41,9 +42,10 @@ class CompetitionListCreateView(generics.ListCreateAPIView):
         return queryset
 
     def create(self, request, *args, **kwargs):
-        # Only coaches should create comps
+        # Global Role Check: Only Coaches/Staff can create global competitions
         if not (
-            request.user.role in ["COACH", "COLLABORATOR"] or request.user.is_superuser
+            request.user.role in ["COACH", "COLLABORATOR", "MANAGER"]
+            or request.user.is_superuser
         ):
             return Response({"error": "Forbidden"}, status=403)
 
@@ -86,13 +88,18 @@ class CompetitionResultListCreateView(generics.ListCreateAPIView):
     def get_queryset(self):
         skater_id = self.kwargs["skater_id"]
         skater = Skater.objects.get(id=skater_id)
-        # FIX: Include Partner B entities
-        entities = (
-            list(skater.singles_entities.all())
-            + list(skater.solodance_entities.all())
-            + list(skater.teams_as_partner_a.all())
-            + list(skater.teams_as_partner_b.all())
+
+        # --- SECURITY ---
+        if not get_access_role(self.request.user, skater):
+            return CompetitionResult.objects.none()
+        # ----------------
+
+        # Find results for all skater's entities
+        entities = list(skater.singles_entities.all()) + list(
+            skater.solodance_entities.all()
         )
+        # Note: We could add teams_as_partner_a/b here if holistic view is desired
+
         entity_ids = [e.id for e in entities]
         return CompetitionResult.objects.filter(object_id__in=entity_ids).order_by(
             "-competition__start_date"
@@ -102,10 +109,15 @@ class CompetitionResultListCreateView(generics.ListCreateAPIView):
         skater_id = self.kwargs["skater_id"]
         skater = Skater.objects.get(id=skater_id)
 
+        # --- SECURITY: Block Observers ---
+        role = get_access_role(self.request.user, skater)
+        if role in ["VIEWER", "OBSERVER"]:
+            raise PermissionDenied("Observers cannot create results.")
+        # ---------------------------------
+
         # Try explicit entity ID
         entity_id = self.request.data.get("planning_entity_id")
         entity = None
-        # FIX: Include Partner B entities
         all_entities = (
             list(skater.singles_entities.all())
             + list(skater.solodance_entities.all())
@@ -139,12 +151,21 @@ class SkaterTestListCreateView(generics.ListCreateAPIView):
     serializer_class = SkaterTestSerializer
 
     def get_queryset(self):
-        return SkaterTest.objects.filter(skater_id=self.kwargs["skater_id"]).order_by(
-            "-test_date"
-        )
+        skater_id = self.kwargs["skater_id"]
+        skater = Skater.objects.get(id=skater_id)
+
+        if not get_access_role(self.request.user, skater):
+            return SkaterTest.objects.none()
+
+        return SkaterTest.objects.filter(skater=skater).order_by("-test_date")
 
     def perform_create(self, serializer):
         skater = Skater.objects.get(id=self.kwargs["skater_id"])
+
+        role = get_access_role(self.request.user, skater)
+        if role in ["VIEWER", "OBSERVER"]:
+            raise PermissionDenied("Observers cannot log tests.")
+
         serializer.save(skater=skater)
 
 
@@ -159,7 +180,12 @@ class ProgramListCreateView(generics.ListCreateAPIView):
     serializer_class = ProgramSerializer
 
     def get_queryset(self):
-        skater = Skater.objects.get(id=self.kwargs["skater_id"])
+        skater_id = self.kwargs["skater_id"]
+        skater = Skater.objects.get(id=skater_id)
+
+        if not get_access_role(self.request.user, skater):
+            return Program.objects.none()
+
         entities = list(skater.singles_entities.all()) + list(
             skater.solodance_entities.all()
         )
@@ -167,6 +193,12 @@ class ProgramListCreateView(generics.ListCreateAPIView):
         return Program.objects.filter(object_id__in=entity_ids).order_by("-season")
 
     def perform_create(self, serializer):
+        skater = Skater.objects.get(id=self.kwargs["skater_id"])
+
+        role = get_access_role(self.request.user, skater)
+        if role in ["VIEWER", "OBSERVER"]:
+            raise PermissionDenied("Observers cannot create programs.")
+
         entity_id = self.request.data.get("planning_entity_id")
         entity_type = self.request.data.get("planning_entity_type")
 
@@ -177,6 +209,11 @@ class ProgramListCreateView(generics.ListCreateAPIView):
             "SynchroTeam": SynchroTeam,
         }
         model_class = model_map.get(entity_type)
+        if not model_class:
+            # Simple fallback
+            entity_id = skater.singles_entities.first().id
+            model_class = SinglesEntity
+
         content_type = ContentType.objects.get_for_model(model_class)
         serializer.save(content_type=content_type, object_id=entity_id)
 
@@ -188,15 +225,16 @@ class ProgramDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 
 class CompetitionResultListByTeamView(generics.ListCreateAPIView):
-    """
-    List/Create Results for a specific TEAM.
-    """
-
     permission_classes = [permissions.IsAuthenticated, IsCoachUser]
     serializer_class = CompetitionResultSerializer
 
     def get_queryset(self):
         team_id = self.kwargs["team_id"]
+        team = Team.objects.get(id=team_id)
+
+        if not get_access_role(self.request.user, team):
+            return CompetitionResult.objects.none()
+
         ct = ContentType.objects.get_for_model(Team)
         return CompetitionResult.objects.filter(
             content_type=ct, object_id=team_id
@@ -204,6 +242,12 @@ class CompetitionResultListByTeamView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         team_id = self.kwargs["team_id"]
+        team = Team.objects.get(id=team_id)
+
+        role = get_access_role(self.request.user, team)
+        if role in ["VIEWER", "OBSERVER"]:
+            raise PermissionDenied("Observers cannot create results.")
+
         ct = ContentType.objects.get_for_model(Team)
         serializer.save(content_type=ct, object_id=team_id)
 
@@ -214,6 +258,11 @@ class ProgramListCreateByTeamView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         team_id = self.kwargs["team_id"]
+        team = Team.objects.get(id=team_id)
+
+        if not get_access_role(self.request.user, team):
+            return Program.objects.none()
+
         ct = ContentType.objects.get_for_model(Team)
         return Program.objects.filter(content_type=ct, object_id=team_id).order_by(
             "-season"
@@ -221,20 +270,27 @@ class ProgramListCreateByTeamView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         team_id = self.kwargs["team_id"]
+        team = Team.objects.get(id=team_id)
+
+        role = get_access_role(self.request.user, team)
+        if role in ["VIEWER", "OBSERVER"]:
+            raise PermissionDenied("Observers cannot create programs.")
+
         ct = ContentType.objects.get_for_model(Team)
         serializer.save(content_type=ct, object_id=team_id)
 
 
 class SynchroCompetitionResultListCreateView(generics.ListCreateAPIView):
-    """
-    List/Create Results specifically for a SYNCHRO Team.
-    """
-
     permission_classes = [permissions.IsAuthenticated, IsCoachUser]
     serializer_class = CompetitionResultSerializer
 
     def get_queryset(self):
         team_id = self.kwargs["team_id"]
+        team = SynchroTeam.objects.get(id=team_id)
+
+        if not get_access_role(self.request.user, team):
+            return CompetitionResult.objects.none()
+
         ct = ContentType.objects.get_for_model(SynchroTeam)
         return CompetitionResult.objects.filter(
             content_type=ct, object_id=team_id
@@ -242,6 +298,12 @@ class SynchroCompetitionResultListCreateView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         team_id = self.kwargs["team_id"]
+        team = SynchroTeam.objects.get(id=team_id)
+
+        role = get_access_role(self.request.user, team)
+        if role in ["VIEWER", "OBSERVER"]:
+            raise PermissionDenied("Observers cannot create results.")
+
         ct = ContentType.objects.get_for_model(SynchroTeam)
         serializer.save(content_type=ct, object_id=team_id)
 
@@ -252,6 +314,11 @@ class SynchroProgramListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         team_id = self.kwargs["team_id"]
+        team = SynchroTeam.objects.get(id=team_id)
+
+        if not get_access_role(self.request.user, team):
+            return Program.objects.none()
+
         ct = ContentType.objects.get_for_model(SynchroTeam)
         return Program.objects.filter(content_type=ct, object_id=team_id).order_by(
             "-season"
@@ -259,6 +326,12 @@ class SynchroProgramListCreateView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         team_id = self.kwargs["team_id"]
+        team = SynchroTeam.objects.get(id=team_id)
+
+        role = get_access_role(self.request.user, team)
+        if role in ["VIEWER", "OBSERVER"]:
+            raise PermissionDenied("Observers cannot create programs.")
+
         ct = ContentType.objects.get_for_model(SynchroTeam)
         serializer.save(content_type=ct, object_id=team_id)
 
@@ -270,6 +343,17 @@ class ProgramAssetCreateView(generics.CreateAPIView):
     def perform_create(self, serializer):
         program_id = self.kwargs["program_id"]
         program = Program.objects.get(id=program_id)
+
+        # Resolve Entity from Program
+        entity = program.planning_entity
+        if hasattr(entity, "skater"):
+            entity = entity.skater
+
+        # Security Check
+        role = get_access_role(self.request.user, entity)
+        if not role or role in ["VIEWER", "OBSERVER"]:
+            raise PermissionDenied("You do not have permission to modify this program.")
+
         serializer.save(program=program)
 
 
@@ -277,3 +361,17 @@ class ProgramAssetDestroyView(generics.DestroyAPIView):
     permission_classes = [permissions.IsAuthenticated, IsCoachUser]
     serializer_class = ProgramAssetSerializer
     queryset = ProgramAsset.objects.all()
+
+    def perform_destroy(self, instance):
+        program = instance.program
+        entity = program.planning_entity
+        if hasattr(entity, "skater"):
+            entity = entity.skater
+
+        # Security Check
+        role = get_access_role(self.request.user, entity)
+        # Collaborators CAN edit/delete assets (part of "Edit Program"), but Observers cannot.
+        if not role or role in ["VIEWER", "OBSERVER"]:
+            raise PermissionDenied("You do not have permission to modify this program.")
+
+        instance.delete()

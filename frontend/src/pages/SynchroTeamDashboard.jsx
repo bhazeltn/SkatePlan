@@ -1,26 +1,28 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { useAuth } from '@/AuthContext';
+import { useAuth } from '@/features/auth/AuthContext';
 import { apiRequest } from '@/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, ArrowLeft, Trash2, UserCheck, Eye, Handshake, Briefcase } from 'lucide-react';
+import { Users, ArrowLeft, Trash2, UserCheck, Eye, Handshake } from 'lucide-react';
 import { FederationFlag } from '@/components/ui/FederationFlag';
-import { InviteUserModal } from '@/components/dashboard/InviteUserModal';
-import { useAccessControl } from '@/hooks/useAccessControl'; 
+import { useAccessControl } from '@/hooks/useAccessControl';
+
+import { InviteUserModal } from '@/features/profiles/components/InviteUserModal';
 
 // Tabs
-import { SynchroRosterTab } from '@/components/dashboard/tabs/SynchroRosterTab';
-import { YearlyPlansTab } from '@/components/dashboard/tabs/YearlyPlansTab';
-import { GoalsTab } from '@/components/dashboard/tabs/GoalsTab';
-import { ProgramsTab } from '@/components/dashboard/tabs/ProgramsTab';
-import { CompetitionsTab } from '@/components/dashboard/tabs/CompetitionsTab';
-import { LogsTab } from '@/components/dashboard/tabs/LogsTab';
-import { HealthTab } from '@/components/dashboard/tabs/HealthTab';
-import { AnalyticsTab } from '@/components/dashboard/tabs/AnalyticsTab';
-import { GapAnalysisTab } from '@/components/dashboard/tabs/GapAnalysisTab';
-import { LogisticsTab } from '@/components/dashboard/tabs/LogisticsTab';
-import { SynchroProfileTab } from '@/components/dashboard/tabs/SynchroProfileTab';
+import { SynchroRosterTab } from '@/features/profiles/components/SynchroRosterTab';
+import { SynchroProfileTab } from '@/features/profiles/components/SynchroProfileTab';
+import { WeeklyPlanTab } from '@/features/planning/components/WeeklyPlanTab';
+import { YearlyPlansTab } from '@/features/planning/components/YearlyPlansTab';
+import { GapAnalysisTab } from '@/features/planning/components/GapAnalysisTab';
+import { GoalsTab } from '@/features/performance/components/GoalsTab';
+import { ProgramsTab } from '@/features/performance/components/ProgramsTab';
+import { CompetitionsTab } from '@/features/performance/components/CompetitionsTab';
+import { AnalyticsTab } from '@/features/performance/components/AnalyticsTab';
+import { LogsTab } from '@/features/health/components/LogsTab';
+import { HealthTab } from '@/features/health/components/HealthTab';
+import { LogisticsTab } from '@/features/logistics/components/LogisticsTab';
 
 export default function SynchroTeamDashboard() {
   const { id } = useParams();

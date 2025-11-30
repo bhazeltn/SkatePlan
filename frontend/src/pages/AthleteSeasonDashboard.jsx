@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { useAuth } from '@/AuthContext';
+import { useAuth } from '@/features/auth/AuthContext';
 import { apiRequest } from '@/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,19 +8,19 @@ import { User, Calendar, MapPin, ArrowLeft, LogOut, Settings, Handshake, Eye } f
 import { FederationFlag } from '@/components/ui/FederationFlag';
 import { useAccessControl } from '@/hooks/useAccessControl';
 
-// Tabs
-import { WeeklyPlanTab } from '@/components/dashboard/tabs/WeeklyPlanTab';
-import { YearlyPlansTab } from '@/components/dashboard/tabs/YearlyPlansTab';
-import { GoalsTab } from '@/components/dashboard/tabs/GoalsTab';
-import { ProgramsTab } from '@/components/dashboard/tabs/ProgramsTab';
-import { CompetitionsTab } from '@/components/dashboard/tabs/CompetitionsTab';
-import { TestsTab } from '@/components/dashboard/tabs/TestsTab';
-import { LogsTab } from '@/components/dashboard/tabs/LogsTab';
-import { HealthTab } from '@/components/dashboard/tabs/HealthTab';
-import { AnalyticsTab } from '@/components/dashboard/tabs/AnalyticsTab';
-import { ProfileTab } from '@/components/dashboard/tabs/ProfileTab';
-import { GapAnalysisTab } from '@/components/dashboard/tabs/GapAnalysisTab';
-import { LogisticsTab } from '@/components/dashboard/tabs/LogisticsTab';
+// Tabs - Updated Paths
+import { WeeklyPlanTab } from '@/features/planning/components/WeeklyPlanTab';
+import { YearlyPlansTab } from '@/features/planning/components/YearlyPlansTab';
+import { GapAnalysisTab } from '@/features/planning/components/GapAnalysisTab';
+import { GoalsTab } from '@/features/performance/components/GoalsTab';
+import { ProgramsTab } from '@/features/performance/components/ProgramsTab';
+import { CompetitionsTab } from '@/features/performance/components/CompetitionsTab';
+import { TestsTab } from '@/features/performance/components/TestsTab';
+import { AnalyticsTab } from '@/features/performance/components/AnalyticsTab';
+import { LogsTab } from '@/features/health/components/LogsTab';
+import { HealthTab } from '@/features/health/components/HealthTab';
+import { ProfileTab } from '@/features/profiles/components/ProfileTab';
+import { LogisticsTab } from '@/features/logistics/components/LogisticsTab';
 
 export default function AthleteSeasonDashboard() {
   const params = useParams();

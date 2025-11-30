@@ -1,19 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '../AuthContext';
+import { useAuth } from '@/features/auth/AuthContext';
 import { apiRequest } from '@/api';
-import { AddSkaterModal } from '../components/dashboard/AddSkaterModal';
-import { CreateTeamModal } from '@/components/dashboard/CreateTeamModal';
-import { CreateSynchroTeamModal } from '@/components/dashboard/CreateSynchroTeamModal';
-import { RosterList } from '../components/dashboard/RosterList';
-import { TeamList } from '@/components/dashboard/TeamList';
-import { SynchroTeamList } from '@/components/dashboard/SynchroTeamList';
+import { AddSkaterModal } from '@/features/profiles/components/AddSkaterModal';
+import { CreateTeamModal } from '@/features/profiles/components/CreateTeamModal';
+import { CreateSynchroTeamModal } from '@/features/profiles/components/CreateSynchroTeamModal';
+import { RosterList } from '@/features/profiles/components/RosterList';
+import { TeamList } from '@/features/profiles/components/TeamList';
+import { SynchroTeamList } from '@/features/profiles/components/SynchroTeamList';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { 
     Clock, Calendar, Activity, HeartPulse, CheckCircle2, FileWarning, 
     ShieldCheck, ClipboardList, Settings, Plus, Users, UserPlus, Handshake, Eye
-} from 'lucide-react'; // Added Eye
+} from 'lucide-react';
 import GuardianDashboard from './GuardianDashboard';
 import { Navigate } from 'react-router-dom';
 

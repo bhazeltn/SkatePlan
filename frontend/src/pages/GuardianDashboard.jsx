@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '@/AuthContext';
+import { useAuth } from '@/features/auth/AuthContext';
 import { apiRequest } from '@/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { User, ArrowRight, ShieldCheck, Settings } from 'lucide-react';

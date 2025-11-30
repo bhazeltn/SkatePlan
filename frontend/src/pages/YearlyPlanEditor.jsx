@@ -1,19 +1,22 @@
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '@/AuthContext';
+import { useAuth } from '@/features/auth/AuthContext';
 import { apiRequest } from '@/api';
+import { useAccessControl } from '@/hooks/useAccessControl';
+
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea'; 
-import { MacrocycleModal } from '@/components/planning/MacrocycleModal';
-import { GoalModal } from '@/components/planning/GoalModal';
-import { GapAnalysisCard } from '@/components/planning/GapAnalysisCard'; 
-import { useAccessControl } from '@/hooks/useAccessControl'; // <--- Import Hook
 import { 
     ArrowLeft, Calendar, CheckCircle2, Circle, Trash2, Pencil,
     Zap, Palette, Dumbbell, Brain, Lock 
 } from 'lucide-react';
+
+// Components
+import { MacrocycleModal } from '@/features/planning/components/MacrocycleModal';
+import { GoalModal } from '@/features/performance/components/GoalModal';
+import { GapAnalysisCard } from '@/features/planning/components/GapAnalysisCard';
 
 const formatDate = (d) => new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 

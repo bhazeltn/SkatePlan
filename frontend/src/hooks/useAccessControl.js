@@ -1,4 +1,4 @@
-import { useAuth } from '@/AuthContext';
+import { useAuth } from '@/features/auth/AuthContext';
 
 /**
  * Centralized Permission Logic.

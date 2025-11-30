@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useLocation } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useAuth } from '@/features/auth/AuthContext';
 import { apiRequest } from '@/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { User, MapPin, ArrowLeft, LogOut, Settings, Handshake, Eye } from 'lucide-react'; // Removed Calendar
+import { User, Calendar, MapPin, ArrowLeft, LogOut, Settings, Handshake, Eye } from 'lucide-react';
 import { FederationFlag } from '@/components/ui/FederationFlag';
 import { useAccessControl } from '@/hooks/useAccessControl';
 
@@ -24,7 +24,6 @@ import { LogisticsTab } from '@/features/logistics/components/LogisticsTab';
 
 export default function AthleteSeasonDashboard() {
   const params = useParams();
-  const location = useLocation();
   const id = params.id || params.skaterId;
   const { token, user, logout } = useAuth();
   const [skater, setSkater] = useState(null);
@@ -43,17 +42,7 @@ export default function AthleteSeasonDashboard() {
 
   useEffect(() => { fetchSkater(); }, [id, token]);
 
-  useEffect(() => {
-      const searchParams = new URLSearchParams(location.search);
-      const tab = searchParams.get('tab');
-      if (tab) {
-          setActiveTab(tab);
-      }
-  }, [location.search]);
-
-  // --- CENTRALIZED PERMISSIONS ---
   const perms = useAccessControl(skater);
-  // -------------------------------
 
   const formatTabLabel = (str) => str.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
 
@@ -64,13 +53,8 @@ export default function AthleteSeasonDashboard() {
   if (perms.canViewYearlyPlan) tabs.push('yearly');
   if (perms.canViewGapAnalysis) tabs.push('gap_analysis');
   if (perms.canViewPerformance) tabs.push('goals', 'programs', 'competitions');
-
-  if (skater?.synchro_teams?.length > 0 && perms.canViewLogistics) {
-      tabs.push('synchro_logistics');
-  }
-
+  if (skater?.synchro_teams?.length > 0 && perms.canViewLogistics) tabs.push('synchro_logistics');
   if (perms.canViewHealth) tabs.push('tests', 'logs', 'health', 'analytics');
-  
   tabs.push('profile');
 
   return (
@@ -82,15 +66,12 @@ export default function AthleteSeasonDashboard() {
                 <h1 className="text-3xl font-bold text-gray-900">{skater.full_name}</h1>
                 <div className="flex flex-wrap gap-3 text-sm text-muted-foreground mt-1 items-center">
                     
-                    {/* Federation */}
-                    <FederationFlag federation={skater.federation} />
-                    
-                    {/* Disciplines & Levels (Replaces DOB) */}
+                    {/* 1. Disciplines (Filtered by Backend) */}
                     <div className="flex items-center gap-2">
                         {skater.planning_entities && skater.planning_entities.length > 0 ? (
                             skater.planning_entities.map((ent, i) => (
-                                <span key={i} className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200 text-xs font-medium">
-                                    {ent.name} ({ent.current_level || '-'})
+                                <span key={i} className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200 text-xs font-bold">
+                                    {ent.name} <span className="font-normal text-slate-500">({ent.current_level || '-'})</span>
                                 </span>
                             ))
                         ) : (
@@ -98,10 +79,13 @@ export default function AthleteSeasonDashboard() {
                         )}
                     </div>
 
-                    {/* Home Club */}
+                    {/* 2. Flag */}
+                    <FederationFlag federation={skater.federation} />
+
+                    {/* 3. Club */}
                     {skater.home_club && <span className="flex items-center gap-1 text-gray-400 border-l pl-3 ml-1"><MapPin className="h-3 w-3" /> {skater.home_club}</span>}
                     
-                    {/* Role Badges */}
+                    {/* 4. Badges */}
                     {perms.isCollaborator && <span className="bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded border border-indigo-200 uppercase flex items-center gap-1"><Handshake className="h-3 w-3"/> Collaborating</span>}
                     {perms.isObserver && <span className="bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded border border-amber-200 uppercase flex items-center gap-1"><Eye className="h-3 w-3"/> Observer</span>}
                 </div>
@@ -120,7 +104,6 @@ export default function AthleteSeasonDashboard() {
         </div>
       </div>
 
-      {/* ... Tabs & Content (Same as before) ... */}
       <div className="flex space-x-2 border-b mb-6 overflow-x-auto no-scrollbar">
         {tabs.map((tab) => (
           <button key={tab} onClick={() => setActiveTab(tab)} className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === tab ? 'border-brand-blue text-brand-blue' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>{formatTabLabel(tab)}</button>

@@ -222,7 +222,9 @@ class TeamListView(generics.ListAPIView):
         ids = PlanningEntityAccess.objects.filter(
             user=self.request.user, content_type=ct
         ).values_list("object_id", flat=True)
-        return Team.objects.filter(id__in=ids)
+
+        # FIX: Order by Active first
+        return Team.objects.filter(id__in=ids).order_by("-is_active", "team_name")
 
 
 # --- SYNCHRO ---
@@ -266,4 +268,8 @@ class SynchroTeamListView(generics.ListAPIView):
         ids = PlanningEntityAccess.objects.filter(
             user=self.request.user, content_type=ct
         ).values_list("object_id", flat=True)
-        return SynchroTeam.objects.filter(id__in=ids).order_by("team_name")
+
+        # FIX: Order by Active first
+        return SynchroTeam.objects.filter(id__in=ids).order_by(
+            "-is_active", "team_name"
+        )

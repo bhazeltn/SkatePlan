@@ -20,13 +20,18 @@ class SendInviteView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
-        email = request.data.get("email")
+        # Support both single 'email' and list of 'emails'
+        emails = request.data.get("emails", [])
+        single_email = request.data.get("email")
+        if single_email:
+            emails.append(single_email)
+
         role = request.data.get("role")
         entity_type = request.data.get("entity_type")
         entity_id = request.data.get("entity_id")
 
-        if not email or not role:
-            return Response({"error": "Email and Role required"}, status=400)
+        if not emails or not role:
+            return Response({"error": "Emails and Role required"}, status=400)
 
         # 1. Find Target
         target = None
@@ -40,75 +45,85 @@ class SendInviteView(APIView):
         if not target:
             return Response({"error": "Target not found"}, status=404)
 
-        # 2. SECURITY CHECK: Can this user invite people?
-        # Only Owners, Head Coaches, or Managers can grow the team/staff.
-        # Collaborators and Observers CANNOT invite others.
+        # 2. SECURITY CHECK
         user_role = get_access_role(request.user, target)
-
         if user_role not in ["OWNER", "COACH", "MANAGER"]:
             raise PermissionDenied(
                 "You do not have permission to invite users to this entity."
             )
 
-        # 3. Compliance Check (Minors)
-        if role == "ATHLETE" and entity_type == "Skater":
-            if target.date_of_birth:
-                today = date.today()
-                dob = target.date_of_birth
-                age = (
-                    today.year
-                    - dob.year
-                    - ((today.month, today.day) < (dob.month, dob.day))
-                )
+        # 3. Loop and Send
+        results = []
 
-                if age < 13:
-                    return Response(
-                        {
-                            "error": "SafeSport: Athletes under 13 cannot have direct accounts. Please invite a Parent/Guardian."
-                        },
-                        status=400,
+        for email in emails:
+            email = email.strip()
+            if not email:
+                continue
+
+            # Compliance Check (Minors - Skaters Only) - Skip for bulk team invites usually
+            if role == "ATHLETE" and entity_type == "Skater":
+                if target.date_of_birth:
+                    today = date.today()
+                    dob = target.date_of_birth
+                    age = (
+                        today.year
+                        - dob.year
+                        - ((today.month, today.day) < (dob.month, dob.day))
                     )
+                    if age < 13:
+                        results.append(
+                            {
+                                "email": email,
+                                "status": "failed",
+                                "reason": "SafeSport: Under 13",
+                            }
+                        )
+                        continue
 
-        # 4. Create Invitation
-        invite = Invitation.objects.create(
-            email=email,
-            sender=request.user,
-            role=role,
-            content_type=ContentType.objects.get_for_model(target),
-            object_id=target.id,
-            token=str(uuid.uuid4()),
-        )
+            # Create Invitation
+            invite = Invitation.objects.create(
+                email=email,
+                sender=request.user,
+                role=role,
+                content_type=ContentType.objects.get_for_model(target),
+                object_id=target.id,
+                token=str(uuid.uuid4()),
+            )
 
-        # 5. Send Email
-        base_url = settings.FRONTEND_URL.rstrip("/")
-        accept_link = f"{base_url}/#/accept-invite/{invite.token}"
+            # Send Email
+            base_url = settings.FRONTEND_URL.rstrip("/")
+            accept_link = f"{base_url}/#/accept-invite/{invite.token}"
 
-        subject = f"You've been invited to SkatePlan"
-        html_message = f"""
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 8px;">
-            <h2 style="color: #2563eb;">Welcome to SkatePlan!</h2>
-            <p>Hello,</p>
-            <p>Your coach <strong>{request.user.full_name}</strong> has invited you to join their roster on SkatePlan.</p>
-            <p><strong>Role:</strong> {role.replace('_', ' ').title()}</p>
-            <p><strong>Team/Athlete:</strong> {str(target)}</p>
-            <br>
-            <a href="{accept_link}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">Accept Invitation</a>
-            <br><br>
-            <p style="font-size: 12px; color: #666;">Or copy this link: <br> <a href="{accept_link}">{accept_link}</a></p>
-        </div>
-        """
+            display_role = role.replace("_", " ").title()
+            if role == "ATHLETE" and entity_type != "Skater":
+                display_role = "Team Member"
 
-        send_mail(
-            subject=subject,
-            message=f"Accept at: {accept_link}",
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[email],
-            html_message=html_message,
-            fail_silently=False,
-        )
+            html_message = f"""
+            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 8px;">
+                <h2 style="color: #2563eb;">Welcome to SkatePlan!</h2>
+                <p>Hello,</p>
+                <p>Your coach <strong>{request.user.full_name}</strong> has invited you to join their roster on SkatePlan.</p>
+                <p><strong>Role:</strong> {display_role}</p>
+                <p><strong>Team/Athlete:</strong> {str(target)}</p>
+                <br>
+                <a href="{accept_link}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">Accept Invitation</a>
+                <br><br>
+                <p style="font-size: 12px; color: #666;">Or copy this link: <br> <a href="{accept_link}">{accept_link}</a></p>
+            </div>
+            """
+
+            send_mail(
+                subject=f"Invitation to join {str(target)}",
+                message=f"Accept at: {accept_link}",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[email],
+                html_message=html_message,
+                fail_silently=True,
+            )
+            results.append({"email": email, "status": "sent"})
 
         return Response(
-            {"message": "Invitation sent", "token": invite.token}, status=201
+            {"message": "Invitations processed", "results": results}, status=201
         )
 
 
@@ -116,7 +131,6 @@ class AcceptInviteView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def validate_requirements(self, invite):
-        # SafeSport Logic for Minors
         if invite.role == "ATHLETE" and isinstance(invite.target_entity, Skater):
             skater = invite.target_entity
             if skater.date_of_birth:
@@ -127,15 +141,13 @@ class AcceptInviteView(APIView):
                     - dob.year
                     - ((today.month, today.day) < (dob.month, dob.day))
                 )
-
                 if 13 <= age < 18:
                     ct = ContentType.objects.get_for_model(Skater)
                     has_guardian = PlanningEntityAccess.objects.filter(
                         content_type=ct, object_id=skater.id, access_level="GUARDIAN"
                     ).exists()
-
                     if not has_guardian:
-                        return f"SafeSport Compliance: As a minor athlete ({age}), a Parent/Guardian must accept their invitation and link their account before you can join."
+                        return f"SafeSport Compliance: As a minor athlete ({age}), a Parent/Guardian must accept their invitation first."
         return None
 
     def get(self, request, token):
@@ -150,7 +162,6 @@ class AcceptInviteView(APIView):
             )
 
         user_exists = User.objects.filter(email=invite.email).exists()
-
         return Response(
             {
                 "email": invite.email,
@@ -174,36 +185,30 @@ class AcceptInviteView(APIView):
 
         # --- 1. MAP ROLES ---
         final_role = invite.role
-        user_role = final_role
+        user_role = User.Role.OBSERVER  # Default safe
 
-        # Map Context Roles to Global User Roles
-        if final_role == "PARENT":
+        if final_role == "PARENT" or final_role == "GUARDIAN":
             user_role = User.Role.GUARDIAN
-        elif final_role == "ATHLETE":
+        elif final_role == "ATHLETE" or final_role == "SKATER":
             user_role = User.Role.SKATER
-        elif final_role in ["COLLABORATOR", "MANAGER"]:
+        elif final_role in ["COLLABORATOR", "MANAGER", "COACH"]:
             user_role = User.Role.COACH
-        elif final_role == "OBSERVER":
-            user_role = User.Role.OBSERVER
 
         # --- 2. RESOLVE USER ---
         user = None
         existing_user = User.objects.filter(email=invite.email).first()
 
         if existing_user:
-            # Login Check
             user = authenticate(email=invite.email, password=password)
             if not user:
                 return Response(
                     {"error": "Invalid password for existing account."}, status=401
                 )
         else:
-            # Create New
             if not password or len(password) < 6:
                 return Response(
                     {"error": "Password must be at least 6 characters"}, status=400
                 )
-
             with transaction.atomic():
                 user = User.objects.create_user(
                     email=invite.email,
@@ -214,8 +219,9 @@ class AcceptInviteView(APIView):
 
         # --- 3. ASSIGN PERMISSIONS ---
         entity = invite.target_entity
+        ct = ContentType.objects.get_for_model(entity)
 
-        # Link Skater Profile directly
+        # Case A: Direct Skater Link (Profile Ownership)
         if (invite.role == "ATHLETE" or invite.role == "SKATER") and hasattr(
             entity, "user_account"
         ):
@@ -223,21 +229,20 @@ class AcceptInviteView(APIView):
                 entity.user_account = user
                 entity.save()
 
-        # Grant Access Record
-        elif final_role in [
-            "GUARDIAN",
-            "PARENT",
-            "COLLABORATOR",
-            "MANAGER",
-            "OBSERVER",
-        ]:
-            access_level = "GUARDIAN"
-            if final_role == "PARENT":
-                access_level = "GUARDIAN"
-            elif final_role in ["COLLABORATOR", "MANAGER", "OBSERVER"]:
-                access_level = final_role
+        # Case B: Access Record (Team Members, Parents, Staff, Observers)
+        else:
+            # Map invitation role to PlanningEntityAccess level
+            access_level = "VIEWER"  # Default
 
-            ct = ContentType.objects.get_for_model(entity)
+            if final_role in ["COLLABORATOR", "MANAGER", "COACH"]:
+                access_level = final_role
+            elif final_role in ["PARENT", "GUARDIAN"]:
+                access_level = "GUARDIAN"
+            elif final_role in ["ATHLETE", "SKATER"]:
+                access_level = "SKATER"  # New PEA Level for Team Members
+            elif final_role == "OBSERVER":
+                access_level = "OBSERVER"
+
             PlanningEntityAccess.objects.get_or_create(
                 user=user,
                 content_type=ct,

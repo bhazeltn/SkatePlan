@@ -58,23 +58,18 @@ def get_access_role(user, entity):
 
 def get_accessible_skaters(user, filter_mode="ALL"):
     """
-    Returns a QuerySet of skaters visible to the user.
-    filter_mode:
-      'ALL' (Default): Everything (Roster + Shared + Self)
-      'OPERATIONAL': Only owned/collaborating (excludes Observers) - For Dashboard Stats
+    Returns QuerySet of ALL skaters (Active + Archived).
+    Sorted by Active First, then Name.
     """
     if user.role == "SKATER":
-        return Skater.objects.filter(user_account=user, is_active=True)
+        # Skaters only see themselves (Active only? Or should they see archived self? Usually active)
+        return Skater.objects.filter(user_account=user)
 
-    # 1. Get Access Records
     query = PlanningEntityAccess.objects.filter(user=user)
-
     if filter_mode == "OPERATIONAL":
         query = query.exclude(access_level__in=["VIEWER", "OBSERVER"])
 
-    # 2. Collect IDs
     skater_ids = set()
-
     for record in query:
         entity = record.planning_entity
         if not entity:
@@ -82,18 +77,22 @@ def get_accessible_skaters(user, filter_mode="ALL"):
 
         if isinstance(entity, Skater):
             skater_ids.add(entity.id)
-        elif hasattr(entity, "skater"):  # Wrapper entities
+        elif hasattr(entity, "skater"):
             skater_ids.add(entity.skater.id)
-        elif hasattr(entity, "partner_a"):  # Pair Team
+        elif hasattr(entity, "partner_a"):
             skater_ids.add(entity.partner_a.id)
             skater_ids.add(entity.partner_b.id)
-        elif hasattr(entity, "roster"):  # Synchro Team
+        elif hasattr(entity, "roster"):
             skater_ids.update(entity.roster.values_list("id", flat=True))
 
-    # 3. Add Identity (if applicable)
-    if user.role == "COACH":  # Or 'SKATER' disguised
-        linked = Skater.objects.filter(user_account=user, is_active=True).first()
+    if user.role == "COACH":
+        linked = Skater.objects.filter(user_account=user).first()
         if linked:
             skater_ids.add(linked.id)
 
-    return Skater.objects.filter(id__in=skater_ids, is_active=True).distinct()
+    # FIX: Removed is_active=True filter, added ordering
+    return (
+        Skater.objects.filter(id__in=skater_ids)
+        .distinct()
+        .order_by("-is_active", "full_name")
+    )

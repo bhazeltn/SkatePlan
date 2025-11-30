@@ -103,7 +103,10 @@ export function LogisticsTab({ team, skater, isSynchro, readOnly }) {
                       <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
                           <div className="space-y-2">
                               {/* Pass readOnly to managers */}
-                              <ItineraryManager tripId={trip.id} readOnly={readOnly} /> 
+                              <ItineraryManager 
+                                tripId={trip.id} 
+                                tripStartDate={trip.start_date}
+                                readOnly={readOnly} />
                           </div>
                           <div className="space-y-2">
                               <RoomingManager trip={trip} team={team} skater={mySkater} readOnly={readOnly} />

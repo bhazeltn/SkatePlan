@@ -1,13 +1,13 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'; // <--- Added Popover
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { FederationFlag } from '@/components/ui/FederationFlag';
-import { AlertTriangle, Shield, User, Mail, Users, Trash2, Eye, ChevronDown } from 'lucide-react';
+import { AlertTriangle, Shield, User, Mail, Users, Trash2, Eye, ChevronDown, Archive } from 'lucide-react';
 import { apiRequest } from '@/api';
 import { useAuth } from '@/features/auth/AuthContext';
 
-// Sibling Imports (Files in the same folder)
+// Sibling Imports
 import { EditSkaterModal } from './EditSkaterModal';
 import { EditDisciplineModal } from './EditDisciplineModal';
 import { InviteUserModal } from './InviteUserModal';
@@ -20,6 +20,15 @@ export function ProfileTab({ skater, onUpdated, readOnly, permissions }) {
       try {
           await apiRequest(`/skaters/${skater.id}/`, 'DELETE', null, token);
           window.location.hash = '#/';
+      } catch (e) { alert("Failed."); }
+  };
+
+  const handleArchive = async () => {
+      const action = skater.is_active ? 'archive' : 'restore';
+      if (!confirm(`Are you sure you want to ${action} this profile?`)) return;
+      try {
+          await apiRequest(`/skaters/${skater.id}/`, 'PATCH', { is_active: !skater.is_active }, token);
+          if (onUpdated) onUpdated();
       } catch (e) { alert("Failed."); }
   };
 
@@ -49,6 +58,8 @@ export function ProfileTab({ skater, onUpdated, readOnly, permissions }) {
 
   // Permission: Can invite? (Owner Only)
   const canInvite = permissions ? permissions.canEditProfile : !readOnly;
+  // Permission: Can delete/archive? (Owner Only)
+  const canManage = permissions ? permissions.canDelete : !readOnly;
 
   return (
     <div className="space-y-6">
@@ -61,7 +72,6 @@ export function ProfileTab({ skater, onUpdated, readOnly, permissions }) {
             {!readOnly && (
                 <div className="flex gap-2">
                     
-                    {/* CONSOLIDATED INVITE MENU */}
                     {canInvite && (
                         <Popover>
                             <PopoverTrigger asChild>
@@ -74,12 +84,14 @@ export function ProfileTab({ skater, onUpdated, readOnly, permissions }) {
                                     <InviteUserModal 
                                         entityType="Skater" entityId={skater.id} entityName={skater.full_name}
                                         defaultRole="OBSERVER"
+                                        lockRole={true} 
                                         trigger={<Button variant="ghost" size="sm" className="w-full justify-start font-normal h-9"><Eye className="h-4 w-4 mr-2 text-amber-500" /> Observer</Button>}
                                     />
 
                                     <InviteUserModal 
                                         entityType="Skater" entityId={skater.id} entityName={skater.full_name}
                                         defaultRole="COLLABORATOR"
+                                        lockRole={true} 
                                         trigger={<Button variant="ghost" size="sm" className="w-full justify-start font-normal h-9"><Users className="h-4 w-4 mr-2 text-indigo-500" /> Coach / Staff</Button>}
                                     />
 
@@ -125,7 +137,6 @@ export function ProfileTab({ skater, onUpdated, readOnly, permissions }) {
                 <div><label className="text-xs font-bold text-gray-500 uppercase">Home Club</label><p className="text-lg">{skater.home_club || '-'}</p></div>
             </div>
 
-            {/* ACCOUNT CONNECTIONS */}
             <div className="bg-slate-50 rounded-lg border border-slate-200 overflow-hidden">
                 <div className="px-4 py-2 bg-slate-100 border-b border-slate-200 flex justify-between items-center">
                     <h4 className="text-xs font-bold text-gray-700 uppercase">Linked Accounts</h4>
@@ -133,7 +144,6 @@ export function ProfileTab({ skater, onUpdated, readOnly, permissions }) {
                 
                 <div className="p-4 space-y-4">
                     
-                    {/* 1. Athlete Row */}
                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-8">
                         <div className="w-32 flex items-center gap-2 text-sm font-medium text-gray-900">
                             <User className="h-4 w-4 text-blue-500" /> Athlete
@@ -162,10 +172,9 @@ export function ProfileTab({ skater, onUpdated, readOnly, permissions }) {
                         </div>
                     </div>
 
-                    {/* 2. Guardian Row */}
                     <div className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-8">
                         <div className="w-32 flex items-center gap-2 text-sm font-medium text-gray-900 mt-1">
-                            <Shield className="h-4 w-4 text-green-600" /> Parent/Guardian
+                            <Shield className="h-4 w-4 text-purple-500" /> Parent/Guardian
                         </div>
                         <div className="flex-1 space-y-2">
                             {hasGuardian ? (
@@ -182,7 +191,6 @@ export function ProfileTab({ skater, onUpdated, readOnly, permissions }) {
                         </div>
                     </div>
 
-                    {/* 3. Collaborators Row */}
                     <div className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-8 pt-4 border-t border-slate-200">
                         <div className="w-32 flex items-center gap-2 text-sm font-medium text-gray-900 mt-1">
                             <Users className="h-4 w-4 text-indigo-500" /> Coaching Staff
@@ -215,11 +223,10 @@ export function ProfileTab({ skater, onUpdated, readOnly, permissions }) {
                         </div>
                     </div>
 
-                    {/* 4. Observers Row (Owner Only) */}
                     {!readOnly && permissions?.canManageStaff && ( 
                         <div className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-8 pt-4 border-t border-slate-200">
                             <div className="w-32 flex items-center gap-2 text-sm font-medium text-gray-900 mt-1">
-                                <Eye className="h-4 w-4 text-amber-500" /> Observers
+                                <Eye className="h-4 w-4 text-slate-500" /> Observers
                             </div>
                             <div className="flex-1 space-y-2">
                                 {skater.observers && skater.observers.length > 0 ? (
@@ -254,7 +261,6 @@ export function ProfileTab({ skater, onUpdated, readOnly, permissions }) {
         </CardContent>
       </Card>
       
-      {/* Disciplines Card */}
       <Card>
           <CardHeader className="flex flex-row justify-between items-center">
               <CardTitle>Disciplines & Levels</CardTitle>
@@ -272,13 +278,28 @@ export function ProfileTab({ skater, onUpdated, readOnly, permissions }) {
           </CardContent>
       </Card>
 
-      {/* Danger Zone - Only if canDelete (Owner) */}
-      {!readOnly && permissions?.canDelete && (
+      {/* Management / Danger Zone */}
+      {canManage && (
           <Card className="border-red-100">
-              <CardHeader className="bg-red-50/50 border-b border-red-100"><CardTitle className="text-red-800 flex items-center gap-2"><AlertTriangle className="h-5 w-5" /> Danger Zone</CardTitle></CardHeader>
-              <CardContent className="p-6 flex justify-between items-center">
-                  <div className="text-sm text-gray-600"><p className="font-medium text-gray-900">Delete Athlete</p><p>Permanently remove this profile and all data.</p></div>
-                  <Button variant="destructive" onClick={handleDelete}>Delete Profile</Button>
+              <CardHeader className="bg-red-50/50 border-b border-red-100"><CardTitle className="text-red-800 flex items-center gap-2"><AlertTriangle className="h-5 w-5" /> Management</CardTitle></CardHeader>
+              <CardContent className="p-6 flex flex-col gap-4">
+                  
+                  {/* ARCHIVE */}
+                  <div className="flex justify-between items-center border-b border-red-50 pb-4">
+                      <div className="text-sm text-gray-600">
+                          <p className="font-medium text-gray-900">{skater.is_active ? 'Archive Athlete' : 'Restore Athlete'}</p>
+                          <p>Move to the bottom of your roster. Data is preserved.</p>
+                      </div>
+                      <Button variant="outline" onClick={handleArchive}>
+                          <Archive className="h-4 w-4 mr-2" /> {skater.is_active ? 'Archive' : 'Restore'}
+                      </Button>
+                  </div>
+
+                  {/* DELETE */}
+                  <div className="flex justify-between items-center">
+                      <div className="text-sm text-gray-600"><p className="font-medium text-gray-900">Delete Athlete</p><p>Permanently remove this profile and all data.</p></div>
+                      <Button variant="destructive" onClick={handleDelete}>Delete Profile</Button>
+                  </div>
               </CardContent>
           </Card>
       )}

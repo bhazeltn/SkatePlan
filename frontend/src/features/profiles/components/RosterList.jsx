@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { User, Handshake, Eye, MapPin } from 'lucide-react'; 
+import { User, Handshake, Eye, MapPin, Archive } from 'lucide-react'; 
 import { FederationFlag } from '@/components/ui/FederationFlag';
 
 export function RosterList({ roster }) {
@@ -9,29 +9,35 @@ export function RosterList({ roster }) {
         {roster.map((skater) => {
             const isCollaborator = skater.access_level === 'COLLABORATOR';
             const isObserver = skater.access_level === 'VIEWER' || skater.access_level === 'OBSERVER';
+            // FIX: Strict check for false ensures undefined defaults to "Active"
+            const isArchived = skater.is_active === false;
 
             return (
                 <a key={skater.id} href={`#/skater/${skater.id}`} className="block h-full">
-                    <Card className="hover:border-brand-blue hover:shadow-md transition-all cursor-pointer h-full group relative overflow-hidden">
+                    <Card className={`hover:border-brand-blue hover:shadow-md transition-all cursor-pointer h-full group relative overflow-hidden ${isArchived ? 'opacity-60 bg-slate-50 border-dashed' : ''}`}>
                         {/* Status Strip */}
-                        {(isCollaborator || isObserver) && (
+                        {(isCollaborator || isObserver) && !isArchived && (
                             <div className={`absolute top-0 left-0 w-1 h-full ${isCollaborator ? 'bg-indigo-500' : 'bg-amber-400'}`} />
                         )}
 
+                        {isArchived && (
+                            <div className="absolute top-2 right-2 px-2 py-0.5 bg-slate-200 text-slate-600 text-[10px] font-bold uppercase rounded flex items-center gap-1">
+                                <Archive className="h-3 w-3" /> Archived
+                            </div>
+                        )}
+
                         <CardContent className="p-4 flex items-start gap-4">
-                            {/* Avatar */}
-                            <div className={`h-12 w-12 rounded-full flex items-center justify-center shrink-0 ${isCollaborator ? 'bg-indigo-50 text-indigo-600' : isObserver ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-brand-blue'}`}>
+                            <div className={`h-12 w-12 rounded-full flex items-center justify-center shrink-0 ${isArchived ? 'bg-slate-200 text-slate-400' : isCollaborator ? 'bg-indigo-50 text-indigo-600' : isObserver ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-brand-blue'}`}>
                                 {isCollaborator ? <Handshake className="h-6 w-6" /> : isObserver ? <Eye className="h-6 w-6" /> : <User className="h-6 w-6" />}
                             </div>
                             
                             <div className="min-w-0 flex-1">
                                 <div className="flex justify-between items-start">
-                                    <h4 className="font-bold text-gray-900 truncate pr-2">{skater.full_name}</h4>
-                                    {/* Federation Flag Preserved */}
-                                    <FederationFlag federation={skater.federation} />
+                                    <h4 className={`font-bold truncate pr-2 ${isArchived ? 'text-slate-500' : 'text-gray-900'}`}>{skater.full_name}</h4>
+                                    {!isArchived && <FederationFlag federation={skater.federation} />}
                                 </div>
                                 
-                                {/* DISCIPLINES & LEVELS (Replaces DOB) */}
+                                {/* DISCIPLINES & LEVELS */}
                                 <div className="mt-1 space-y-1">
                                     {skater.planning_entities && skater.planning_entities.length > 0 ? (
                                         skater.planning_entities.map((ent, i) => (

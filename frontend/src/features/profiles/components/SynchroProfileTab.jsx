@@ -1,12 +1,13 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { InviteUserModal } from '@/features/profiles/components/InviteUserModal';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { InviteUserModal } from './InviteUserModal';
 import { FederationFlag } from '@/components/ui/FederationFlag';
-import { AlertTriangle, Users, Trash2, Eye, UserCheck } from 'lucide-react';
+import { AlertTriangle, Users, Trash2, Eye, Mail, ChevronDown, Shield, User, Archive, UserCheck } from 'lucide-react';
 import { apiRequest } from '@/api';
 import { useAuth } from '@/features/auth/AuthContext';
-import { EditSynchroTeamModal } from '@/features/profiles/components/EditSynchroTeamModal';
+import { EditSynchroTeamModal } from './EditSynchroTeamModal';
 
 export function SynchroProfileTab({ team, onUpdated, readOnly }) {
   const { token } = useAuth();
@@ -19,6 +20,15 @@ export function SynchroProfileTab({ team, onUpdated, readOnly }) {
       } catch (e) { alert("Failed."); }
   };
 
+  const handleArchive = async () => {
+      const action = team.is_active ? 'archive' : 'restore';
+      if (!confirm(`Are you sure you want to ${action} this team?`)) return;
+      try {
+          await apiRequest(`/synchro/${team.id}/`, 'PATCH', { is_active: !team.is_active }, token);
+          if (onUpdated) onUpdated();
+      } catch (e) { alert("Failed."); }
+  };
+
   const handleRevoke = async (accessId) => {
       if (!confirm("Revoke access for this user?")) return;
       try {
@@ -26,27 +36,52 @@ export function SynchroProfileTab({ team, onUpdated, readOnly }) {
           if (onUpdated) onUpdated();
       } catch (e) { alert("Failed to revoke access."); }
   };
+  
+  // For Synchro/Team dashboards, readOnly acts as the permission flag.
+  // If !readOnly, you are an Owner.
+  const canManage = !readOnly;
 
   return (
     <div className="space-y-6">
       
-      {/* Team Details Card */}
       <Card>
         <CardHeader className="flex flex-row justify-between items-center pb-4 border-b">
             <CardTitle>Team Profile</CardTitle>
             
             {!readOnly && (
                 <div className="flex gap-2">
-                    <InviteUserModal 
-                        entityType="SynchroTeam" entityId={team.id} entityName={team.team_name}
-                        defaultRole="OBSERVER"
-                        trigger={<Button size="sm" variant="outline"><Eye className="h-4 w-4 mr-2" /> Invite Observer</Button>}
-                    />
-                    <InviteUserModal 
-                        entityType="SynchroTeam" entityId={team.id} entityName={team.team_name}
-                        defaultRole="COLLABORATOR"
-                        trigger={<Button size="sm" variant="outline"><Users className="h-4 w-4 mr-2" /> Invite Staff</Button>}
-                    />
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button size="sm" variant="outline">
+                                <Mail className="h-4 w-4 mr-2" /> Invite... <ChevronDown className="h-3 w-3 ml-1 opacity-50" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent align="end" className="w-56 p-1">
+                            <div className="flex flex-col gap-1">
+                                <InviteUserModal 
+                                    entityType="SynchroTeam" entityId={team.id} entityName={team.team_name}
+                                    defaultRole="OBSERVER" lockRole={true}
+                                    trigger={<Button variant="ghost" size="sm" className="w-full justify-start font-normal h-9"><Eye className="h-4 w-4 mr-2 text-amber-500" /> Observer</Button>}
+                                />
+                                <InviteUserModal 
+                                    entityType="SynchroTeam" entityId={team.id} entityName={team.team_name}
+                                    defaultRole="COLLABORATOR" lockRole={true}
+                                    trigger={<Button variant="ghost" size="sm" className="w-full justify-start font-normal h-9"><Users className="h-4 w-4 mr-2 text-indigo-500" /> Assistant Coach</Button>}
+                                />
+                                <div className="h-px bg-slate-100 my-1" />
+                                <InviteUserModal 
+                                    entityType="SynchroTeam" entityId={team.id} entityName={team.team_name}
+                                    defaultRole="PARENT" lockRole={true}
+                                    trigger={<Button variant="ghost" size="sm" className="w-full justify-start font-normal h-9"><Shield className="h-4 w-4 mr-2 text-slate-500" /> Team Parent</Button>}
+                                />
+                                <InviteUserModal 
+                                    entityType="SynchroTeam" entityId={team.id} entityName={team.team_name}
+                                    defaultRole="ATHLETE" lockRole={true}
+                                    trigger={<Button variant="ghost" size="sm" className="w-full justify-start font-normal h-9"><User className="h-4 w-4 mr-2 text-blue-500" /> Athlete</Button>}
+                                />
+                            </div>
+                        </PopoverContent>
+                    </Popover>
                     <EditSynchroTeamModal team={team} onSaved={onUpdated} />
                 </div>
             )}
@@ -62,15 +97,12 @@ export function SynchroProfileTab({ team, onUpdated, readOnly }) {
                 </div>
             </div>
 
-            {/* Staff & Observers */}
             <div className="bg-slate-50 rounded-lg border border-slate-200 overflow-hidden">
                 <div className="px-4 py-2 bg-slate-100 border-b border-slate-200">
                     <h4 className="text-xs font-bold text-gray-700 uppercase">Team Access</h4>
                 </div>
                 
                 <div className="p-4 space-y-4">
-                    
-                    {/* Coaching Staff */}
                     <div className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-8">
                         <div className="w-32 flex items-center gap-2 text-sm font-medium text-gray-900 mt-1">
                             <Users className="h-4 w-4 text-indigo-500" /> Coaching Staff
@@ -95,7 +127,6 @@ export function SynchroProfileTab({ team, onUpdated, readOnly }) {
                         </div>
                     </div>
 
-                    {/* Observers (Only Owner sees this) */}
                     {!readOnly && (
                         <div className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-8 pt-4 border-t border-slate-200">
                             <div className="w-32 flex items-center gap-2 text-sm font-medium text-gray-900 mt-1">
@@ -121,17 +152,28 @@ export function SynchroProfileTab({ team, onUpdated, readOnly }) {
                     )}
                 </div>
             </div>
-
         </CardContent>
       </Card>
 
-      {/* Danger Zone */}
-      {!readOnly && (
+      {/* Management / Danger Zone */}
+      {canManage && (
           <Card className="border-red-100">
-              <CardHeader className="bg-red-50/50 border-b border-red-100"><CardTitle className="text-red-800 flex items-center gap-2"><AlertTriangle className="h-5 w-5" /> Danger Zone</CardTitle></CardHeader>
-              <CardContent className="p-6 flex justify-between items-center">
-                  <div className="text-sm text-gray-600"><p className="font-medium text-gray-900">Delete Team</p><p>Permanently remove this team and all data.</p></div>
-                  <Button variant="destructive" onClick={handleDelete}>Delete Team</Button>
+              <CardHeader className="bg-red-50/50 border-b border-red-100"><CardTitle className="text-red-800 flex items-center gap-2"><AlertTriangle className="h-5 w-5" /> Management</CardTitle></CardHeader>
+              <CardContent className="p-6 flex flex-col gap-4">
+                  <div className="flex justify-between items-center border-b border-red-50 pb-4">
+                      <div className="text-sm text-gray-600">
+                          <p className="font-medium text-gray-900">{team.is_active ? 'Archive Team' : 'Restore Team'}</p>
+                          <p>Move to the bottom of your list. Data is preserved.</p>
+                      </div>
+                      <Button variant="outline" onClick={handleArchive}>
+                          <Archive className="h-4 w-4 mr-2" /> {team.is_active ? 'Archive' : 'Restore'}
+                      </Button>
+                  </div>
+
+                  <div className="flex justify-between items-center">
+                      <div className="text-sm text-gray-600"><p className="font-medium text-gray-900">Delete Team</p><p>Permanently remove this team.</p></div>
+                      <Button variant="destructive" onClick={handleDelete}>Delete Team</Button>
+                  </div>
               </CardContent>
           </Card>
       )}

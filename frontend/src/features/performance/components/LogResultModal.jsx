@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/features/auth/AuthContext';
 import { apiRequest } from '@/api';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog'; // Added DialogDescription
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -10,6 +10,21 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { Search, Plus, MapPin, Trash2, ChevronDown, ChevronUp, Video, Paperclip, Lock } from 'lucide-react';
 import { Country, State, City } from 'country-state-city';
 import { ProtocolEditor } from './ProtocolEditor';
+
+// Helper to safely parse segments
+const parseSegments = (data) => {
+    if (!data) return [];
+    if (Array.isArray(data)) return data;
+    if (typeof data === 'string') {
+        try {
+            const parsed = JSON.parse(data);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+            return [];
+        }
+    }
+    return [];
+};
 
 export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved, trigger, readOnly, permissions }) {
   const [open, setOpen] = useState(false);
@@ -40,8 +55,7 @@ export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved,
   const [overallScore, setOverallScore] = useState(resultToEdit?.total_score || '');
   const [notes, setNotes] = useState(resultToEdit?.notes || '');
   
-  // FIX: Safely initialize segments array
-  const [segments, setSegments] = useState([]);
+  const [segments, setSegments] = useState(parseSegments(resultToEdit?.segment_scores));
   
   const [expandedPCS, setExpandedPCS] = useState(null);
   const [expandedProtocol, setExpandedProtocol] = useState(null);
@@ -49,7 +63,6 @@ export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved,
   const [currentDetailSheet, setCurrentDetailSheet] = useState(null); 
   const [videoUrl, setVideoUrl] = useState('');
 
-  // Permissions
   const canCreateComp = permissions?.canCreateCompetitions;
   const canDelete = permissions?.canDelete;
 
@@ -64,21 +77,15 @@ export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved,
               setPlacement(resultToEdit.placement || '');
               setOverallScore(resultToEdit.total_score || '');
               setNotes(resultToEdit.notes || '');
-              
-              // FIX: Robust Parsing
-              let segs = resultToEdit.segment_scores;
-              if (typeof segs === 'string') {
-                  try { segs = JSON.parse(segs); } catch (e) { segs = []; }
-              }
-              if (!Array.isArray(segs)) segs = [];
-              setSegments(segs);
-
+              setSegments(parseSegments(resultToEdit.segment_scores));
               setVideoUrl(resultToEdit.video_url || '');
               setCurrentDetailSheet(resultToEdit.detail_sheet); 
               setDetailSheet(null); 
           } else {
               setStep('SEARCH');
               setSelectedComp(null);
+              setSearchTerm(''); // Clear search on open
+              setSearchResults([]);
               if (team) setSelectedEntityId(team.id);
               else if (skater?.planning_entities?.length > 0) setSelectedEntityId(skater.planning_entities[0].id);
               setStatus('COMPLETED');
@@ -89,15 +96,38 @@ export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved,
       }
   }, [open, resultToEdit, skater, team]);
 
+  // NEW: Live Search Effect
   useEffect(() => {
-      // Safe calculate total
+      const delayDebounceFn = setTimeout(() => {
+        if (searchTerm.trim().length > 1) {
+           handleSearch();
+        } else {
+           setSearchResults([]);
+        }
+      }, 400); // 400ms delay
+
+      return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm]);
+
+  useEffect(() => {
       if (Array.isArray(segments) && segments.length > 0 && status === 'COMPLETED') {
           const total = segments.reduce((sum, seg) => sum + (parseFloat(seg.score) || 0), 0);
           setOverallScore(total > 0 ? total.toFixed(2) : '');
       }
   }, [segments, status]);
 
-  const handleSearch = async () => { setLoading(true); setError(null); try { const data = await apiRequest(`/competitions/?search=${searchTerm}`, 'GET', null, token); setSearchResults(data || []); } catch(e) { console.error(e); } finally { setLoading(false); } };
+  const handleSearch = async () => { 
+      setLoading(true); 
+      setError(null); 
+      try { 
+          const data = await apiRequest(`/competitions/?search=${searchTerm}`, 'GET', null, token); 
+          setSearchResults(data || []); 
+      } catch(e) { 
+          console.error(e); 
+      } finally { 
+          setLoading(false); 
+      } 
+  };
   
   const handleCreate = async () => { setLoading(true); setError(null); try { const data = await apiRequest('/competitions/', 'POST', { title: newTitle, country: countryCode, province_state: stateCode, city: cityName, start_date: start, end_date: end }, token); setSelectedComp(data); setStep('LOG'); } catch (e) { setError("Failed/Duplicate"); } finally { setLoading(false); } };
   
@@ -106,7 +136,11 @@ export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved,
       if (!end) setEnd(val);
   };
 
-  const addSegment = () => { setSegments([...segments, { id: Date.now(), name: 'Short Program', score: '', tes: '', pcs: '', pcs_composition: '', pcs_presentation: '', pcs_skills: '', deductions: '', bonus: '', placement: '', protocol: [] }]); };
+  const addSegment = () => { 
+      const safeSegments = Array.isArray(segments) ? segments : [];
+      setSegments([...safeSegments, { id: Date.now(), name: 'Short Program', score: '', tes: '', pcs: '', pcs_composition: '', pcs_presentation: '', pcs_skills: '', deductions: '', bonus: '', placement: '', protocol: [] }]); 
+  };
+  
   const removeSegment = (id) => setSegments(segments.filter(s => s.id !== id));
   const updateSegment = (id, field, value) => setSegments(segments.map(s => s.id === id ? { ...s, [field]: value } : s));
   const togglePCS = (id) => setExpandedPCS(expandedPCS === id ? null : id);
@@ -238,8 +272,7 @@ export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved,
                           {!readOnly && <Button type="button" size="sm" variant="outline" onClick={addSegment}><Plus className="h-3 w-3 mr-1" /> Add Segment</Button>}
                       </div>
                       <div className="space-y-3">
-                          {/* FIX: Safe Map */}
-                          {(Array.isArray(segments) ? segments : []).map((seg) => (
+                          {Array.isArray(segments) && segments.map((seg) => (
                               <div key={seg.id} className="p-3 border rounded-md bg-slate-50 relative">
                                   {!readOnly && <Button type="button" variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6 text-gray-400 hover:text-red-500" onClick={() => removeSegment(seg.id)}><Trash2 className="h-3 w-3" /></Button>}
                                   <div className="grid grid-cols-2 gap-2 mb-2 pr-6">
@@ -286,15 +319,13 @@ export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved,
 
           <div className="space-y-2 mt-2"><Label>Notes</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes..." disabled={readOnly} /></div>
           
-          {/* FOOTER - HIDE IF READ ONLY */}
+          {/* FOOTER */}
           {!readOnly && (
               <div className="flex justify-between pt-2">
                   {!resultToEdit && <Button variant="ghost" onClick={() => { setStep('SEARCH'); setSelectedComp(null); }}>Back</Button>}
-                  
                   {resultToEdit && canDelete && (
                       <Button variant="destructive" onClick={handleDeleteResult}>Delete</Button>
                   )}
-                  
                   {!resultToEdit && <Button variant="secondary" onClick={handleSaveAndAdd} disabled={loading} className="ml-auto mr-2"><Plus className="h-4 w-4 mr-2" /> Save & Add Another</Button>}
                   <Button onClick={handleSave} disabled={loading} className={resultToEdit && !canDelete ? "w-full" : ""}>Save Changes</Button>
               </div>
@@ -311,20 +342,61 @@ export function LogResultModal({ skater, team, isSynchro, resultToEdit, onSaved,
                 {step === 'SEARCH' ? 'Find Competition' : step === 'CREATE' ? 'New Event' : (status === 'COMPLETED' ? 'Log Result' : 'Plan Event')}
                 {readOnly && <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded border border-amber-200 flex items-center gap-1"><Lock className="h-3 w-3"/> View Only</span>}
             </DialogTitle>
-            {/* FIX: Added Missing Description */}
             <DialogDescription>
                 {step === 'SEARCH' ? 'Search for an existing competition or create a new one.' : 'Enter the results details below.'}
             </DialogDescription>
         </DialogHeader>
         
         {step === 'SEARCH' && !readOnly && (
-            <div className="space-y-4"><div className="flex gap-2"><Input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Search..." /><Button onClick={handleSearch} disabled={loading}><Search className="h-4 w-4" /></Button></div><div className="max-h-[200px] overflow-y-auto space-y-2 border rounded p-2">{searchResults.map(comp => (<div key={comp.id} className="flex justify-between p-2 hover:bg-slate-50 rounded items-center border-b last:border-0"><div className="text-sm"><div className="font-bold">{comp.title}</div><div className="text-xs text-gray-500">{comp.city}, {comp.province_state}</div></div><Button size="sm" variant="outline" onClick={() => { setSelectedComp(comp); setStep('LOG'); }}>Select</Button></div>))}</div>
-            {canCreateComp && <div className="pt-2"><Button variant="secondary" className="w-full" onClick={() => setStep('CREATE')}><Plus className="h-4 w-4 mr-2" /> Create New Competition</Button></div>}
+            <div className="space-y-4">
+                <div className="flex gap-2">
+                    <Input 
+                        value={searchTerm} 
+                        onChange={(e) => setSearchTerm(e.target.value)} 
+                        placeholder="Search..." 
+                        autoFocus 
+                    />
+                    <Button onClick={handleSearch} disabled={loading}><Search className="h-4 w-4" /></Button>
+                </div>
+                
+                <div className="max-h-[200px] overflow-y-auto space-y-2 border rounded p-2">
+                    {searchResults.map(comp => (
+                        <div key={comp.id} className="flex justify-between p-2 hover:bg-slate-50 rounded items-center border-b last:border-0">
+                            <div className="text-sm">
+                                <div className="font-bold">{comp.title}</div>
+                                <div className="text-xs text-gray-500">{comp.city}, {comp.province_state}</div>
+                            </div>
+                            <Button size="sm" variant="outline" onClick={() => { setSelectedComp(comp); setStep('LOG'); }}>Select</Button>
+                        </div>
+                    ))}
+                    {searchResults.length === 0 && searchTerm.length > 1 && !loading && (
+                        <p className="text-xs text-muted-foreground text-center">No matches found.</p>
+                    )}
+                </div>
+
+                {canCreateComp && (
+                    <div className="pt-2">
+                        <Button variant="secondary" className="w-full" onClick={() => setStep('CREATE')}>
+                            <Plus className="h-4 w-4 mr-2" /> Create New Competition
+                        </Button>
+                    </div>
+                )}
             </div>
         )}
+        
         {step === 'CREATE' && !readOnly && (
-            <div className="space-y-4"><div className="space-y-2"><Label>Name</Label><Input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} /></div>{renderLocationSelectors()}<div className="grid grid-cols-2 gap-2"><div><Label>Start</Label><DatePicker date={start} setDate={handleStartChange} /></div><div><Label>End</Label><DatePicker date={end} setDate={setEnd} min={start} /></div></div><div className="flex justify-between pt-2"><Button variant="ghost" onClick={() => setStep('SEARCH')}>Back</Button><Button onClick={handleCreate} disabled={loading}>Create</Button></div></div>
+            <div className="space-y-4">
+                {/* ... Create Form (Using smart date logic) ... */}
+                <div className="space-y-2"><Label>Name</Label><Input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} /></div>
+                {renderLocationSelectors()}
+                <div className="grid grid-cols-2 gap-2">
+                    <div><Label>Start</Label><DatePicker date={start} setDate={handleStartChange} /></div>
+                    <div><Label>End</Label><DatePicker date={end} setDate={setEnd} min={start} /></div>
+                </div>
+                <div className="flex justify-between pt-2"><Button variant="ghost" onClick={() => setStep('SEARCH')}>Back</Button><Button onClick={handleCreate} disabled={loading}>Create</Button></div>
+            </div>
         )}
+        
         {(step === 'LOG' || readOnly) && renderLogStep()}
       </DialogContent>
     </Dialog>

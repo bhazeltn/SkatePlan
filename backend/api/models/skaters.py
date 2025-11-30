@@ -20,6 +20,8 @@ class Skater(models.Model):
     federation = models.ForeignKey(
         Federation, on_delete=models.SET_NULL, null=True, blank=True
     )
+
+    # Archiving Field
     is_active = models.BooleanField(
         default=True, help_text="If false, skater is archived."
     )
@@ -126,6 +128,9 @@ class Team(models.Model):
     )
     current_level = models.CharField(max_length=100, blank=True, null=True)
 
+    # Archiving
+    is_active = models.BooleanField(default=True)
+
     def __str__(self):
         return self.team_name
 
@@ -134,15 +139,15 @@ class SynchroTeam(models.Model):
     id = models.AutoField(primary_key=True)
     team_name = models.CharField(max_length=255, unique=True)
 
-    # --- NEW: ROSTER ---
-    # A skater can belong to multiple synchro teams (e.g. Junior & Open)
     roster = models.ManyToManyField(Skater, related_name="synchro_teams", blank=True)
-    # -------------------
 
     federation = models.ForeignKey(
         Federation, on_delete=models.SET_NULL, null=True, blank=True
     )
     level = models.CharField(max_length=100)  # e.g. "Junior", "Novice"
+
+    # Archiving
+    is_active = models.BooleanField(default=True)
 
     def __str__(self):
         return self.team_name
@@ -153,6 +158,10 @@ class PlanningEntityAccess(models.Model):
         COACH = "COACH", "Coach"
         GUARDIAN = "GUARDIAN", "Guardian"
         OBSERVER = "OBSERVER", "Observer"
+        # Added to support new roles
+        COLLABORATOR = "COLLABORATOR", "Collaborator"
+        MANAGER = "MANAGER", "Manager"
+        VIEWER = "VIEWER", "Viewer"
 
     id = models.AutoField(primary_key=True)
     user = models.ForeignKey(

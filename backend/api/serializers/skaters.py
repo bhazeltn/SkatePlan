@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.contrib.contenttypes.models import ContentType
 from api.models import (
     Skater,
     AthleteProfile,
@@ -13,10 +14,8 @@ from .core import FederationSerializer
 from api.services import get_access_role
 
 
-# --- HELPER TO FETCH STAFF (Specific to Serialization) ---
+# --- HELPERS ---
 def get_entity_staff(entity_obj, role_list):
-    from django.contrib.contenttypes.models import ContentType
-
     ct = ContentType.objects.get_for_model(entity_obj)
     access_records = PlanningEntityAccess.objects.filter(
         content_type=ct, object_id=entity_obj.id, access_level__in=role_list
@@ -34,6 +33,66 @@ def get_entity_staff(entity_obj, role_list):
             }
         )
     return results
+
+
+def get_visible_planning_entities(user, skater, context):
+    entities = []
+    if not user:
+        return []
+
+    # 1. Determine Access Rights
+    has_direct_access = False
+    if user.is_superuser or skater.user_account == user:
+        has_direct_access = True
+    else:
+        ct_skater = ContentType.objects.get_for_model(skater)
+        if PlanningEntityAccess.objects.filter(
+            user=user, content_type=ct_skater, object_id=skater.id
+        ).exists():
+            has_direct_access = True
+
+    # 2. Add Personal Disciplines
+    if has_direct_access:
+        for entity in skater.singles_entities.all():
+            entities.append(
+                GenericPlanningEntitySerializer(entity, context=context).data
+            )
+        for entity in skater.solodance_entities.all():
+            entities.append(
+                GenericPlanningEntitySerializer(entity, context=context).data
+            )
+
+    # 3. Add Teams
+    teams = list(skater.teams_as_partner_a.all()) + list(
+        skater.teams_as_partner_b.all()
+    )
+    ct_team = ContentType.objects.get_for_model(Team)
+    for team in teams:
+        if (
+            user.is_superuser
+            or skater.user_account == user
+            or PlanningEntityAccess.objects.filter(
+                user=user, content_type=ct_team, object_id=team.id
+            ).exists()
+        ):
+            entities.append(GenericPlanningEntitySerializer(team, context=context).data)
+
+    # 4. Add Synchro
+    ct_synchro = ContentType.objects.get_for_model(SynchroTeam)
+    for team in skater.synchro_teams.all():
+        if (
+            user.is_superuser
+            or skater.user_account == user
+            or PlanningEntityAccess.objects.filter(
+                user=user, content_type=ct_synchro, object_id=team.id
+            ).exists()
+        ):
+            entities.append(GenericPlanningEntitySerializer(team, context=context).data)
+
+    return entities
+
+
+# --- SERIALIZERS ---
 
 
 class AthleteProfileSerializer(serializers.ModelSerializer):
@@ -134,6 +193,7 @@ class TeamSerializer(serializers.ModelSerializer):
             "partner_b",
             "partner_a_details",
             "partner_b_details",
+            "is_active",
             "collaborators",
             "observers",
             "access_level",
@@ -162,6 +222,8 @@ class SynchroTeamSerializer(serializers.ModelSerializer):
         allow_null=True,
     )
     roster = SimpleSkaterSerializer(many=True, read_only=True)
+
+    # Write-only field to accept IDs
     roster_ids = serializers.PrimaryKeyRelatedField(
         queryset=Skater.objects.all(),
         source="roster",
@@ -184,6 +246,7 @@ class SynchroTeamSerializer(serializers.ModelSerializer):
             "federation_id",
             "roster",
             "roster_ids",
+            "is_active",
             "collaborators",
             "observers",
             "access_level",
@@ -197,6 +260,12 @@ class SynchroTeamSerializer(serializers.ModelSerializer):
 
     def get_access_level(self, obj):
         return get_access_role(self.context.get("request").user, obj)
+
+    def update(self, instance, validated_data):
+        if "roster" in validated_data:
+            roster_skaters = validated_data.pop("roster")
+            instance.roster.set(roster_skaters)
+        return super().update(instance, validated_data)
 
 
 class GenericPlanningEntitySerializer(serializers.Serializer):
@@ -284,31 +353,14 @@ class SkaterSerializer(serializers.ModelSerializer):
         )
 
     def get_planning_entities(self, obj):
-        entities = []
-        for entity in obj.singles_entities.all():
-            entities.append(
-                GenericPlanningEntitySerializer(entity, context=self.context).data
-            )
-        for entity in obj.solodance_entities.all():
-            entities.append(
-                GenericPlanningEntitySerializer(entity, context=self.context).data
-            )
-        for entity in obj.teams_as_partner_a.all():
-            entities.append(
-                GenericPlanningEntitySerializer(entity, context=self.context).data
-            )
-        for entity in obj.teams_as_partner_b.all():
-            entities.append(
-                GenericPlanningEntitySerializer(entity, context=self.context).data
-            )
-        return entities
+        return get_visible_planning_entities(
+            self.context.get("request").user, obj, self.context
+        )
 
     def get_user_account_email(self, obj):
         return obj.user_account.email if obj.user_account else None
 
     def get_guardians(self, obj):
-        from django.contrib.contenttypes.models import ContentType
-
         ct = ContentType.objects.get_for_model(obj)
         access_records = PlanningEntityAccess.objects.filter(
             content_type=ct, object_id=obj.id, access_level="GUARDIAN"
@@ -323,8 +375,6 @@ class SkaterSerializer(serializers.ModelSerializer):
         return len(self.get_guardians(obj)) > 0
 
     def get_collaborators(self, obj):
-        from django.contrib.contenttypes.models import ContentType
-
         ct = ContentType.objects.get_for_model(obj)
         access_records = PlanningEntityAccess.objects.filter(
             content_type=ct,
@@ -349,8 +399,6 @@ class SkaterSerializer(serializers.ModelSerializer):
         return results
 
     def get_observers(self, obj):
-        from django.contrib.contenttypes.models import ContentType
-
         ct = ContentType.objects.get_for_model(obj)
         access_records = PlanningEntityAccess.objects.filter(
             content_type=ct, object_id=obj.id, access_level__in=["VIEWER", "OBSERVER"]
@@ -370,7 +418,6 @@ class SkaterSerializer(serializers.ModelSerializer):
         return results
 
     def get_access_level(self, obj):
-        # REFACTORED: Use Service
         return get_access_role(self.context.get("request").user, obj)
 
 
@@ -390,27 +437,13 @@ class RosterSkaterSerializer(serializers.ModelSerializer):
             "federation",
             "planning_entities",
             "access_level",
+            "is_active",  # <--- ADDED BACK
         )
 
     def get_planning_entities(self, obj):
-        entities = []
-        for entity in obj.singles_entities.all():
-            entities.append(
-                GenericPlanningEntitySerializer(entity, context=self.context).data
-            )
-        for entity in obj.solodance_entities.all():
-            entities.append(
-                GenericPlanningEntitySerializer(entity, context=self.context).data
-            )
-        for entity in obj.teams_as_partner_a.all():
-            entities.append(
-                GenericPlanningEntitySerializer(entity, context=self.context).data
-            )
-        for entity in obj.teams_as_partner_b.all():
-            entities.append(
-                GenericPlanningEntitySerializer(entity, context=self.context).data
-            )
-        return entities
+        return get_visible_planning_entities(
+            self.context.get("request").user, obj, self.context
+        )
 
     def get_access_level(self, obj):
         return get_access_role(self.context.get("request").user, obj)

@@ -1,15 +1,8 @@
-// FIX: Update import path
 import { useAuth } from '@/features/auth/AuthContext';
 
-/**
- * Centralized Permission Logic.
- * @param {Object} entity - The Skater, Team, or SynchroTeam object being viewed.
- * @returns {Object} Permissions flags (canEdit, canDelete, etc.)
- */
 export function useAccessControl(entity) {
     const { user } = useAuth();
 
-    // Safety check
     if (!user || !entity) {
         return {
             role: 'NONE',
@@ -27,28 +20,25 @@ export function useAccessControl(entity) {
             canViewPerformance: false,
             canViewLogistics: false,
             canViewHealth: false,
+            canManageStaff: false, // Default false
             readOnlyStructure: true,
             readOnlyData: true
         };
     }
 
-    // 1. Determine Contextual Role
+    // 1. Determine Role
     let role = entity.access_level;
-
-    // Fallback: Identity Check (Am I this skater?)
     if (user.role === 'SKATER' && user.skater_id === entity.id && !role) {
         role = 'SKATER_OWNER';
     }
-
-    // Fallback: Legacy Owner Check
     if (!role && (user.role === 'COACH' || user.is_superuser)) {
         role = 'COACH';
     }
 
-    // 2. Define Role Groups
-    const isOwner = role === 'COACH' || role === 'OWNER'; 
-    const isCollaborator = role === 'COLLABORATOR';       
-    const isManager = role === 'MANAGER';                 
+    // 2. Groups
+    const isOwner = role === 'COACH' || role === 'OWNER';
+    const isCollaborator = role === 'COLLABORATOR';
+    const isManager = role === 'MANAGER';
     
     const isStaff = isOwner || isCollaborator || isManager;
     
@@ -57,7 +47,6 @@ export function useAccessControl(entity) {
     const isSelf = role === 'SKATER_OWNER' || (user.role === 'SKATER' && user.skater_id === entity.id);
     const isFamily = isGuardian || isSelf;
 
-    // 3. Calculate Capabilities
     const isTechViewer = isOwner || isCollaborator || isObserver || isFamily;
 
     return {
@@ -70,28 +59,30 @@ export function useAccessControl(entity) {
         isSelf,
         isStaff,
 
-        // --- TAB VISIBILITY FLAGS ---
+        // Visibility
         canViewYearlyPlan: isTechViewer && !isManager,
         canViewGapAnalysis: isOwner || isCollaborator || isObserver,
         canViewPerformance: isTechViewer && !isManager,
         canViewLogistics: true, 
         canViewHealth: isTechViewer && !isManager,
 
-        // --- EDIT PERMISSIONS ---
+        // Actions
         canEditStructure: isOwner || isCollaborator,
         canEditData: isOwner || isCollaborator || isFamily,
         canDelete: isOwner,
-
-        // --- SPECIFIC UI FLAGS ---
+        
+        // Specifics
         canEditPlan: isOwner || isCollaborator,
         canCreateCompetitions: isOwner || isCollaborator,
         canEditCompetitions: (isOwner || isCollaborator || isFamily),
         canEditGoals: (isOwner || isCollaborator || isFamily),
         canEditLogs: (isOwner || isCollaborator || isFamily),
         canEditHealth: (isOwner || isCollaborator || isFamily),
-        canEditProfile: isOwner, 
         
-        // Global "View Only" flags
+        // FIX: This was missing!
+        canManageStaff: isOwner, // Only Owner invites/revokes staff/parents
+        canEditProfile: isOwner, 
+
         readOnlyStructure: !(isOwner || isCollaborator), 
         readOnlyData: isObserver
     };

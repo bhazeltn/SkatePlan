@@ -221,9 +221,9 @@ class AcceptInviteView(APIView):
         entity = invite.target_entity
         ct = ContentType.objects.get_for_model(entity)
 
-        # Case A: Direct Skater Link (Profile Ownership)
-        if (invite.role == "ATHLETE" or invite.role == "SKATER") and hasattr(
-            entity, "user_account"
+        # Case A: Direct Skater Link (Profile Ownership) - ONLY for Skater entities
+        if (invite.role == "ATHLETE" or invite.role == "SKATER") and isinstance(
+            entity, Skater
         ):
             if not entity.user_account:
                 entity.user_account = user
@@ -232,14 +232,21 @@ class AcceptInviteView(APIView):
         # Case B: Access Record (Team Members, Parents, Staff, Observers)
         else:
             # Map invitation role to PlanningEntityAccess level
-            access_level = "VIEWER"  # Default
+            access_level = "VIEWER"
 
             if final_role in ["COLLABORATOR", "MANAGER", "COACH"]:
-                access_level = final_role
+                access_level = "COLLABORATOR"  # Normalize to DB choice
             elif final_role in ["PARENT", "GUARDIAN"]:
                 access_level = "GUARDIAN"
             elif final_role in ["ATHLETE", "SKATER"]:
-                access_level = "SKATER"  # New PEA Level for Team Members
+                # If inviting Athlete to a Team, they get SKATER access level (if supported)
+                # or MEMBER if you defined that. Let's map to SKATER or VIEWER?
+                # Wait, PlanningEntityAccess.AccessLevel choice needs 'SKATER' if we use it.
+                # Let's check models.py. It has COACH, GUARDIAN, OBSERVER, COLLABORATOR, MANAGER, VIEWER.
+                # It does NOT have SKATER.
+                # We should probably map Team Athletes to 'VIEWER' for now (Read Only)
+                # or add 'SKATER' to the model if they need write access to the team logs.
+                access_level = "VIEWER"
             elif final_role == "OBSERVER":
                 access_level = "OBSERVER"
 

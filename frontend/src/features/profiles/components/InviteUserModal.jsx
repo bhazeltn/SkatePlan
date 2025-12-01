@@ -83,12 +83,18 @@ export function InviteUserModal({ entityType, entityId, entityName, trigger, ska
           return roles;
       }
       // TEAMS
-      return [
+      const roles = [
           { value: 'ATHLETE', label: 'Team Member (Athlete)' },
           { value: 'PARENT', label: 'Team Parent' },
           { value: 'COLLABORATOR', label: 'Assistant Coach' },
           { value: 'OBSERVER', label: 'Observer / Judge' }
       ];
+      
+      if (entityType === 'SynchroTeam') {
+           roles.splice(2, 0, { value: 'MANAGER', label: 'Team Manager' });
+      }
+      
+      return roles;
   };
 
   return (

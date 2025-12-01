@@ -177,6 +177,8 @@ class TeamSerializer(serializers.ModelSerializer):
 
     collaborators = serializers.SerializerMethodField()
     observers = serializers.SerializerMethodField()
+
+    # IMPORTANT: This field controls the Dashboard Section
     access_level = serializers.SerializerMethodField()
 
     class Meta:
@@ -209,7 +211,10 @@ class TeamSerializer(serializers.ModelSerializer):
         return get_entity_staff(obj, ["VIEWER", "OBSERVER"])
 
     def get_access_level(self, obj):
-        return get_access_role(self.context.get("request").user, obj)
+        user = self.context.get("request").user
+        if not user:
+            return None
+        return get_access_role(user, obj)
 
 
 class SynchroTeamSerializer(serializers.ModelSerializer):
@@ -222,8 +227,6 @@ class SynchroTeamSerializer(serializers.ModelSerializer):
         allow_null=True,
     )
     roster = SimpleSkaterSerializer(many=True, read_only=True)
-
-    # Write-only field to accept IDs
     roster_ids = serializers.PrimaryKeyRelatedField(
         queryset=Skater.objects.all(),
         source="roster",
@@ -234,6 +237,11 @@ class SynchroTeamSerializer(serializers.ModelSerializer):
 
     collaborators = serializers.SerializerMethodField()
     observers = serializers.SerializerMethodField()
+
+    name = serializers.SerializerMethodField()
+    current_level = serializers.SerializerMethodField()
+
+    # IMPORTANT
     access_level = serializers.SerializerMethodField()
 
     class Meta:
@@ -250,7 +258,15 @@ class SynchroTeamSerializer(serializers.ModelSerializer):
             "collaborators",
             "observers",
             "access_level",
+            "name",
+            "current_level",
         )
+
+    def get_name(self, obj):
+        return obj.team_name
+
+    def get_current_level(self, obj):
+        return obj.level
 
     def get_collaborators(self, obj):
         return get_entity_staff(obj, ["COLLABORATOR", "MANAGER", "COACH"])
@@ -259,12 +275,14 @@ class SynchroTeamSerializer(serializers.ModelSerializer):
         return get_entity_staff(obj, ["VIEWER", "OBSERVER"])
 
     def get_access_level(self, obj):
-        return get_access_role(self.context.get("request").user, obj)
+        user = self.context.get("request").user
+        if not user:
+            return None
+        return get_access_role(user, obj)
 
     def update(self, instance, validated_data):
         if "roster" in validated_data:
-            roster_skaters = validated_data.pop("roster")
-            instance.roster.set(roster_skaters)
+            instance.roster.set(validated_data.pop("roster"))
         return super().update(instance, validated_data)
 
 
@@ -361,13 +379,20 @@ class SkaterSerializer(serializers.ModelSerializer):
         return obj.user_account.email if obj.user_account else None
 
     def get_guardians(self, obj):
+        from django.contrib.contenttypes.models import ContentType
+
         ct = ContentType.objects.get_for_model(obj)
         access_records = PlanningEntityAccess.objects.filter(
             content_type=ct, object_id=obj.id, access_level="GUARDIAN"
         ).select_related("user")
 
         return [
-            {"full_name": record.user.full_name, "email": record.user.email}
+            {
+                "id": record.id,
+                "user_id": record.user.pk,
+                "full_name": record.user.full_name,
+                "email": record.user.email,
+            }
             for record in access_records
         ]
 

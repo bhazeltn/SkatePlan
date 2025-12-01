@@ -34,15 +34,34 @@ class CoachDashboardStatsView(APIView):
 
     def get(self, request):
         user = request.user
-
-        # 1. SECURITY: Fetch ONLY operational skaters (Owned + Collab)
-        skaters = get_accessible_skaters(user, filter_mode="OPERATIONAL")
-
         today = date.today()
         next_week = today + timedelta(days=7)
         two_weeks = today + timedelta(days=14)
+        start_of_week = today - timedelta(days=today.weekday())
 
-        # A. Injuries
+        # --- 1. FETCH ENTITIES ---
+        # Skaters
+        skaters = get_accessible_skaters(user, filter_mode="OPERATIONAL")
+
+        # Teams (Pairs/Dance)
+        ct_team = ContentType.objects.get_for_model(Team)
+        team_ids = (
+            PlanningEntityAccess.objects.filter(user=user, content_type=ct_team)
+            .exclude(access_level__in=["VIEWER", "OBSERVER"])
+            .values_list("object_id", flat=True)
+        )
+        teams = Team.objects.filter(id__in=team_ids, is_active=True)
+
+        # Synchro
+        ct_synchro = ContentType.objects.get_for_model(SynchroTeam)
+        synchro_ids = (
+            PlanningEntityAccess.objects.filter(user=user, content_type=ct_synchro)
+            .exclude(access_level__in=["VIEWER", "OBSERVER"])
+            .values_list("object_id", flat=True)
+        )
+        synchro_teams = SynchroTeam.objects.filter(id__in=synchro_ids, is_active=True)
+
+        # --- 2. INJURIES (Restored) ---
         active_injuries = (
             InjuryLog.objects.filter(
                 skater__in=skaters, recovery_status__in=["Active", "Recovering"]
@@ -51,18 +70,16 @@ class CoachDashboardStatsView(APIView):
             .order_by("date_of_onset")
         )
 
-        # B. Planning Alerts
+        # --- 3. PLANNING ALERTS ---
         planning_alerts = []
-        start_of_week = today - timedelta(days=today.weekday())
 
+        # A. Skaters
         for skater in skaters:
             role = get_access_role(user, skater)
             is_shared = role == "COLLABORATOR"
-
             active_seasons = skater.athlete_seasons.filter(is_active=True)
             if not active_seasons.exists():
                 continue
-
             for season in active_seasons:
                 if not season.yearly_plans.exists():
                     planning_alerts.append(
@@ -71,7 +88,7 @@ class CoachDashboardStatsView(APIView):
                             "id": skater.id,
                             "issue": f"No Plan for {season.season}",
                             "is_shared": is_shared,
-                            "link": f"#/skater/{skater.id}?tab=yearly",  # <--- Link to Yearly
+                            "link": f"#/skater/{skater.id}?tab=yearly",
                         }
                     )
                 else:
@@ -91,18 +108,100 @@ class CoachDashboardStatsView(APIView):
                                 "id": skater.id,
                                 "issue": f"Unplanned Week",
                                 "is_shared": is_shared,
-                                "link": f"#/skater/{skater.id}?tab=weekly",  # <--- Link to Weekly
+                                "link": f"#/skater/{skater.id}?tab=weekly",
                             }
                         )
 
-        # C. Goals
+        # B. Teams
+        for team in teams:
+            role = get_access_role(user, team)
+            is_shared = role == "COLLABORATOR"
+            # Teams usually have 1 active season linked to the TEAM object
+            seasons = AthleteSeason.objects.filter(
+                content_type=ct_team, object_id=team.id, is_active=True
+            )
+            for season in seasons:
+                if not season.yearly_plans.exists():
+                    planning_alerts.append(
+                        {
+                            "skater": team.team_name,
+                            "id": team.id,
+                            "issue": "No Team Plan",
+                            "is_shared": is_shared,
+                            "link": f"#/team/{team.id}?tab=yearly",
+                        }
+                    )
+                else:
+                    current_week = WeeklyPlan.objects.filter(
+                        athlete_season=season, week_start=start_of_week
+                    ).first()
+                    if not current_week or not current_week.theme:
+                        planning_alerts.append(
+                            {
+                                "skater": team.team_name,
+                                "id": team.id,
+                                "issue": "Unplanned Week",
+                                "is_shared": is_shared,
+                                "link": f"#/team/{team.id}?tab=weekly",
+                            }
+                        )
+
+        # C. Synchro
+        for team in synchro_teams:
+            role = get_access_role(user, team)
+            is_shared = role == "COLLABORATOR"
+            seasons = AthleteSeason.objects.filter(
+                content_type=ct_synchro, object_id=team.id, is_active=True
+            )
+            for season in seasons:
+                if not season.yearly_plans.exists():
+                    planning_alerts.append(
+                        {
+                            "skater": team.team_name,
+                            "id": team.id,
+                            "issue": "No Team Plan",
+                            "is_shared": is_shared,
+                            "link": f"#/synchro/{team.id}?tab=yearly",
+                        }
+                    )
+                else:
+                    current_week = WeeklyPlan.objects.filter(
+                        athlete_season=season, week_start=start_of_week
+                    ).first()
+                    if not current_week or not current_week.theme:
+                        planning_alerts.append(
+                            {
+                                "skater": team.team_name,
+                                "id": team.id,
+                                "issue": "Unplanned Week",
+                                "is_shared": is_shared,
+                                "link": f"#/synchro/{team.id}?tab=weekly",
+                            }
+                        )
+
+        # --- 4. GOALS ---
         goal_query = Q(assignee_skater__in=skaters)
+
+        # Singles/Solo
         singles_ids = SinglesEntity.objects.filter(skater__in=skaters).values_list(
             "id", flat=True
         )
         if singles_ids:
-            ct = ContentType.objects.get_for_model(SinglesEntity)
-            goal_query |= Q(content_type=ct, object_id__in=singles_ids)
+            ct_singles = ContentType.objects.get_for_model(SinglesEntity)
+            goal_query |= Q(content_type=ct_singles, object_id__in=singles_ids)
+
+        # Teams
+        if teams.exists():
+            goal_query |= Q(
+                content_type=ct_team, object_id__in=teams.values_list("id", flat=True)
+            )
+
+        # Synchro
+        if synchro_teams.exists():
+            goal_query |= Q(
+                content_type=ct_synchro,
+                object_id__in=synchro_teams.values_list("id", flat=True),
+            )
 
         overdue_goals = Goal.objects.filter(
             goal_query,
@@ -122,7 +221,6 @@ class CoachDashboardStatsView(APIView):
                 link = "#/"
                 is_shared = False
 
-                # Logic to determine Link & Badge
                 if g.assignee_skater:
                     name = g.assignee_skater.full_name
                     link = f"#/skater/{g.assignee_skater.id}?tab=goals"
@@ -156,43 +254,72 @@ class CoachDashboardStatsView(APIView):
                 )
             return formatted
 
-        # D. Activity
+        # --- 5. ACTIVITY ---
+        # Fetch logs for Skaters + Teams + Synchro
+        log_query = Q(athlete_season__skater__in=skaters)
+
+        if teams.exists():
+            log_query |= Q(
+                athlete_season__content_type=ct_team,
+                athlete_season__object_id__in=teams.values_list("id", flat=True),
+            )
+        if synchro_teams.exists():
+            log_query |= Q(
+                athlete_season__content_type=ct_synchro,
+                athlete_season__object_id__in=synchro_teams.values_list(
+                    "id", flat=True
+                ),
+            )
+
         recent_logs = (
             SessionLog.objects.filter(
-                athlete_season__skater__in=skaters,
-                session_date__gte=today - timedelta(days=3),
+                log_query, session_date__gte=today - timedelta(days=3)
             )
-            .select_related("athlete_season__skater")
+            .select_related("athlete_season")
             .order_by("-session_date")[:15]
         )
 
         activity_data = []
         for log in recent_logs:
-            if not log.athlete_season.skater:
-                continue
+            # Determine name/link
+            season = log.athlete_season
+            name = "Unknown"
+            link = "#/"
+            is_shared = False
 
-            skater_name = log.athlete_season.skater.full_name
-            sid = log.athlete_season.skater.id
-
-            role = get_access_role(user, log.athlete_season.skater)
-            is_shared = role == "COLLABORATOR"
+            if season.skater:
+                name = season.skater.full_name
+                link = f"#/skater/{season.skater.id}?tab=logs"
+                role = get_access_role(user, season.skater)
+                is_shared = role == "COLLABORATOR"
+            elif season.planning_entity:
+                name = str(season.planning_entity)
+                entity = season.planning_entity
+                if isinstance(entity, Team):
+                    link = f"#/team/{entity.id}?tab=logs"
+                elif isinstance(entity, SynchroTeam):
+                    link = f"#/synchro/{entity.id}?tab=logs"
+                role = get_access_role(user, entity)
+                is_shared = role == "COLLABORATOR"
 
             activity_data.append(
                 {
-                    "skater": skater_name,
+                    "skater": name,
                     "type": "Session",
                     "date": log.session_date,
                     "rating": log.session_rating,
                     "is_shared": is_shared,
-                    "link": f"#/skater/{sid}?tab=logs",
+                    "link": link,
                 }
             )
 
-        # Agenda
+        # --- 6. AGENDA ---
+        agenda_items = []
+
+        # Tests (Skater only)
         upcoming_tests = SkaterTest.objects.filter(
             test_date__range=(today, two_weeks), skater__in=skaters
         ).order_by("test_date")
-        agenda_items = []
         for t in upcoming_tests:
             role = get_access_role(user, t.skater)
             is_shared = role == "COLLABORATOR"
@@ -207,17 +334,17 @@ class CoachDashboardStatsView(APIView):
                 }
             )
 
+        # Comps (Global)
         upcoming_comps = Competition.objects.filter(
             start_date__range=(today, two_weeks)
         ).order_by("start_date")
-
         for c in upcoming_comps:
             results = CompetitionResult.objects.filter(competition=c)
             attendees = set()
-            # Simple link to first attendee found, or just skater 1
             first_link = "#/"
 
             for r in results:
+                # Check Skaters
                 if r.planning_entity:
                     if (
                         hasattr(r.planning_entity, "skater")
@@ -226,17 +353,26 @@ class CoachDashboardStatsView(APIView):
                         attendees.add(r.planning_entity.skater.full_name)
                         if first_link == "#/":
                             first_link = f"#/skater/{r.planning_entity.skater.id}?tab=competitions"
-                    elif hasattr(r.planning_entity, "team_name"):
+                    # Check Teams
+                    elif (
+                        isinstance(r.planning_entity, Team)
+                        and r.planning_entity in teams
+                    ):
                         attendees.add(r.planning_entity.team_name)
                         if first_link == "#/":
-                            if hasattr(r.planning_entity, "roster"):
-                                first_link = (
-                                    f"#/synchro/{r.planning_entity.id}?tab=competitions"
-                                )
-                            else:
-                                first_link = (
-                                    f"#/team/{r.planning_entity.id}?tab=competitions"
-                                )
+                            first_link = (
+                                f"#/team/{r.planning_entity.id}?tab=competitions"
+                            )
+                    # Check Synchro
+                    elif (
+                        isinstance(r.planning_entity, SynchroTeam)
+                        and r.planning_entity in synchro_teams
+                    ):
+                        attendees.add(r.planning_entity.team_name)
+                        if first_link == "#/":
+                            first_link = (
+                                f"#/synchro/{r.planning_entity.id}?tab=competitions"
+                            )
 
             if attendees:
                 agenda_items.append(
@@ -264,7 +400,7 @@ class CoachDashboardStatsView(APIView):
                             "date": i.date_of_onset,
                             "is_shared": get_access_role(user, i.skater)
                             == "COLLABORATOR",
-                            "link": f"#/skater/{i.skater.id}?tab=health",  # <--- Link to Health
+                            "link": f"#/skater/{i.skater.id}?tab=health",
                         }
                         for i in active_injuries
                     ],

@@ -7,13 +7,14 @@ import { AlertTriangle, Shield, User, Mail, Users, Trash2, Eye, ChevronDown, Arc
 import { apiRequest } from '@/api';
 import { useAuth } from '@/features/auth/AuthContext';
 
-// Sibling Imports
 import { EditSkaterModal } from './EditSkaterModal';
 import { EditDisciplineModal } from './EditDisciplineModal';
 import { InviteUserModal } from './InviteUserModal';
 
 export function ProfileTab({ skater, onUpdated, readOnly, permissions }) {
   const { token } = useAuth();
+
+  // --- HANDLERS ---
 
   const handleDelete = async () => {
       if (!confirm("Delete this athlete profile? This cannot be undone.")) return;
@@ -42,6 +43,15 @@ export function ProfileTab({ skater, onUpdated, readOnly, permissions }) {
       }
   };
 
+  const handleUnlinkAthlete = async () => {
+      if (!confirm("Unlink this user account? They will lose access to this profile.")) return;
+      try {
+          await apiRequest(`/skaters/${skater.id}/unlink-user/`, 'POST', {}, token);
+          if (onUpdated) onUpdated();
+      } catch (e) { alert("Failed to unlink."); }
+  };
+
+  // --- HELPERS ---
   const getAge = (dobString) => {
       if (!dobString) return 18; 
       const today = new Date();
@@ -56,10 +66,8 @@ export function ProfileTab({ skater, onUpdated, readOnly, permissions }) {
   const isYoungMinor = age < 13;
   const hasGuardian = skater.guardians && skater.guardians.length > 0;
 
-  // Permission: Can invite? (Owner Only)
-  const canInvite = permissions ? permissions.canEditProfile : !readOnly;
-  // Permission: Can delete/archive? (Owner Only)
-  const canManage = permissions ? permissions.canDelete : !readOnly;
+  // Permission: Can invite/manage? (Owner Only)
+  const canManage = permissions ? permissions.canManageStaff : !readOnly;
 
   return (
     <div className="space-y-6">
@@ -72,7 +80,7 @@ export function ProfileTab({ skater, onUpdated, readOnly, permissions }) {
             {!readOnly && (
                 <div className="flex gap-2">
                     
-                    {canInvite && (
+                    {canManage && (
                         <Popover>
                             <PopoverTrigger asChild>
                                 <Button size="sm" variant="outline">
@@ -137,6 +145,7 @@ export function ProfileTab({ skater, onUpdated, readOnly, permissions }) {
                 <div><label className="text-xs font-bold text-gray-500 uppercase">Home Club</label><p className="text-lg">{skater.home_club || '-'}</p></div>
             </div>
 
+            {/* ACCOUNT CONNECTIONS */}
             <div className="bg-slate-50 rounded-lg border border-slate-200 overflow-hidden">
                 <div className="px-4 py-2 bg-slate-100 border-b border-slate-200 flex justify-between items-center">
                     <h4 className="text-xs font-bold text-gray-700 uppercase">Linked Accounts</h4>
@@ -144,6 +153,7 @@ export function ProfileTab({ skater, onUpdated, readOnly, permissions }) {
                 
                 <div className="p-4 space-y-4">
                     
+                    {/* 1. Athlete Row */}
                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-8">
                         <div className="w-32 flex items-center gap-2 text-sm font-medium text-gray-900">
                             <User className="h-4 w-4 text-blue-500" /> Athlete
@@ -154,11 +164,22 @@ export function ProfileTab({ skater, onUpdated, readOnly, permissions }) {
                                     Restricted (Under 13)
                                 </span>
                             ) : skater.user_account_email ? (
-                                <span className="font-mono text-sm text-gray-700">{skater.user_account_email}</span>
+                                <div className="flex items-center justify-between bg-slate-50 p-2 rounded border border-slate-200">
+                                    <span className="font-mono text-sm text-gray-700">{skater.user_account_email}</span>
+                                    {!readOnly && canManage && (
+                                        <button 
+                                            onClick={handleUnlinkAthlete}
+                                            className="text-gray-400 hover:text-red-600 transition-colors ml-4"
+                                            title="Unlink Account"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </button>
+                                    )}
+                                </div>
                             ) : (
                                 <div className="flex items-center gap-4">
                                     <span className="text-sm text-gray-400 italic">Not Linked</span>
-                                    {!readOnly && canInvite && (
+                                    {!readOnly && canManage && (
                                         <InviteUserModal 
                                             entityType="Skater" entityId={skater.id} entityName={skater.full_name}
                                             skaterDOB={skater.date_of_birth} hasGuardian={hasGuardian}
@@ -172,17 +193,29 @@ export function ProfileTab({ skater, onUpdated, readOnly, permissions }) {
                         </div>
                     </div>
 
+                    {/* 2. Guardian Row */}
                     <div className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-8">
                         <div className="w-32 flex items-center gap-2 text-sm font-medium text-gray-900 mt-1">
-                            <Shield className="h-4 w-4 text-purple-500" /> Parent/Guardian
+                            <Shield className="h-4 w-4 text-green-600" /> Parent/Guardian
                         </div>
                         <div className="flex-1 space-y-2">
                             {hasGuardian ? (
                                 skater.guardians.map((g, i) => (
-                                    <div key={i} className="flex items-center gap-2 text-sm">
-                                        <span className="font-medium text-gray-900">{g.full_name}</span>
-                                        <span className="text-gray-400">&bull;</span>
-                                        <span className="font-mono text-gray-600">{g.email}</span>
+                                    <div key={i} className="flex items-center justify-between text-sm bg-white p-2 rounded border border-slate-200 shadow-sm">
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-medium text-gray-900">{g.full_name}</span>
+                                            <span className="text-gray-400">&bull;</span>
+                                            <span className="font-mono text-gray-600">{g.email}</span>
+                                        </div>
+                                        {!readOnly && canManage && (
+                                            <button 
+                                                onClick={() => handleRevoke(g.id)} // <--- Now uses ID from serializer
+                                                className="text-gray-400 hover:text-red-600 transition-colors"
+                                                title="Revoke Access"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </button>
+                                        )}
                                     </div>
                                 ))
                             ) : (
@@ -191,6 +224,7 @@ export function ProfileTab({ skater, onUpdated, readOnly, permissions }) {
                         </div>
                     </div>
 
+                    {/* 3. Collaborators Row */}
                     <div className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-8 pt-4 border-t border-slate-200">
                         <div className="w-32 flex items-center gap-2 text-sm font-medium text-gray-900 mt-1">
                             <Users className="h-4 w-4 text-indigo-500" /> Coaching Staff
@@ -205,7 +239,7 @@ export function ProfileTab({ skater, onUpdated, readOnly, permissions }) {
                                         </div>
                                         <div className="flex items-center gap-4">
                                             <span className="font-mono text-gray-400 text-xs hidden sm:inline">{collab.email}</span>
-                                            {!readOnly && permissions?.canManageStaff && (
+                                            {!readOnly && canManage && (
                                                 <button 
                                                     onClick={() => handleRevoke(collab.id)}
                                                     className="text-gray-400 hover:text-red-600 transition-colors"
@@ -223,10 +257,11 @@ export function ProfileTab({ skater, onUpdated, readOnly, permissions }) {
                         </div>
                     </div>
 
-                    {!readOnly && permissions?.canManageStaff && ( 
+                    {/* 4. Observers Row (Owner Only) */}
+                    {!readOnly && canManage && ( 
                         <div className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-8 pt-4 border-t border-slate-200">
                             <div className="w-32 flex items-center gap-2 text-sm font-medium text-gray-900 mt-1">
-                                <Eye className="h-4 w-4 text-slate-500" /> Observers
+                                <Eye className="h-4 w-4 text-amber-500" /> Observers
                             </div>
                             <div className="flex-1 space-y-2">
                                 {skater.observers && skater.observers.length > 0 ? (
@@ -261,6 +296,7 @@ export function ProfileTab({ skater, onUpdated, readOnly, permissions }) {
         </CardContent>
       </Card>
       
+      {/* Disciplines Card */}
       <Card>
           <CardHeader className="flex flex-row justify-between items-center">
               <CardTitle>Disciplines & Levels</CardTitle>
@@ -278,8 +314,8 @@ export function ProfileTab({ skater, onUpdated, readOnly, permissions }) {
           </CardContent>
       </Card>
 
-      {/* Management / Danger Zone */}
-      {canManage && (
+      {/* Danger Zone */}
+      {!readOnly && permissions?.canDelete && (
           <Card className="border-red-100">
               <CardHeader className="bg-red-50/50 border-b border-red-100"><CardTitle className="text-red-800 flex items-center gap-2"><AlertTriangle className="h-5 w-5" /> Management</CardTitle></CardHeader>
               <CardContent className="p-6 flex flex-col gap-4">

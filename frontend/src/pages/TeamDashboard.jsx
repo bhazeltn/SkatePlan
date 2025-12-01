@@ -1,17 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useLocation } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useAuth } from '@/features/auth/AuthContext';
 import { apiRequest } from '@/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'; // <--- Added
-import { Users, ArrowLeft, AlertTriangle, Handshake, Briefcase, Eye, UserCheck, Trash2, Mail, ChevronDown, Shield, User, Archive } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'; 
+import { 
+    Users, ArrowLeft, AlertTriangle, Handshake, Briefcase, Eye, 
+    UserCheck, Trash2, Mail, ChevronDown, Shield, User
+} from 'lucide-react';
 import { FederationFlag } from '@/components/ui/FederationFlag';
 import { EditTeamModal } from '@/features/profiles/components/EditTeamModal';
 import { InviteUserModal } from '@/features/profiles/components/InviteUserModal';
 import { useAccessControl } from '@/hooks/useAccessControl';
 
-// Tabs (Keep existing imports)
+// Tabs
 import { YearlyPlansTab } from '@/features/planning/components/YearlyPlansTab';
 import { GoalsTab } from '@/features/performance/components/GoalsTab';
 import { ProgramsTab } from '@/features/performance/components/ProgramsTab';
@@ -23,12 +26,10 @@ import { GapAnalysisTab } from '@/features/planning/components/GapAnalysisTab';
 import { WeeklyPlanTab } from '@/features/planning/components/WeeklyPlanTab';
 
 export default function TeamDashboard() {
-  // ... (Fetch logic remains same) ...
   const { id } = useParams();
-  const location = useLocation();
   const { token, user } = useAuth();
   const [team, setTeam] = useState(null);
-  const [activeTab, setActiveTab] = useState('weekly');
+  const [activeTab, setActiveTab] = useState('weekly'); // Default to Weekly
   const [loading, setLoading] = useState(true);
 
   const fetchTeam = async () => {
@@ -42,13 +43,9 @@ export default function TeamDashboard() {
 
   useEffect(() => { fetchTeam(); }, [id, token]);
 
-  useEffect(() => {
-      const searchParams = new URLSearchParams(location.search);
-      const tab = searchParams.get('tab');
-      if (tab) setActiveTab(tab);
-  }, [location.search]);
-
+  // --- PERMISSIONS ---
   const perms = useAccessControl(team);
+  // -------------------
 
   const handleRevoke = async (accessId) => {
       if (!confirm("Revoke access?")) return;
@@ -62,15 +59,6 @@ export default function TeamDashboard() {
       if (!confirm(`Delete ${team.team_name}?`)) return;
       try { await apiRequest(`/teams/${id}/`, 'DELETE', null, token); window.location.hash = '#/'; } catch (e) { alert("Failed."); }
   };
-  
-  const handleArchive = async () => {
-      const action = team.is_active ? 'archive' : 'restore';
-      if (!confirm(`Change status to ${action}?`)) return;
-      try {
-          await apiRequest(`/teams/${team.id}/`, 'PATCH', { is_active: !team.is_active }, token);
-          fetchTeam();
-      } catch (e) { alert("Failed."); }
-  };
 
   const formatTabLabel = (str) => str.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 
@@ -81,6 +69,7 @@ export default function TeamDashboard() {
   if (perms.canViewYearlyPlan) tabs.push('yearly');
   if (perms.canViewGapAnalysis) tabs.push('gap_analysis');
   if (perms.canViewPerformance) tabs.push('goals', 'programs', 'competitions');
+  // Logistics removed for Pairs/Dance
   if (perms.canViewHealth) tabs.push('logs', 'health', 'analytics');
   tabs.push('profile');
 
@@ -92,16 +81,21 @@ export default function TeamDashboard() {
             <div>
                 <h1 className="text-3xl font-bold text-gray-900">{team.team_name}</h1>
                 <div className="flex items-center gap-3 text-muted-foreground mt-1">
-                    <span className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded text-xs font-bold">{team.name}</span>
+                    <span className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded text-xs font-bold">
+                        {team.name}
+                    </span>
                     <span>{team.current_level}</span>
                     <FederationFlag federation={team.federation} />
+
+                    {/* BADGES */}
                     {perms.isCollaborator && <span className="bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded border border-indigo-200 uppercase flex items-center gap-1"><Handshake className="h-3 w-3"/> Collaborating</span>}
+                    {perms.isManager && <span className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded border border-green-200 uppercase flex items-center gap-1"><Briefcase className="h-3 w-3"/> Manager</span>}
                     {perms.isObserver && <span className="bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded border border-amber-200 uppercase flex items-center gap-1"><Eye className="h-3 w-3"/> Observer</span>}
                 </div>
             </div>
         </div>
         <div className="flex gap-2">
-            <a href="#/"><Button variant="outline"><ArrowLeft className="h-4 w-4 mr-2" /> Back</Button></a>
+            <a href="#/"><Button variant="outline"><ArrowLeft className="h-4 w-4 mr-2" /> Back to Dashboard</Button></a>
         </div>
       </div>
 
@@ -118,6 +112,7 @@ export default function TeamDashboard() {
         {activeTab === 'goals' && <GoalsTab team={team} permissions={perms} />}
         {activeTab === 'programs' && <ProgramsTab team={team} readOnly={perms.readOnlyStructure} permissions={perms} />}
         {activeTab === 'competitions' && <CompetitionsTab team={team} readOnly={perms.readOnlyStructure} permissions={perms} />}
+        
         {activeTab === 'logs' && <LogsTab team={team} permissions={perms} />}
         {activeTab === 'health' && <HealthTab team={team} permissions={perms} />}
         {activeTab === 'analytics' && <AnalyticsTab team={team} />}
@@ -127,20 +122,48 @@ export default function TeamDashboard() {
               <Card>
                 <CardHeader className="flex flex-row justify-between items-center">
                     <CardTitle>Team Details</CardTitle>
+                    {/* Invite/Edit only for Owner */}
                     {perms.isOwner && (
                         <div className="flex gap-2">
-                             <Popover>
-                                <PopoverTrigger asChild><Button size="sm" variant="outline"><Mail className="h-4 w-4 mr-2" /> Invite... <ChevronDown className="h-3 w-3 ml-1 opacity-50" /></Button></PopoverTrigger>
+                            
+                            {/* CONSOLIDATED INVITE MENU */}
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button size="sm" variant="outline">
+                                        <Mail className="h-4 w-4 mr-2" /> Invite... <ChevronDown className="h-3 w-3 ml-1 opacity-50" />
+                                    </Button>
+                                </PopoverTrigger>
                                 <PopoverContent align="end" className="w-56 p-1">
                                     <div className="flex flex-col gap-1">
-                                        <InviteUserModal entityType="Team" entityId={team.id} entityName={team.team_name} defaultRole="OBSERVER" lockRole={true} trigger={<Button variant="ghost" size="sm" className="w-full justify-start font-normal h-9"><Eye className="h-4 w-4 mr-2 text-amber-500" /> Observer</Button>} />
-                                        <InviteUserModal entityType="Team" entityId={team.id} entityName={team.team_name} defaultRole="COLLABORATOR" lockRole={true} trigger={<Button variant="ghost" size="sm" className="w-full justify-start font-normal h-9"><Users className="h-4 w-4 mr-2 text-indigo-500" /> Assistant Coach</Button>} />
+                                        <InviteUserModal 
+                                            entityType="Team" entityId={team.id} entityName={team.team_name}
+                                            defaultRole="OBSERVER" lockRole={true}
+                                            trigger={<Button variant="ghost" size="sm" className="w-full justify-start font-normal h-9"><Eye className="h-4 w-4 mr-2 text-amber-500" /> Observer</Button>}
+                                        />
+
+                                        <InviteUserModal 
+                                            entityType="Team" entityId={team.id} entityName={team.team_name}
+                                            defaultRole="COLLABORATOR" lockRole={true}
+                                            trigger={<Button variant="ghost" size="sm" className="w-full justify-start font-normal h-9"><Users className="h-4 w-4 mr-2 text-indigo-500" /> Assistant Coach</Button>}
+                                        />
+                                        
                                         <div className="h-px bg-slate-100 my-1" />
-                                        <InviteUserModal entityType="Team" entityId={team.id} entityName={team.team_name} defaultRole="PARENT" lockRole={true} trigger={<Button variant="ghost" size="sm" className="w-full justify-start font-normal h-9"><Shield className="h-4 w-4 mr-2 text-slate-500" /> Team Parent</Button>} />
-                                        <InviteUserModal entityType="Team" entityId={team.id} entityName={team.team_name} defaultRole="ATHLETE" lockRole={true} trigger={<Button variant="ghost" size="sm" className="w-full justify-start font-normal h-9"><User className="h-4 w-4 mr-2 text-blue-500" /> Athlete</Button>} />
+                                        
+                                        <InviteUserModal 
+                                            entityType="Team" entityId={team.id} entityName={team.team_name}
+                                            defaultRole="PARENT" lockRole={true}
+                                            trigger={<Button variant="ghost" size="sm" className="w-full justify-start font-normal h-9"><Shield className="h-4 w-4 mr-2 text-slate-500" /> Team Parent</Button>}
+                                        />
+
+                                        <InviteUserModal 
+                                            entityType="Team" entityId={team.id} entityName={team.team_name}
+                                            defaultRole="ATHLETE" lockRole={true}
+                                            trigger={<Button variant="ghost" size="sm" className="w-full justify-start font-normal h-9"><User className="h-4 w-4 mr-2 text-blue-500" /> Athlete</Button>}
+                                        />
                                     </div>
                                 </PopoverContent>
                             </Popover>
+                            
                             <EditTeamModal team={team} onSaved={fetchTeam} />
                         </div>
                     )}
@@ -150,6 +173,7 @@ export default function TeamDashboard() {
                         <div className="p-4 border rounded-lg bg-slate-50"><label className="text-xs font-bold text-gray-500 uppercase">Partner A</label><p className="text-lg font-medium">{team.partner_a_details?.full_name}</p><a href={`#/skater/${team.partner_a}`} className="text-xs text-brand-blue hover:underline block mt-1">View Profile &rarr;</a></div>
                         <div className="p-4 border rounded-lg bg-slate-50"><label className="text-xs font-bold text-gray-500 uppercase">Partner B</label><p className="text-lg font-medium">{team.partner_b_details?.full_name}</p><a href={`#/skater/${team.partner_b}`} className="text-xs text-brand-blue hover:underline block mt-1">View Profile &rarr;</a></div>
                     </div>
+                    {/* Staff List */}
                     <div className="border-t pt-4">
                         <h4 className="text-xs font-bold text-gray-500 uppercase mb-2">Access List</h4>
                         <div className="flex flex-wrap gap-2">
@@ -163,19 +187,12 @@ export default function TeamDashboard() {
                     </div>
                 </CardContent>
               </Card>
-
               {perms.canDelete && (
                 <Card className="border-red-100">
-                  <CardHeader className="bg-red-50/50 border-b border-red-100"><CardTitle className="text-red-800 flex items-center gap-2"><AlertTriangle className="h-5 w-5" /> Management</CardTitle></CardHeader>
-                  <CardContent className="p-6 flex flex-col gap-4">
-                      <div className="flex justify-between items-center border-b border-red-50 pb-4">
-                          <div className="text-sm text-gray-600"><p className="font-medium text-gray-900">{team.is_active ? 'Archive Team' : 'Restore Team'}</p><p>Move to the bottom of your list.</p></div>
-                          <Button variant="outline" onClick={handleArchive}><Archive className="h-4 w-4 mr-2" /> {team.is_active ? 'Archive' : 'Restore'}</Button>
-                      </div>
-                      <div className="flex justify-between items-center">
-                          <div className="text-sm text-gray-600"><p className="font-medium text-gray-900">Delete Team</p><p>Permanently remove this team.</p></div>
-                          <Button variant="destructive" onClick={handleDelete}>Delete Team</Button>
-                      </div>
+                  <CardHeader className="bg-red-50/50 border-b border-red-100"><CardTitle className="text-red-800 flex items-center gap-2"><AlertTriangle className="h-5 w-5" /> Danger Zone</CardTitle></CardHeader>
+                  <CardContent className="p-6 flex justify-between items-center">
+                      <div className="text-sm text-gray-600"><p className="font-medium text-gray-900">Delete this team</p><p>This action cannot be undone.</p></div>
+                      <Button variant="destructive" onClick={handleDelete}>Delete Team</Button>
                   </CardContent>
                 </Card>
               )}

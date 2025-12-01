@@ -4,19 +4,22 @@ import { Users, Handshake, Eye, Archive } from 'lucide-react';
 import { FederationFlag } from '@/components/ui/FederationFlag';
 
 export function TeamList({ teams }) {
+  const formatDiscipline = (disc) => {
+      if (!disc) return '';
+      return disc.replace('_', ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+  };
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {teams.map((team) => {
             const isCollaborator = team.access_level === 'COLLABORATOR';
             const isObserver = team.access_level === 'VIEWER' || team.access_level === 'OBSERVER';
-            // Check active status (default true if undefined during migration)
             const isArchived = team.is_active === false;
 
             return (
                 <a key={team.id} href={`#/team/${team.id}`} className="block h-full">
                     <Card className={`hover:border-indigo-500 hover:shadow-md transition-all cursor-pointer h-full group relative overflow-hidden ${isArchived ? 'opacity-60 bg-slate-50 border-dashed' : ''}`}>
                         
-                        {/* Status Strip */}
                         {(isCollaborator || isObserver) && !isArchived && (
                             <div className={`absolute top-0 left-0 w-1 h-full ${isCollaborator ? 'bg-indigo-500' : 'bg-amber-400'}`} />
                         )}
@@ -39,7 +42,10 @@ export function TeamList({ teams }) {
                                 </div>
                                 
                                 <div className="mt-1 flex items-center gap-2 text-xs text-gray-600">
-                                    <span className="bg-slate-100 px-1.5 py-0.5 rounded border">{team.discipline}</span>
+                                    {/* FIX: Format Discipline */}
+                                    <span className="bg-slate-100 px-1.5 py-0.5 rounded border">
+                                        {formatDiscipline(team.discipline)}
+                                    </span>
                                     <span className="text-gray-400">|</span>
                                     <span>{team.current_level}</span>
                                 </div>

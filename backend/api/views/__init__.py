@@ -1,5 +1,10 @@
 from .auth import RegisterView, LoginView, UserProfileView
-from .core import FederationList, SkatingElementList, RevokeAccessView
+from .core import (
+    FederationList,
+    SkatingElementList,
+    RevokeAccessView,
+    UnlinkAthleteView,
+)
 from .skaters import (
     CreateSkaterView,
     SkaterDetailView,

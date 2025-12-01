@@ -70,3 +70,26 @@ class RevokeAccessView(APIView):
         return Response(
             {"error": "Permission denied. You cannot revoke this access."}, status=403
         )
+
+
+class UnlinkAthleteView(APIView):
+    """
+    Unlinks a User account from a Skater profile (Firing the athlete).
+    Only the Owner/Coach can do this.
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, skater_id):
+        skater = get_object_or_404(Skater, id=skater_id)
+
+        # Check Permission
+        role = get_access_role(request.user, skater)
+        if role not in ["OWNER", "COACH"]:
+            return Response({"error": "Permission denied."}, status=403)
+
+        # Unlink
+        skater.user_account = None
+        skater.save()
+
+        return Response({"message": "Athlete unlinked successfully."}, status=200)

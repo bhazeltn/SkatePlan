@@ -55,9 +55,25 @@ export default function Home() {
 
   const handleActionComplete = () => { fetchData(); setMenuOpen(false); };
 
-  const mySkaters = roster.filter(s => !s.access_level || s.access_level === 'COACH' || s.access_level === 'OWNER');
-  const sharedSkaters = roster.filter(s => s.access_level === 'COLLABORATOR');
-  const observedSkaters = roster.filter(s => s.access_level === 'VIEWER' || s.access_level === 'OBSERVER');
+  // --- FILTER LISTS (STRICT) ---
+  const isMine = (level) => !level || level === 'COACH' || level === 'OWNER' || level === 'SKATER_OWNER';
+  const isShared = (level) => level === 'COLLABORATOR' || level === 'MANAGER';
+  const isObserved = (level) => level === 'VIEWER' || level === 'OBSERVER';
+
+  const mySkaters = roster.filter(s => isMine(s.access_level));
+  const myTeams = teams.filter(t => isMine(t.access_level));
+  const mySynchro = synchroTeams.filter(t => isMine(t.access_level));
+
+  const sharedSkaters = roster.filter(s => isShared(s.access_level));
+  const sharedTeams = teams.filter(t => isShared(t.access_level));
+  const sharedSynchro = synchroTeams.filter(t => isShared(t.access_level));
+  
+  const observedSkaters = roster.filter(s => isObserved(s.access_level));
+  const observedTeams = teams.filter(t => isObserved(t.access_level));
+  const observedSynchro = synchroTeams.filter(t => isObserved(t.access_level));
+  
+  const hasCollaborations = sharedSkaters.length > 0 || sharedTeams.length > 0 || sharedSynchro.length > 0;
+  const hasObserved = observedSkaters.length > 0 || observedTeams.length > 0 || observedSynchro.length > 0;
 
   const SharedBadge = ({ isShared }) => isShared ? <Handshake className="h-3 w-3 text-indigo-500 ml-1 inline" /> : null;
 
@@ -86,123 +102,60 @@ export default function Home() {
       {/* Stats Widgets */}
       {stats && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-            
-             {/* 1. Health */}
              <Card className={stats.red_flags?.injuries?.length > 0 ? "border-red-200 bg-red-50/30" : "border-green-200 bg-green-50/30"}>
                 <CardHeader className="pb-2 flex flex-row items-center gap-2 space-y-0"><HeartPulse className={`h-5 w-5 ${stats.red_flags?.injuries?.length > 0 ? "text-red-600" : "text-green-600"}`} /><CardTitle className="text-base font-semibold text-gray-900">Health Status</CardTitle></CardHeader>
                 <CardContent>
-                    {stats.red_flags?.injuries?.length === 0 ? (
-                        <div className="flex items-center gap-2 text-sm text-green-700 font-medium"><ShieldCheck className="h-5 w-5" /> All athletes healthy.</div>
-                    ) : (
-                        <div className="space-y-2">
-                            {stats.red_flags?.injuries?.map((inj, i) => (
-                                <a key={i} href={inj.link || `#/skater/${inj.skater_id}?tab=health`} className="block text-sm text-red-800 bg-white border border-red-100 px-3 py-2 rounded shadow-sm hover:bg-red-50 transition-colors cursor-pointer">
-                                    <div className="flex justify-between items-center">
-                                        <div><span className="font-bold">{inj.skater}</span><SharedBadge isShared={inj.is_shared}/><span className="text-xs opacity-80 block">{inj.injury}</span></div>
-                                        <span className="text-xs bg-red-100 px-2 py-0.5 rounded-full font-medium">{inj.status}</span>
-                                    </div>
-                                </a>
-                            ))}
-                        </div>
-                    )}
+                    {stats.red_flags?.injuries?.length === 0 ? (<div className="flex items-center gap-2 text-sm text-green-700 font-medium"><ShieldCheck className="h-5 w-5" /> All athletes healthy.</div>) : (<div className="space-y-2">{stats.red_flags?.injuries?.map((inj, i) => (<a key={i} href={inj.link} className="text-sm flex justify-between items-center text-red-800 bg-white border border-red-100 px-3 py-2 rounded shadow-sm hover:bg-red-50 transition-colors cursor-pointer"><div><span className="font-bold">{inj.skater}</span><SharedBadge isShared={inj.is_shared}/><span className="text-xs opacity-80 block">{inj.injury}</span></div><span className="text-xs bg-red-100 px-2 py-0.5 rounded-full font-medium">{inj.status}</span></a>))}</div>)}
                 </CardContent>
             </Card>
-
-            {/* 2. Planning */}
             <Card className={stats.red_flags?.planning?.length > 0 ? "border-orange-200 bg-orange-50/30" : "border-slate-200 bg-slate-50/50"}>
                 <CardHeader className="pb-2 flex flex-row items-center gap-2 space-y-0"><FileWarning className={`h-5 w-5 ${stats.red_flags?.planning?.length > 0 ? "text-orange-600" : "text-slate-400"}`} /><CardTitle className="text-base font-semibold text-gray-900">Planning Status</CardTitle></CardHeader>
                 <CardContent>
-                    {stats.red_flags?.planning?.length === 0 ? (
-                        <div className="flex items-center gap-2 text-sm text-slate-600"><CheckCircle2 className="h-4 w-4 text-slate-400" /> All active skaters planned.</div>
-                    ) : (
-                        <div className="space-y-2">
-                            {stats.red_flags?.planning?.map((item, i) => (
-                                <a key={i} href={item.link} className="block text-sm text-orange-900 bg-white border border-orange-100 px-3 py-2 rounded shadow-sm hover:bg-orange-50 transition-colors cursor-pointer">
-                                    <span className="font-bold">{item.skater}</span><SharedBadge isShared={item.is_shared}/>: {item.issue}
-                                </a>
-                            ))}
-                        </div>
-                    )}
+                    {stats.red_flags?.planning?.length === 0 ? (<div className="flex items-center gap-2 text-sm text-slate-600"><CheckCircle2 className="h-4 w-4 text-slate-400" /> All active skaters planned.</div>) : (<div className="space-y-2">{stats.red_flags?.planning?.map((item, i) => (<a key={i} href={item.link} className="block text-sm text-orange-900 bg-white border border-orange-100 px-3 py-2 rounded shadow-sm hover:bg-orange-50"><span className="font-bold">{item.skater}</span><SharedBadge isShared={item.is_shared}/>: {item.issue}</a>))}</div>)}
                 </CardContent>
             </Card>
-
-            {/* 3. Goals */}
             <Card>
                 <CardHeader className="pb-2 flex flex-row items-center gap-2 space-y-0"><Clock className="h-5 w-5 text-amber-500" /><CardTitle className="text-base font-semibold text-gray-900">Goal Tracker</CardTitle></CardHeader>
                 <CardContent>
-                    {(!stats.red_flags?.overdue_goals || stats.red_flags.overdue_goals.length === 0) ? (
-                        <div className="flex items-center gap-2 text-sm text-slate-500"><ClipboardList className="h-4 w-4" /> No urgent goals.</div>
-                    ) : (
-                        <div className="space-y-2">
-                            {stats.red_flags.overdue_goals.map((g, i) => (
-                                <a key={i} href={g.link} className="block text-sm text-red-700 bg-red-50 px-2 py-1 rounded border border-red-100 hover:bg-red-100 transition-colors cursor-pointer">
-                                    <span className="font-bold">{g.title}</span> (Overdue)<br/>
-                                    <span className="text-[10px] text-red-500">{g.skater_name}</span><SharedBadge isShared={g.is_shared}/>
-                                </a>
-                            ))}
-                        </div>
-                    )}
+                        {(!stats.red_flags?.overdue_goals || stats.red_flags.overdue_goals.length === 0) ? <div className="flex items-center gap-2 text-sm text-slate-500"><ClipboardList className="h-4 w-4" /> No urgent goals.</div> : <div className="space-y-2">{stats.red_flags.overdue_goals.map((g, i) => (<a key={i} href={g.link} className="block text-sm text-red-700 bg-red-50 px-2 py-1 rounded border border-red-100 hover:bg-red-100"><span className="font-bold">{g.title}</span> (Overdue)<br/><span className="text-[10px] text-red-500">{g.skater_name}</span><SharedBadge isShared={g.is_shared}/></a>))}</div>}
                 </CardContent>
             </Card>
-
-            {/* 4. Activity */}
-            <Card className="h-full"><CardHeader className="pb-2 flex flex-row items-center gap-2 space-y-0"><Activity className="h-5 w-5 text-blue-500" /><CardTitle className="text-base font-semibold text-gray-800">Recent Activity</CardTitle></CardHeader>
-                <CardContent>
-                    {stats.activity.length === 0 ? <div className="text-sm text-slate-400 italic">No recent activity.</div> : <div className="space-y-0">
-                        {stats.activity.map((act, i) => (
-                            <a key={i} href={act.link} className="block text-sm border-b py-3 hover:bg-slate-50 px-2 -mx-2 rounded transition-colors">
-                                <div className="flex justify-between mb-1"><span className="font-bold text-gray-900">{act.skater} <SharedBadge isShared={act.is_shared}/></span><span className="text-xs text-gray-400">{new Date(act.date).toLocaleDateString()}</span></div>
-                                <p className="text-xs text-gray-600">Logged Session <span className="text-yellow-500">{'★'.repeat(act.rating)}</span></p>
-                            </a>
-                        ))}
-                    </div>}
-                </CardContent>
-            </Card>
-            
-            {/* 5. Agenda */}
-            <Card className="h-full"><CardHeader className="pb-2 flex flex-row items-center gap-2 space-y-0"><Calendar className="h-5 w-5 text-purple-500" /><CardTitle className="text-base font-semibold text-gray-800">Next 14 Days</CardTitle></CardHeader>
-                <CardContent>
-                    {stats.agenda.length === 0 ? <div className="text-sm text-slate-400 italic">No upcoming events.</div> : <div className="space-y-3">
-                        {stats.agenda.map((item, i) => (
-                            <a key={i} href={item.link} className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded cursor-pointer block">
-                                <div className={`w-2 h-2 rounded-full ${item.type === 'Competition' ? 'bg-purple-500' : 'bg-indigo-500'}`} />
-                                <div className="min-w-0 flex-1">
-                                    <div className="flex justify-between"><span className="text-xs font-bold text-gray-500 uppercase">{item.type}</span><span className="text-xs text-gray-400">{new Date(item.date).toLocaleDateString(undefined, {month:'short', day:'numeric'})}</span></div>
-                                    <p className="text-sm font-medium truncate">{item.title}</p>
-                                    <p className="text-xs text-gray-500 truncate">{item.who} <SharedBadge isShared={item.is_shared}/></p>
-                                </div>
-                            </a>
-                        ))}
-                    </div>}
-                </CardContent>
-            </Card>
+            <Card className="h-full"><CardHeader className="pb-2 flex flex-row items-center gap-2 space-y-0"><Activity className="h-5 w-5 text-blue-500" /><CardTitle className="text-base font-semibold text-gray-800">Recent Activity</CardTitle></CardHeader><CardContent>{stats.activity.length === 0 ? <div className="text-sm text-slate-400 italic">No recent activity.</div> : <div className="space-y-0">{stats.activity.map((act, i) => (<a key={i} href={act.link || '#'} className="block text-sm border-b py-3 hover:bg-slate-50 px-2 -mx-2 rounded transition-colors"><div className="flex justify-between mb-1"><span className="font-bold text-gray-900">{act.skater} <SharedBadge isShared={act.is_shared}/></span><span className="text-xs text-gray-400">{new Date(act.date).toLocaleDateString()}</span></div><p className="text-xs text-gray-600">Logged Session <span className="text-yellow-500">{'★'.repeat(act.rating)}</span></p></a>))}</div>}</CardContent></Card>
+            <Card className="h-full"><CardHeader className="pb-2 flex flex-row items-center gap-2 space-y-0"><Calendar className="h-5 w-5 text-purple-500" /><CardTitle className="text-base font-semibold text-gray-800">Next 14 Days</CardTitle></CardHeader><CardContent>{stats.agenda.length === 0 ? <div className="text-sm text-slate-400 italic">No upcoming events.</div> : <div className="space-y-3">{stats.agenda.map((item, i) => (<a key={i} href={item.link} className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded block"><div className={`w-2 h-2 rounded-full ${item.type === 'Competition' ? 'bg-purple-500' : 'bg-indigo-500'}`} /><div className="min-w-0 flex-1"><div className="flex justify-between"><span className="text-xs font-bold text-gray-500 uppercase">{item.type}</span><span className="text-xs text-gray-400">{new Date(item.date).toLocaleDateString(undefined, {month:'short', day:'numeric'})}</span></div><p className="text-sm font-medium truncate">{item.title}</p><p className="text-xs text-gray-500 truncate">{item.who} <SharedBadge isShared={item.is_shared}/></p></div></a>))}</div>}</CardContent></Card>
         </div>
       )}
 
-      {/* ... (Roster Sections remain same) ... */}
-      {synchroTeams.length > 0 && <div className="mb-8"><h2 className="text-xl font-bold text-gray-900 mb-4">Synchro Teams</h2><SynchroTeamList teams={synchroTeams} /></div>}
-      {teams.length > 0 && <div className="mb-8"><h2 className="text-xl font-bold text-gray-900 mb-4">Pairs & Dance</h2><TeamList teams={teams} /></div>}
+      {/* --- MY ROSTER (OWNED) --- */}
+      {mySynchro.length > 0 && <div className="mb-8"><h2 className="text-xl font-bold text-gray-900 mb-4">Synchro Teams</h2><SynchroTeamList teams={mySynchro} /></div>}
+      {myTeams.length > 0 && <div className="mb-8"><h2 className="text-xl font-bold text-gray-900 mb-4">Pairs & Dance</h2><TeamList teams={myTeams} /></div>}
       {mySkaters.length > 0 && <div className="mb-8"><h2 className="text-xl font-bold text-gray-900 mb-4">My Athletes</h2><RosterList roster={mySkaters} /></div>}
       
-      {sharedSkaters.length > 0 && (
+      {/* --- COLLABORATIONS --- */}
+      {hasCollaborations && (
           <div className="mb-8 pt-6 border-t border-dashed">
               <h2 className="text-xl font-bold text-indigo-900 mb-4 flex items-center gap-2">
                   <Handshake className="h-6 w-6 text-indigo-600" /> Collaborations
               </h2>
-              <div className="bg-indigo-50/50 p-4 rounded-lg border border-indigo-100">
-                  <RosterList roster={sharedSkaters} />
+              <div className="bg-indigo-50/50 p-6 rounded-lg border border-indigo-100 space-y-6">
+                  {sharedSynchro.length > 0 && <div><h4 className="text-sm font-bold text-indigo-400 uppercase mb-2">Synchro Teams</h4><SynchroTeamList teams={sharedSynchro} /></div>}
+                  {sharedTeams.length > 0 && <div><h4 className="text-sm font-bold text-indigo-400 uppercase mb-2">Pairs & Dance</h4><TeamList teams={sharedTeams} /></div>}
+                  {sharedSkaters.length > 0 && <div><h4 className="text-sm font-bold text-indigo-400 uppercase mb-2">Athletes</h4><RosterList roster={sharedSkaters} /></div>}
               </div>
           </div>
       )}
 
-      {observedSkaters.length > 0 && (
+      {/* --- SHARED WITH ME (OBSERVED) --- */}
+      {hasObserved && (
           <div className="mb-8 pt-6 border-t border-dashed">
               <h2 className="text-xl font-bold text-slate-700 mb-4 flex items-center gap-2">
                   <Eye className="h-6 w-6 text-slate-500" /> Shared with Me
               </h2>
-              <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-                  <RosterList roster={observedSkaters} />
-                  <p className="text-xs text-gray-500 mt-2 italic">You have Read-Only access to these portfolios.</p>
+              <div className="bg-slate-50 p-6 rounded-lg border border-slate-200 space-y-6">
+                  {observedSynchro.length > 0 && <div><h4 className="text-sm font-bold text-slate-400 uppercase mb-2">Synchro Teams</h4><SynchroTeamList teams={observedSynchro} /></div>}
+                  {observedTeams.length > 0 && <div><h4 className="text-sm font-bold text-slate-400 uppercase mb-2">Pairs & Dance</h4><TeamList teams={observedTeams} /></div>}
+                  {observedSkaters.length > 0 && <div><h4 className="text-sm font-bold text-slate-400 uppercase mb-2">Athletes</h4><RosterList roster={observedSkaters} /></div>}
+                  
+                  <p className="text-xs text-gray-500 mt-2 italic text-center w-full">You have Read-Only access to these portfolios.</p>
               </div>
           </div>
       )}

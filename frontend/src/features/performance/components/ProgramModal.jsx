@@ -152,7 +152,7 @@ export function ProgramModal({ skater, team, isSynchro, programToEdit, onSaved, 
     formData.append('planning_entity_id', selectedEntityId);
     formData.append('planning_entity_type', entityType);
     formData.append('is_active', isActive);
-    formData.append('est_base_value', totalBV);
+    formData.append('est_base_value', totalBV.toFixed(2));
     formData.append('planned_elements', JSON.stringify(elements));
 
     if (musicFile) formData.append('music_file', musicFile);

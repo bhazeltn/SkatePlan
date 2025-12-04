@@ -64,6 +64,27 @@ class SessionLog(models.Model):
     spin_focus = models.JSONField(default=dict, blank=True)
     synchro_element_focus = models.JSONField(default=dict, blank=True)
 
+    # PRACTICE TRACKING
+    # Structure: [
+    #   {
+    #     "id": 1712345678,
+    #     "program_id": 12,
+    #     "program_title": "Short Program",
+    #     "run_type": "Full",
+    #     "music": true,
+    #     "quality": 4,
+    #     "elements": [ ... protocol data ... ],
+    #     "total_score": 45.50
+    #   }
+    # ]
+    program_runs = models.JSONField(default=list, blank=True)
+
+    # Structure: [
+    #   { "element_code": "2A", "attempts": 10, "successful": 8 },
+    #   { "element_code": "3Lz", "attempts": 5, "successful": 2 }
+    # ]
+    element_attempts = models.JSONField(default=list, blank=True)
+
     def __str__(self):
         return f"Log for {self.planning_entity} on {self.session_date}"
 

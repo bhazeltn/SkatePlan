@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Search, Trash2, Plus, X, ArrowDown } from 'lucide-react';
+import { Trash2, Plus, X } from 'lucide-react';
 import { apiRequest } from '@/api';
 import { useAuth } from '@/features/auth/AuthContext';
 import { Switch } from '@/components/ui/switch';
@@ -22,7 +21,7 @@ export function ProgramElementRow({ index, element, onChange, onRemove, readOnly
           ...element,
           type: e.target.value,
           components: [{ name: '', id: null }],
-          level: '',
+          // Level removed
           notes: '',
           base_value: '',
           is_second_half: false
@@ -30,7 +29,7 @@ export function ProgramElementRow({ index, element, onChange, onRemove, readOnly
   };
 
   const handleSearch = (query, compIndex) => {
-      // 1. Update UI immediately
+      // 1. Update UI immediately (controlled input)
       const newComps = [...element.components];
       newComps[compIndex] = { ...newComps[compIndex], name: query };
       onChange(index, { ...element, components: newComps });
@@ -49,15 +48,17 @@ export function ProgramElementRow({ index, element, onChange, onRemove, readOnly
               setSearchIndex(compIndex);
               setIsSearching(true);
               
-              // Map UI Type (JUMP/SPIN) to Database Type if needed
-              // Assuming backend expects 'Jump', 'Spin', 'Step' (Title Case) or exact match
-              // Let's try sending it as is, but often backend is case-sensitive
+              // Map UI Type to Database Category
+              // UI: JUMP, SPIN, STEP, CHOREO
+              // DB: Jump, Spin, Step, Choreo
               let category = element.type.charAt(0) + element.type.slice(1).toLowerCase(); 
-              if (element.type === 'CHOREO') category = 'Choreo'; // Adjust if needed
+              if (element.type === 'CHOREO') category = 'Choreo';
               
-              const data = await apiRequest(`/elements/?search=${query}&category=${category}`, 'GET', null, token);
+              // Filter: Category + Standard Elements Only (No <, <<, e)
+              const url = `/elements/?search=${query}&category=${category}&standard=true`;
+              const data = await apiRequest(url, 'GET', null, token);
               
-              // Client-side filter boost: Prioritize exact starts
+              // Sort: Exact starts first
               const sorted = data.sort((a, b) => {
                   const aStarts = a.abbreviation.toLowerCase().startsWith(query.toLowerCase());
                   const bStarts = b.abbreviation.toLowerCase().startsWith(query.toLowerCase());
@@ -66,21 +67,36 @@ export function ProgramElementRow({ index, element, onChange, onRemove, readOnly
                   return 0;
               });
               
-              setSearchResults(sorted.slice(0, 10)); // Limit to top 10
+              setSearchResults(sorted.slice(0, 10));
           } catch (e) { console.error(e); }
-      }, 300)); // 300ms delay
+      }, 300));
   };
 
   const selectElement = (el) => {
       const newComps = [...element.components];
       newComps[searchIndex] = { name: el.abbreviation, id: el.id };
-      // Auto-fill Base Value if available
-      const bv = el.base_value || ''; 
+      
+      let newBV = element.base_value;
+      if (element.components.length === 1) {
+          newBV = el.base_value || '';
+      }
+
+      // --- NEW: Auto-extract Level ---
+      // Regex looks for a digit at the end of the code (e.g. "StSq4" -> "4", "ChSq1" -> "1")
+      // But ignores "3T" (jumps)
+      let newLevel = element.level;
+      if (element.type === 'STEP' || element.type === 'CHOREO' || element.type === 'SPIN') {
+          const match = el.abbreviation.match(/(\d+|B)$/); // Matches 1, 2, 3, 4, or B at end
+          if (match) {
+              newLevel = match[0];
+          }
+      }
       
       onChange(index, { 
           ...element, 
           components: newComps,
-          base_value: bv // You might want to handle combos (adding BVs) differently
+          base_value: newBV,
+          level: newLevel
       });
       
       setSearchResults([]);
@@ -99,7 +115,7 @@ export function ProgramElementRow({ index, element, onChange, onRemove, readOnly
       onChange(index, { ...element, components: newComps });
   };
 
-  // Close search on click outside (Basic implementation)
+  // Close search on click outside
   useEffect(() => {
       const handleClick = () => setSearchResults([]);
       window.addEventListener('click', handleClick);
@@ -112,7 +128,7 @@ export function ProgramElementRow({ index, element, onChange, onRemove, readOnly
         <div className="text-gray-400 font-mono text-xs w-5 text-center">{index + 1}</div>
 
         <select 
-            className="h-8 w-[70px] rounded border bg-slate-50 text-xs"
+            className="h-8 w-[80px] rounded border bg-slate-50 text-xs font-medium"
             value={element.type}
             onChange={handleTypeChange}
             disabled={readOnly} 
@@ -130,10 +146,10 @@ export function ProgramElementRow({ index, element, onChange, onRemove, readOnly
                     
                     <div className="relative">
                         <Input 
-                            className="h-8 w-20 font-bold uppercase text-xs px-1.5"
+                            className="h-8 w-24 font-bold uppercase text-xs px-2"
                             value={comp.name}
                             onChange={(e) => handleSearch(e.target.value, i)}
-                            placeholder={i === 0 ? "Code" : "Combo"}
+                            placeholder={i === 0 ? "Element" : "Combo"}
                             disabled={readOnly} 
                         />
                         {!readOnly && isSearching && searchIndex === i && searchResults.length > 0 && (
@@ -141,11 +157,14 @@ export function ProgramElementRow({ index, element, onChange, onRemove, readOnly
                                 {searchResults.map(res => (
                                     <div 
                                         key={res.id} 
-                                        className="p-2 hover:bg-indigo-50 cursor-pointer text-xs border-b last:border-0 flex justify-between" 
+                                        className="p-2 hover:bg-indigo-50 cursor-pointer text-xs border-b last:border-0 flex justify-between items-center" 
                                         onClick={() => selectElement(res)}
                                     >
-                                        <span className="font-bold text-indigo-700">{res.abbreviation}</span> 
-                                        <span className="text-gray-500 truncate ml-2">{res.element_name}</span>
+                                        <div>
+                                            <span className="font-bold text-indigo-700 block">{res.abbreviation}</span> 
+                                            <span className="text-gray-500 text-[10px]">{res.element_name}</span>
+                                        </div>
+                                        <span className="font-mono text-gray-400">{res.base_value}</span>
                                     </div>
                                 ))}
                             </div>
@@ -156,6 +175,7 @@ export function ProgramElementRow({ index, element, onChange, onRemove, readOnly
                     )}
                 </div>
             ))}
+            
             {!readOnly && element.type === 'JUMP' && element.components.length < 3 && (
                 <Button type="button" variant="ghost" size="icon" className="h-6 w-6 rounded-full" onClick={addComboJump}>
                     <Plus className="h-3 w-3" />
@@ -163,19 +183,11 @@ export function ProgramElementRow({ index, element, onChange, onRemove, readOnly
             )}
         </div>
 
-        {element.type !== 'JUMP' && element.type !== 'CHOREO' && (
-            <Input 
-                className="h-8 w-10 text-center px-0 text-xs" 
-                placeholder="Lvl" 
-                value={element.level} 
-                onChange={(e) => onChange(index, { ...element, level: e.target.value })}
-                disabled={readOnly} 
-            />
-        )}
+        {/* Level Input Removed Here */}
 
         {element.type === 'JUMP' && (
-             <div className="flex items-center" title="Bonus (2nd Half)">
-                <span className="text-[10px] text-gray-400 mr-1 font-bold">x1.1</span>
+             <div className="flex items-center gap-1" title="Bonus (2nd Half)">
+                <span className="text-[10px] text-gray-400 font-bold">x1.1</span>
                 <Switch 
                     className="scale-75" 
                     checked={element.is_second_half || false}

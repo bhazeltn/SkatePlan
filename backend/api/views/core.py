@@ -20,22 +20,32 @@ class SkatingElementList(generics.ListAPIView):
     serializer_class = SkatingElementSerializer
 
     def get_queryset(self):
-        queryset = SkatingElement.objects.all().order_by(
+        queryset = SkatingElement.objects.filter(is_active=True).order_by(
             "abbreviation"
-        )  # Sort by code usually better for lookup
+        )
 
-        # 1. Search Filter
+        # 1. Search (by code or name)
         search = self.request.query_params.get("search")
         if search:
             queryset = queryset.filter(
                 Q(element_name__icontains=search) | Q(abbreviation__icontains=search)
             )
 
-        # 2. Category Filter (JUMP, SPIN, STEP)
+        # 2. Category Filter (Jump, Spin, etc.)
         category = self.request.query_params.get("category")
         if category:
-            # Use iexact to handle 'Jump' vs 'JUMP' gracefully
-            queryset = queryset.filter(discipline_type__iexact=category)
+            queryset = queryset.filter(category__iexact=category)
+
+        # 3. Discipline Filter (Singles, Pairs, etc.)
+        discipline = self.request.query_params.get("discipline")
+        if discipline:
+            queryset = queryset.filter(discipline_type__iexact=discipline)
+
+        # 4. Standard Only (Hides <, <<, q, V, e)
+        # Pass ?standard=true in the URL to activate this
+        standard = self.request.query_params.get("standard")
+        if standard and standard.lower() == "true":
+            queryset = queryset.filter(is_standard=True)
 
         return queryset
 

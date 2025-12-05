@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Plus, Star, Zap, Smile, Users, Check, X, Clock, Lock } from 'lucide-react';
-import { ProgramRunTracker } from './ProgramRunTracker'; // <--- 1. IMPORT
+import { ProgramRunTracker } from './ProgramRunTracker'; // <--- 1. IMPORT ADDED
 
 // Emoji Definitions
 const MOODS = [
@@ -69,7 +69,7 @@ export function LogSessionModal({ skater, team, isSynchro, logToEdit, onLogCreat
               setSkaterNotes(logToEdit.skater_notes || '');
               setAttendanceList(logToEdit.attendance || []);
               
-              // Load saved runs
+              // Load saved runs (ensure it defaults to empty array if null)
               setProgramRuns(logToEdit.program_runs || []);
           } else {
               // --- CREATE MODE ---
@@ -216,9 +216,9 @@ export function LogSessionModal({ skater, team, isSynchro, logToEdit, onLogCreat
                             onChange={(e) => setSelectedEntityId(e.target.value)} 
                             disabled={!!logToEdit || !canEdit}
                         >
-                            {skater?.planning_entities?.map((entity) => (
-                                // --- 5. FIX DUPLICATE KEY ISSUE ---
-                                <option key={`${entity.type}_${entity.id}`} value={entity.id}>
+                            {skater?.planning_entities?.map((entity, idx) => (
+                                // --- 5. FIX DUPLICATE KEY ISSUE (Composite Key) ---
+                                <option key={`${entity.type}_${entity.id}_${idx}`} value={entity.id}>
                                     {entity.name}
                                 </option>
                             ))}
@@ -293,12 +293,16 @@ export function LogSessionModal({ skater, team, isSynchro, logToEdit, onLogCreat
           </div>
 
           {/* --- 6. PROGRAM RUN TRACKER (Only for ON_ICE) --- */}
-          {type === 'ON_ICE' && skater && canEdit && (
-              <ProgramRunTracker 
-                  skaterId={skater.id} 
-                  initialRuns={programRuns} // Load saved runs
-                  onChange={(runs) => setProgramRuns(runs)} // Capture updates
-              />
+          {/* Always render so we can view history, pass readOnly if !canEdit */}
+          {type === 'ON_ICE' && skater && (
+              <div className="border-t pt-4">
+                   <ProgramRunTracker 
+                        skaterId={skater.id} 
+                        initialRuns={programRuns} 
+                        onChange={(runs) => setProgramRuns(runs)}
+                        readOnly={!canEdit}
+                   />
+              </div>
           )}
 
           {/* Notes */}

@@ -20,19 +20,22 @@ export function ProgramRunTracker({ skaterId, initialRuns = [], onChange, readOn
     const [isMusic, setIsMusic] = useState(true);
     const [runType, setRunType] = useState('Full'); 
 
-    // Sync initial state
+    // 1. SYNC STATE: Ensure runs show up when modal opens
     useEffect(() => {
         setCompletedRuns(initialRuns || []);
     }, [initialRuns]);
 
-    // Load programs
+    // 2. Load programs (for the dropdown)
     useEffect(() => {
         if (!skaterId) return;
         const fetchPrograms = async () => {
             try {
                 const data = await apiRequest(`/skaters/${skaterId}/programs/`, 'GET', null, token);
-                setPrograms(data);
-            } catch (e) { console.error("Failed to load programs", e); }
+                setPrograms(data || []);
+            } catch (e) { 
+                console.error("Failed to load programs", e); 
+                setPrograms([]); // Ensure it's an array so we don't crash
+            }
         };
         fetchPrograms();
     }, [skaterId, token]);
@@ -101,25 +104,23 @@ export function ProgramRunTracker({ skaterId, initialRuns = [], onChange, readOn
         setRunType('Full');
     };
 
-    // --- NEW: EDIT RUN FUNCTION ---
     const handleEditRun = (index) => {
         const runToEdit = completedRuns[index];
-        
-        // 1. Load data back into the "Active" editor variables
-        setSelectedProgramId(runToEdit.program_id);
-        setRunElements(runToEdit.elements);
-        setIsMusic(runToEdit.music);
-        setRunType(runToEdit.run_type);
-        
-        // 2. Remove it from the completed list (it will be re-added when you hit "Finish")
-        setCompletedRuns(prev => prev.filter((_, i) => i !== index));
+        // Only allow editing if we successfully loaded the programs list
+        if (runToEdit.program_id) {
+            setSelectedProgramId(runToEdit.program_id);
+            setRunElements(runToEdit.elements);
+            setIsMusic(runToEdit.music);
+            setRunType(runToEdit.run_type);
+            
+            // Remove from completed list while editing
+            setCompletedRuns(prev => prev.filter((_, i) => i !== index));
+        }
     };
 
     const deleteRun = (runIndex) => {
         setCompletedRuns(prev => prev.filter((_, i) => i !== runIndex));
     };
-
-    if (!programs) return null; 
 
     const currentTotalScore = runElements.reduce((sum, el) => sum + parseFloat(el.score || 0), 0).toFixed(2);
 
@@ -129,7 +130,7 @@ export function ProgramRunTracker({ skaterId, initialRuns = [], onChange, readOn
                 <PlayCircle className="h-5 w-5" /> Program Runs
             </Label>
 
-            {/* COMPLETED RUNS LIST */}
+            {/* LIST OF COMPLETED RUNS (Always show this!) */}
             {completedRuns.length > 0 ? (
                 <div className="space-y-2 mb-4">
                     {completedRuns.map((run, i) => (
@@ -148,10 +149,8 @@ export function ProgramRunTracker({ skaterId, initialRuns = [], onChange, readOn
                                     <div className="text-xs text-slate-400">Score</div>
                                     <div className="font-mono font-bold text-indigo-600">{run.total_score}</div>
                                 </div>
-                                
                                 {!readOnly && (
                                     <>
-                                        {/* EDIT BUTTON */}
                                         <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-400 hover:text-blue-600" onClick={() => handleEditRun(i)}>
                                             <Pencil className="h-4 w-4" />
                                         </Button>
@@ -165,6 +164,7 @@ export function ProgramRunTracker({ skaterId, initialRuns = [], onChange, readOn
                     ))}
                 </div>
             ) : (
+                // Only show "No runs" if there are truly no runs AND we are in read-only mode
                 readOnly && <div className="text-sm text-gray-500 italic">No runs recorded.</div>
             )}
 
@@ -183,7 +183,7 @@ export function ProgramRunTracker({ skaterId, initialRuns = [], onChange, readOn
                                 ))}
                             </SelectContent>
                         </Select>
-                        {programs.length === 0 && <span className="text-xs text-red-400">No programs found.</span>}
+                        {programs.length === 0 && <span className="text-xs text-red-400">No programs found to add.</span>}
                     </div>
                 ) : (
                     <div className="bg-slate-50 p-3 rounded-lg border border-indigo-100 animate-in fade-in slide-in-from-top-2">

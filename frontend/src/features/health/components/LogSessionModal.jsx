@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { DatePicker } from '@/components/ui/date-picker';
-import { Plus, Star, Zap, Smile, Users, Check, X, Clock, Lock, MapPin } from 'lucide-react';
+import { Plus, Star, Zap, Smile, Users, Check, X, Clock, Lock } from 'lucide-react';
+import { ProgramRunTracker } from './ProgramRunTracker'; // <--- 1. IMPORT
 
 // Emoji Definitions
 const MOODS = [
@@ -26,9 +27,9 @@ export function LogSessionModal({ skater, team, isSynchro, logToEdit, onLogCreat
 
   // Form State
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [time, setTime] = useState('');      // <--- New
-  const [location, setLocation] = useState(''); // <--- New
-  const [type, setType] = useState('ON_ICE');   // <--- New
+  const [time, setTime] = useState('');
+  const [location, setLocation] = useState('');
+  const [type, setType] = useState('ON_ICE');
   const [selectedEntityId, setSelectedEntityId] = useState('');
   
   // Ratings
@@ -37,6 +38,9 @@ export function LogSessionModal({ skater, team, isSynchro, logToEdit, onLogCreat
   const [mood, setMood] = useState('🙂');
   const [mentalFocus, setMentalFocus] = useState('');
   const [attendanceList, setAttendanceList] = useState([]);
+
+  // --- 2. NEW STATE FOR RUNS ---
+  const [programRuns, setProgramRuns] = useState([]);
 
   // Split Notes State
   const [coachNotes, setCoachNotes] = useState('');
@@ -64,13 +68,17 @@ export function LogSessionModal({ skater, team, isSynchro, logToEdit, onLogCreat
               setCoachNotes(logToEdit.coach_notes || '');
               setSkaterNotes(logToEdit.skater_notes || '');
               setAttendanceList(logToEdit.attendance || []);
+              
+              // Load saved runs
+              setProgramRuns(logToEdit.program_runs || []);
           } else {
               // --- CREATE MODE ---
               setDate(new Date().toISOString().split('T')[0]);
-              // Default time to now rounded to nearest hour? Or just empty.
               setTime(''); setLocation(''); setType('ON_ICE');
               setRating(3); setEnergy(3); setMood('🙂'); 
               setCoachNotes(''); setSkaterNotes(''); setMentalFocus('');
+              setProgramRuns([]); // Reset runs
+
               if (team) {
                   setSelectedEntityId(team.id);
                   let roster = [];
@@ -108,9 +116,12 @@ export function LogSessionModal({ skater, team, isSynchro, logToEdit, onLogCreat
       let entityType = null;
       if (team) entityType = isSynchro ? 'SynchroTeam' : 'Team';
       else {
+           // Find the entity object to determine its type (Singles vs SoloDance)
            const entity = skater?.planning_entities?.find(e => String(e.id) === String(selectedEntityId));
            entityType = entity ? entity.type : 'SinglesEntity';
       }
+
+      // --- 3. PAYLOAD CONSTRUCTION ---
       const payload = {
         session_date: date,
         session_time: time || null,
@@ -124,8 +135,10 @@ export function LogSessionModal({ skater, team, isSynchro, logToEdit, onLogCreat
         wellbeing_mental_focus_notes: mentalFocus,
         coach_notes: coachNotes,   
         skater_notes: skaterNotes, 
-        attendance: attendanceList
+        attendance: attendanceList,
+        program_runs: programRuns // <--- INCLUDE RUNS
       };
+
       if (logToEdit) await apiRequest(`/logs/${logToEdit.id}/`, 'PATCH', payload, token);
       else if (isSynchro) await apiRequest(`/synchro/${team.id}/logs/`, 'POST', payload, token);
       else if (team) await apiRequest(`/teams/${team.id}/logs/`, 'POST', payload, token);
@@ -133,7 +146,12 @@ export function LogSessionModal({ skater, team, isSynchro, logToEdit, onLogCreat
       
       if (onLogCreated) onLogCreated();
       setOpen(false);
-    } catch (err) { alert('Failed to save log.'); } finally { setLoading(false); }
+    } catch (err) { 
+        console.error(err);
+        alert('Failed to save log.'); 
+    } finally { 
+        setLoading(false); 
+    }
   };
 
   const handleDelete = async () => {
@@ -174,13 +192,14 @@ export function LogSessionModal({ skater, team, isSynchro, logToEdit, onLogCreat
       <DialogTrigger asChild>
         {trigger || <Button><Plus className="h-4 w-4 mr-2" /> Log Session</Button>}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
+      {/* 4. WIDEN MODAL to fit the program tracker table */}
+      <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
               {logToEdit ? 'Edit Log' : 'Log Training Session'}
               {!canEdit && <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded border border-amber-200 flex items-center gap-1"><Lock className="h-3 w-3"/> View Only</span>}
           </DialogTitle>
-          <DialogDescription>Record details and wellbeing.</DialogDescription>
+          <DialogDescription>Record details, wellbeing, and practice runs.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
            
@@ -191,8 +210,18 @@ export function LogSessionModal({ skater, team, isSynchro, logToEdit, onLogCreat
                     {team ? (
                         <Input value={team.team_name} disabled className="bg-white text-slate-500 text-xs h-8" />
                     ) : (
-                        <select className="flex h-8 w-full rounded-md border bg-white px-3 py-1 text-xs" value={selectedEntityId} onChange={(e) => setSelectedEntityId(e.target.value)} disabled={!!logToEdit || !canEdit}>
-                            {skater?.planning_entities?.map((entity) => (<option key={entity.id} value={entity.id}>{entity.name}</option>))}
+                        <select 
+                            className="flex h-8 w-full rounded-md border bg-white px-3 py-1 text-xs" 
+                            value={selectedEntityId} 
+                            onChange={(e) => setSelectedEntityId(e.target.value)} 
+                            disabled={!!logToEdit || !canEdit}
+                        >
+                            {skater?.planning_entities?.map((entity) => (
+                                // --- 5. FIX DUPLICATE KEY ISSUE ---
+                                <option key={`${entity.type}_${entity.id}`} value={entity.id}>
+                                    {entity.name}
+                                </option>
+                            ))}
                         </select>
                     )}
                 </div>
@@ -231,6 +260,7 @@ export function LogSessionModal({ skater, team, isSynchro, logToEdit, onLogCreat
               </div>
           )}
 
+          {/* Ratings */}
           <div className="grid grid-cols-2 gap-4">
             <div className="p-3 bg-slate-50 rounded-md border flex flex-col justify-center items-center space-y-2">
                 <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Quality Rating</Label>
@@ -242,6 +272,7 @@ export function LogSessionModal({ skater, team, isSynchro, logToEdit, onLogCreat
             </div>
           </div>
 
+          {/* Mental Focus */}
           <div className="space-y-2">
              <Label className="flex items-center gap-2"><Smile className="h-4 w-4" /> Mental State</Label>
              <div className="flex justify-between bg-slate-50 p-2 rounded-md border mb-2">
@@ -251,7 +282,7 @@ export function LogSessionModal({ skater, team, isSynchro, logToEdit, onLogCreat
                         type="button" 
                         onClick={() => canEdit && setMood(m.emoji)} 
                         disabled={!canEdit} 
-                        title={m.label} // <--- Tooltip
+                        title={m.label} 
                         className={`text-2xl hover:scale-125 transition-transform px-2 ${mood === m.emoji ? 'scale-125 bg-white shadow-sm rounded-full' : 'opacity-60'}`}
                     >
                         {m.emoji}
@@ -261,6 +292,16 @@ export function LogSessionModal({ skater, team, isSynchro, logToEdit, onLogCreat
              <Input value={mentalFocus} onChange={(e) => setMentalFocus(e.target.value)} placeholder="Focus notes..." disabled={!canEdit} />
           </div>
 
+          {/* --- 6. PROGRAM RUN TRACKER (Only for ON_ICE) --- */}
+          {type === 'ON_ICE' && skater && canEdit && (
+              <ProgramRunTracker 
+                  skaterId={skater.id} 
+                  initialRuns={programRuns} // Load saved runs
+                  onChange={(runs) => setProgramRuns(runs)} // Capture updates
+              />
+          )}
+
+          {/* Notes */}
           <div className="space-y-3 border-t pt-4">
              <div className="space-y-1.5">
                  <Label className="text-xs font-bold text-blue-700 uppercase">

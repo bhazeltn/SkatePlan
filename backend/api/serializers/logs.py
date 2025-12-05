@@ -12,9 +12,9 @@ class SessionLogSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "session_date",
-            "session_time",  # <--- Added
-            "location",  # <--- Added
-            "session_type",  # <--- Added
+            "session_time",
+            "location",
+            "session_type",
             "discipline_name",
             "author_name",
             "session_rating",
@@ -28,6 +28,8 @@ class SessionLogSerializer(serializers.ModelSerializer):
             "jump_focus",
             "spin_focus",
             "synchro_element_focus",
+            "program_runs",
+            "element_attempts",
         )
         read_only_fields = ("author",)
 

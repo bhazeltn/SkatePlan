@@ -1,0 +1,535 @@
+Element_Name,Abbreviation,Category,Sequence/Level,BASE,GOE_-5,GOE_-4,GOE_-3,GOE_-2,GOE_-1,GOE_+1,GOE_+2,GOE_+3,GOE_+4,GOE_+5
+Fourteenstep (w/ KP),FO1SqB,PATTERN DANCE,1st Sequence B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Fourteenstep (w/ KP),FO1Sq1,PATTERN DANCE,1st Sequence 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Fourteenstep (w/ KP),FO1Sq2,PATTERN DANCE,1st Sequence 2,4.00,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Fourteenstep (w/ KP),FO1Sq3,PATTERN DANCE,1st Sequence 3,4.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Fourteenstep (w/ KP),FO1Sq4,PATTERN DANCE,1st Sequence 4,5.00,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Fourteenstep (w/ KP),FO2SqB,PATTERN DANCE,2nd Sequence B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Fourteenstep (w/ KP),FO2Sq1,PATTERN DANCE,2nd Sequence 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Fourteenstep (w/ KP),FO2Sq2,PATTERN DANCE,2nd Sequence 2,4.00,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Fourteenstep (w/ KP),FO2Sq3,PATTERN DANCE,2nd Sequence 3,4.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Fourteenstep (w/ KP),FO2Sq4,PATTERN DANCE,2nd Sequence 4,5.00,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Fourteenstep (w/ KP),FO3SqB,PATTERN DANCE,3rd Sequence B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Fourteenstep (w/ KP),FO3Sq1,PATTERN DANCE,3rd Sequence 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Fourteenstep (w/ KP),FO3Sq2,PATTERN DANCE,3rd Sequence 2,4.00,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Fourteenstep (w/ KP),FO3Sq3,PATTERN DANCE,3rd Sequence 3,4.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Fourteenstep (w/ KP),FO3Sq4,PATTERN DANCE,3rd Sequence 4,5.00,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Fourteenstep (w/ KP),FO4SqB,PATTERN DANCE,4th Sequence B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Fourteenstep (w/ KP),FO4Sq1,PATTERN DANCE,4th Sequence 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Fourteenstep (w/ KP),FO4Sq2,PATTERN DANCE,4th Sequence 2,4.00,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Fourteenstep (w/ KP),FO4Sq3,PATTERN DANCE,4th Sequence 3,4.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Fourteenstep (w/ KP),FO4Sq4,PATTERN DANCE,4th Sequence 4,5.00,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Foxtrot (w/ KP),FT1SqB,PATTERN DANCE,1st Sequence B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Foxtrot (w/ KP),FT1Sq1,PATTERN DANCE,1st Sequence 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Foxtrot (w/ KP),FT1Sq2,PATTERN DANCE,1st Sequence 2,4.00,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Foxtrot (w/ KP),FT1Sq3,PATTERN DANCE,1st Sequence 3,4.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Foxtrot (w/ KP),FT1Sq4,PATTERN DANCE,1st Sequence 4,5.00,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Foxtrot (w/ KP),FT2SqB,PATTERN DANCE,2nd Sequence B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Foxtrot (w/ KP),FT2Sq1,PATTERN DANCE,2nd Sequence 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Foxtrot (w/ KP),FT2Sq2,PATTERN DANCE,2nd Sequence 2,4.00,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Foxtrot (w/ KP),FT2Sq3,PATTERN DANCE,2nd Sequence 3,4.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Foxtrot (w/ KP),FT2Sq4,PATTERN DANCE,2nd Sequence 4,5.00,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Foxtrot (w/ KP),FT3SqB,PATTERN DANCE,3rd Sequence B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Foxtrot (w/ KP),FT3Sq1,PATTERN DANCE,3rd Sequence 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Foxtrot (w/ KP),FT3Sq2,PATTERN DANCE,3rd Sequence 2,4.00,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Foxtrot (w/ KP),FT3Sq3,PATTERN DANCE,3rd Sequence 3,4.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Foxtrot (w/ KP),FT3Sq4,PATTERN DANCE,3rd Sequence 4,5.00,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Foxtrot (w/ KP),FT4SqB,PATTERN DANCE,4th Sequence B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Foxtrot (w/ KP),FT4Sq1,PATTERN DANCE,4th Sequence 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Foxtrot (w/ KP),FT4Sq2,PATTERN DANCE,4th Sequence 2,4.00,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Foxtrot (w/ KP),FT4Sq3,PATTERN DANCE,4th Sequence 3,4.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Foxtrot (w/ KP),FT4Sq4,PATTERN DANCE,4th Sequence 4,5.00,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Rocker Foxtrot (w/ KP),RF1SqB,PATTERN DANCE,1st Sequence B,5.00,-3.75,-3.00,-2.25,-1.50,-0.75,0.75,1.50,2.25,3.00,3.75
+Rocker Foxtrot (w/ KP),RF1Sq1,PATTERN DANCE,1st Sequence 1,7.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Rocker Foxtrot (w/ KP),RF1Sq2,PATTERN DANCE,1st Sequence 2,8.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Rocker Foxtrot (w/ KP),RF1Sq3,PATTERN DANCE,1st Sequence 3,9.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Rocker Foxtrot (w/ KP),RF1Sq4,PATTERN DANCE,1st Sequence 4,10.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Rocker Foxtrot (w/ KP),RF2SqB,PATTERN DANCE,2nd Sequence B,5.00,-3.75,-3.00,-2.25,-1.50,-0.75,0.75,1.50,2.25,3.00,3.75
+Rocker Foxtrot (w/ KP),RF2Sq1,PATTERN DANCE,2nd Sequence 1,7.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Rocker Foxtrot (w/ KP),RF2Sq2,PATTERN DANCE,2nd Sequence 2,8.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Rocker Foxtrot (w/ KP),RF2Sq3,PATTERN DANCE,2nd Sequence 3,9.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Rocker Foxtrot (w/ KP),RF2Sq4,PATTERN DANCE,2nd Sequence 4,10.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Tea-Time Foxtrot (w/ KP),TTF1SqB,PATTERN DANCE,1st Sequence B,5.00,-3.75,-3.00,-2.25,-1.50,-0.75,0.75,1.50,2.25,3.00,3.75
+Tea-Time Foxtrot (w/ KP),TTF1Sq1,PATTERN DANCE,1st Sequence 1,7.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Tea-Time Foxtrot (w/ KP),TTF1Sq2,PATTERN DANCE,1st Sequence 2,8.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Tea-Time Foxtrot (w/ KP),TTF1Sq3,PATTERN DANCE,1st Sequence 3,9.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Tea-Time Foxtrot (w/ KP),TTF1Sq4,PATTERN DANCE,1st Sequence 4,10.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Tea-Time Foxtrot (w/ KP),TTF2SqB,PATTERN DANCE,2nd Sequence B,5.00,-3.75,-3.00,-2.25,-1.50,-0.75,0.75,1.50,2.25,3.00,3.75
+Tea-Time Foxtrot (w/ KP),TTF2Sq1,PATTERN DANCE,2nd Sequence 1,7.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Tea-Time Foxtrot (w/ KP),TTF2Sq2,PATTERN DANCE,2nd Sequence 2,8.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Tea-Time Foxtrot (w/ KP),TTF2Sq3,PATTERN DANCE,2nd Sequence 3,9.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Tea-Time Foxtrot (w/ KP),TTF2Sq4,PATTERN DANCE,2nd Sequence 4,10.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+European Waltz (w/ KP),EW1SqB,PATTERN DANCE,1st Sequence B,5.00,-3.75,-3.00,-2.25,-1.50,-0.75,0.75,1.50,2.25,3.00,3.75
+European Waltz (w/ KP),EW1Sq1,PATTERN DANCE,1st Sequence 1,7.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+European Waltz (w/ KP),EW1Sq2,PATTERN DANCE,1st Sequence 2,8.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+European Waltz (w/ KP),EW1Sq3,PATTERN DANCE,1st Sequence 3,9.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+European Waltz (w/ KP),EW1Sq4,PATTERN DANCE,1st Sequence 4,10.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+European Waltz (w/ KP),EW2SqB,PATTERN DANCE,2nd Sequence B,5.00,-3.75,-3.00,-2.25,-1.50,-0.75,0.75,1.50,2.25,3.00,3.75
+European Waltz (w/ KP),EW2Sq1,PATTERN DANCE,2nd Sequence 1,7.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+European Waltz (w/ KP),EW2Sq2,PATTERN DANCE,2nd Sequence 2,8.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+European Waltz (w/ KP),EW2Sq3,PATTERN DANCE,2nd Sequence 3,9.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+European Waltz (w/ KP),EW2Sq4,PATTERN DANCE,2nd Sequence 4,10.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+American Waltz (w/ KP),AW1SqB,PATTERN DANCE,1st Sequence B,5.00,-3.75,-3.00,-2.25,-1.50,-0.75,0.75,1.50,2.25,3.00,3.75
+American Waltz (w/ KP),AW1Sq1,PATTERN DANCE,1st Sequence 1,7.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+American Waltz (w/ KP),AW1Sq2,PATTERN DANCE,1st Sequence 2,8.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+American Waltz (w/ KP),AW1Sq3,PATTERN DANCE,1st Sequence 3,9.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+American Waltz (w/ KP),AW1Sq4,PATTERN DANCE,1st Sequence 4,10.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+American Waltz (w/ KP),AW2SqB,PATTERN DANCE,2nd Sequence B,5.00,-3.75,-3.00,-2.25,-1.50,-0.75,0.75,1.50,2.25,3.00,3.75
+American Waltz (w/ KP),AW2Sq1,PATTERN DANCE,2nd Sequence 1,7.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+American Waltz (w/ KP),AW2Sq2,PATTERN DANCE,2nd Sequence 2,8.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+American Waltz (w/ KP),AW2Sq3,PATTERN DANCE,2nd Sequence 3,9.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+American Waltz (w/ KP),AW2Sq4,PATTERN DANCE,2nd Sequence 4,10.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Westminster Waltz (w/ KP),WW1Sq1SeB,PATTERN DANCE,1st Sequence 1st Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Westminster Waltz (w/ KP),WW1Sq1Se1,PATTERN DANCE,1st Sequence 1st Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Westminster Waltz (w/ KP),WW1Sq1Se2,PATTERN DANCE,1st Sequence 1st Section 2,4.00,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Westminster Waltz (w/ KP),WW1Sq1Se3,PATTERN DANCE,1st Sequence 1st Section 3,4.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Westminster Waltz (w/ KP),WW1Sq1Se4,PATTERN DANCE,1st Sequence 1st Section 4,5.00,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Westminster Waltz (w/ KP),WW1Sq2SeB,PATTERN DANCE,1st Sequence 2nd Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Westminster Waltz (w/ KP),WW1Sq2Se1,PATTERN DANCE,1st Sequence 2nd Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Westminster Waltz (w/ KP),WW1Sq2Se2,PATTERN DANCE,1st Sequence 2nd Section 2,4.00,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Westminster Waltz (w/ KP),WW1Sq2Se3,PATTERN DANCE,1st Sequence 2nd Section 3,4.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Westminster Waltz (w/ KP),WW1Sq2Se4,PATTERN DANCE,1st Sequence 2nd Section 4,5.00,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Westminster Waltz (w/ KP),WW2Sq1SeB,PATTERN DANCE,2nd Sequence 1st Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Westminster Waltz (w/ KP),WW2Sq1Se1,PATTERN DANCE,2nd Sequence 1st Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Westminster Waltz (w/ KP),WW2Sq1Se2,PATTERN DANCE,2nd Sequence 1st Section 2,4.00,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Westminster Waltz (w/ KP),WW2Sq1Se3,PATTERN DANCE,2nd Sequence 1st Section 3,4.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Westminster Waltz (w/ KP),WW2Sq1Se4,PATTERN DANCE,2nd Sequence 1st Section 4,5.00,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Westminster Waltz (w/ KP),WW2Sq2SeB,PATTERN DANCE,2nd Sequence 2nd Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Westminster Waltz (w/ KP),WW2Sq2Se1,PATTERN DANCE,2nd Sequence 2nd Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Westminster Waltz (w/ KP),WW2Sq2Se2,PATTERN DANCE,2nd Sequence 2nd Section 2,4.00,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Westminster Waltz (w/ KP),WW2Sq2Se3,PATTERN DANCE,2nd Sequence 2nd Section 3,4.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Westminster Waltz (w/ KP),WW2Sq2Se4,PATTERN DANCE,2nd Sequence 2nd Section 4,5.00,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Starlight Waltz (w/ KP),SW1SqB,PATTERN DANCE,1st Sequence B,5.00,-3.75,-3.00,-2.25,-1.50,-0.75,0.75,1.50,2.25,3.00,3.75
+Starlight Waltz (w/ KP),SW1Sq1,PATTERN DANCE,1st Sequence 1,7.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Starlight Waltz (w/ KP),SW1Sq2,PATTERN DANCE,1st Sequence 2,8.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Starlight Waltz (w/ KP),SW1Sq3,PATTERN DANCE,1st Sequence 3,9.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Starlight Waltz (w/ KP),SW1Sq4,PATTERN DANCE,1st Sequence 4,10.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Starlight Waltz (w/ KP),SW2SqB,PATTERN DANCE,2nd Sequence B,5.00,-3.75,-3.00,-2.25,-1.50,-0.75,0.75,1.50,2.25,3.00,3.75
+Starlight Waltz (w/ KP),SW2Sq1,PATTERN DANCE,2nd Sequence 1,7.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Starlight Waltz (w/ KP),SW2Sq2,PATTERN DANCE,2nd Sequence 2,8.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Starlight Waltz (w/ KP),SW2Sq3,PATTERN DANCE,2nd Sequence 3,9.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Starlight Waltz (w/ KP),SW2Sq4,PATTERN DANCE,2nd Sequence 4,10.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Kilian (w/ KP),KI1SqB,PATTERN DANCE,1st Sequence B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Kilian (w/ KP),KI1Sq1,PATTERN DANCE,1st Sequence 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Kilian (w/ KP),KI1Sq2,PATTERN DANCE,1st Sequence 2,4.00,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Kilian (w/ KP),KI1Sq3,PATTERN DANCE,1st Sequence 3,4.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Kilian (w/ KP),KI1Sq4,PATTERN DANCE,1st Sequence 4,5.00,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Kilian (w/ KP),KI2SqB,PATTERN DANCE,2nd Sequence B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Kilian (w/ KP),KI2Sq1,PATTERN DANCE,2nd Sequence 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Kilian (w/ KP),K12Sq2,PATTERN DANCE,2nd Sequence 2,4.00,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Kilian (w/ KP),K12Sq3,PATTERN DANCE,2nd Sequence 3,4.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Kilian (w/ KP),K12Sq4,PATTERN DANCE,2nd Sequence 4,5.00,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Kilian (w/ KP),K13SqB,PATTERN DANCE,3rd Sequence B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Kilian (w/ KP),KI3Sq1,PATTERN DANCE,3rd Sequence 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Kilian (w/ KP),K13Sq2,PATTERN DANCE,3rd Sequence 2,4.00,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Kilian (w/ KP),K13Sq3,PATTERN DANCE,3rd Sequence 3,4.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Kilian (w/ KP),K13Sq4,PATTERN DANCE,3rd Sequence 4,5.00,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Kilian (w/ KP),KI4SqB,PATTERN DANCE,4th Sequence B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Kilian (w/ KP),KI4Sq1,PATTERN DANCE,4th Sequence 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Kilian (w/ KP),KI4Sq2,PATTERN DANCE,4th Sequence 2,4.00,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Kilian (w/ KP),KI4Sq3,PATTERN DANCE,4th Sequence 3,4.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Kilian (w/ KP),KI4Sq4,PATTERN DANCE,4th Sequence 4,5.00,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Quickstep (w/ KP),QS1SqB,PATTERN DANCE,1st Sequence B,5.00,-3.75,-3.00,-2.25,-1.50,-0.75,0.75,1.50,2.25,3.00,3.75
+Quickstep (w/ KP),QS1Sq1,PATTERN DANCE,1st Sequence 1,7.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Quickstep (w/ KP),QS1Sq2,PATTERN DANCE,1st Sequence 2,8.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Quickstep (w/ KP),QS1Sq3,PATTERN DANCE,1st Sequence 3,9.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Quickstep (w/ KP),QS1Sq4,PATTERN DANCE,1st Sequence 4,10.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Quickstep (w/ KP),QS2SqB,PATTERN DANCE,2nd Sequence B,5.00,-3.75,-3.00,-2.25,-1.50,-0.75,0.75,1.50,2.25,3.00,3.75
+Quickstep (w/ KP),QS2Sq1,PATTERN DANCE,2nd Sequence 1,7.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Quickstep (w/ KP),QS2Sq2,PATTERN DANCE,2nd Sequence 2,8.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Quickstep (w/ KP),QS2Sq3,PATTERN DANCE,2nd Sequence 3,9.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Quickstep (w/ KP),QS2Sq4,PATTERN DANCE,2nd Sequence 4,10.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Finnstep (w/ KP),FS1SqB,PATTERN DANCE,1st Sequence B,5.00,-3.75,-3.00,-2.25,-1.50,-0.75,0.75,1.50,2.25,3.00,3.75
+Finnstep (w/ KP),FS1Sq1,PATTERN DANCE,1st Sequence 1,7.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Finnstep (w/ KP),FS1Sq2,PATTERN DANCE,1st Sequence 2,8.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Finnstep (w/ KP),FS1Sq3,PATTERN DANCE,1st Sequence 3,9.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Finnstep (w/ KP),FS1Sq4,PATTERN DANCE,1st Sequence 4,10.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Finnstep (w/ KP),FS2SqB,PATTERN DANCE,2nd Sequence B,5.00,-3.75,-3.00,-2.25,-1.50,-0.75,0.75,1.50,2.25,3.00,3.75
+Finnstep (w/ KP),FS2Sq1,PATTERN DANCE,2nd Sequence 1,7.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Finnstep (w/ KP),FS2Sq2,PATTERN DANCE,2nd Sequence 2,8.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Finnstep (w/ KP),FS2Sq3,PATTERN DANCE,2nd Sequence 3,9.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Finnstep (w/ KP),FS2Sq4,PATTERN DANCE,2nd Sequence 4,10.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Paso Doble (w/ KP),PD1SqB,PATTERN DANCE,1st Sequence B,3.33,-2.50,-2.00,-1.50,-1.00,-0.50,0.50,1.00,1.50,2.00,2.50
+Paso Doble (w/ KP),PD1Sq1,PATTERN DANCE,1st Sequence 1,4.66,-3.50,-2.80,-2.10,-1.40,-0.70,0.70,1.40,2.10,2.80,3.50
+Paso Doble (w/ KP),PD1Sq2,PATTERN DANCE,1st Sequence 2,5.33,-3.50,-2.80,-2.10,-1.40,-0.70,0.70,1.40,2.10,2.80,3.50
+Paso Doble (w/ KP),PD1Sq3,PATTERN DANCE,1st Sequence 3,6.00,-3.50,-2.80,-2.10,-1.40,-0.70,0.70,1.40,2.10,2.80,3.50
+Paso Doble (w/ KP),PD1Sq4,PATTERN DANCE,1st Sequence 4,6.66,-3.50,-2.80,-2.10,-1.40,-0.70,0.70,1.40,2.10,2.80,3.50
+Paso Doble (w/ KP),PD2SqB,PATTERN DANCE,2nd Sequence B,3.33,-2.50,-2.00,-1.50,-1.00,-0.50,0.50,1.00,1.50,2.00,2.50
+Paso Doble (w/ KP),PD2Sq1,PATTERN DANCE,2nd Sequence 1,4.66,-3.50,-2.80,-2.10,-1.40,-0.70,0.70,1.40,2.10,2.80,3.50
+Paso Doble (w/ KP),PD2Sq2,PATTERN DANCE,2nd Sequence 2,5.33,-3.50,-2.80,-2.10,-1.40,-0.70,0.70,1.40,2.10,2.80,3.50
+Paso Doble (w/ KP),PD2Sq3,PATTERN DANCE,2nd Sequence 3,6.00,-3.50,-2.80,-2.10,-1.40,-0.70,0.70,1.40,2.10,2.80,3.50
+Paso Doble (w/ KP),PD2Sq4,PATTERN DANCE,2nd Sequence 4,6.66,-3.50,-2.80,-2.10,-1.40,-0.70,0.70,1.40,2.10,2.80,3.50
+Paso Doble (w/ KP),PD3SqB,PATTERN DANCE,3rd Sequence B,3.33,-2.50,-2.00,-1.50,-1.00,-0.50,0.50,1.00,1.50,2.00,2.50
+Paso Doble (w/ KP),PD3Sq1,PATTERN DANCE,3rd Sequence 1,4.66,-3.50,-2.80,-2.10,-1.40,-0.70,0.70,1.40,2.10,2.80,3.50
+Paso Doble (w/ KP),PD3Sq2,PATTERN DANCE,3rd Sequence 2,5.33,-3.50,-2.80,-2.10,-1.40,-0.70,0.70,1.40,2.10,2.80,3.50
+Paso Doble (w/ KP),PD3Sq3,PATTERN DANCE,3rd Sequence 3,6.00,-3.50,-2.80,-2.10,-1.40,-0.70,0.70,1.40,2.10,2.80,3.50
+Paso Doble (w/ KP),PD3Sq4,PATTERN DANCE,3rd Sequence 4,6.66,-3.50,-2.80,-2.10,-1.40,-0.70,0.70,1.40,2.10,2.80,3.50
+Tango (w/ KP),TA1SqB,PATTERN DANCE,1st Sequence B,5.00,-3.75,-3.00,-2.25,-1.50,-0.75,0.75,1.50,2.25,3.00,3.75
+Tango (w/ KP),TA1Sq1,PATTERN DANCE,1st Sequence 1,7.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Tango (w/ KP),TA1Sq2,PATTERN DANCE,1st Sequence 2,8.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Tango (w/ KP),TA1Sq3,PATTERN DANCE,1st Sequence 3,9.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Tango (w/ KP),TA1Sq4,PATTERN DANCE,1st Sequence 4,10.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Tango (w/ KP),TA2SqB,PATTERN DANCE,2nd Sequence B,5.00,-3.75,-3.00,-2.25,-1.50,-0.75,0.75,1.50,2.25,3.00,3.75
+Tango (w/ KP),TA2Sq1,PATTERN DANCE,2nd Sequence 1,7.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Tango (w/ KP),TA2Sq2,PATTERN DANCE,2nd Sequence 2,8.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Tango (w/ KP),TA2Sq3,PATTERN DANCE,2nd Sequence 3,9.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Tango (w/ KP),TA2Sq4,PATTERN DANCE,2nd Sequence 4,10.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Argentine Tango (w/ KP),AT1SqB,PATTERN DANCE,1st Sequence B,5.00,-3.75,-3.00,-2.25,-1.50,-0.75,0.75,1.50,2.25,3.00,3.75
+Argentine Tango (w/ KP),AT1Sq1,PATTERN DANCE,1st Sequence 1,7.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Argentine Tango (w/ KP),AT1Sq2,PATTERN DANCE,1st Sequence 2,8.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Argentine Tango (w/ KP),AT1Sq3,PATTERN DANCE,1st Sequence 3,9.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Argentine Tango (w/ KP),AT1Sq4,PATTERN DANCE,1st Sequence 4,10.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Argentine Tango (w/ KP),AT2SqB,PATTERN DANCE,2nd Sequence B,5.00,-3.75,-3.00,-2.25,-1.50,-0.75,0.75,1.50,2.25,3.00,3.75
+Argentine Tango (w/ KP),AT2Sq1,PATTERN DANCE,2nd Sequence 1,7.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Argentine Tango (w/ KP),AT2Sq2,PATTERN DANCE,2nd Sequence 2,8.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Argentine Tango (w/ KP),AT2Sq3,PATTERN DANCE,2nd Sequence 3,9.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Argentine Tango (w/ KP),AT2Sq4,PATTERN DANCE,2nd Sequence 4,10.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Blues (w/ KP),BL1SqB,PATTERN DANCE,1st Sequence B,3.33,-2.50,-2.00,-1.50,-1.00,-0.50,0.50,1.00,1.50,2.00,2.50
+Blues (w/ KP),BL1Sq1,PATTERN DANCE,1st Sequence 1,4.66,-3.50,-2.80,-2.10,-1.40,-0.70,0.70,1.40,2.10,2.80,3.50
+Blues (w/ KP),BL1Sq2,PATTERN DANCE,1st Sequence 2,5.33,-3.50,-2.80,-2.10,-1.40,-0.70,0.70,1.40,2.10,2.80,3.50
+Blues (w/ KP),BL1Sq3,PATTERN DANCE,1st Sequence 3,6.00,-3.50,-2.80,-2.10,-1.40,-0.70,0.70,1.40,2.10,2.80,3.50
+Blues (w/ KP),BL1Sq4,PATTERN DANCE,1st Sequence 4,6.66,-3.50,-2.80,-2.10,-1.40,-0.70,0.70,1.40,2.10,2.80,3.50
+Blues (w/ KP),BL2SqB,PATTERN DANCE,2nd Sequence B,3.33,-2.50,-2.00,-1.50,-1.00,-0.50,0.50,1.00,1.50,2.00,2.50
+Blues (w/ KP),BL2Sq1,PATTERN DANCE,2nd Sequence 1,4.66,-3.50,-2.80,-2.10,-1.40,-0.70,0.70,1.40,2.10,2.80,3.50
+Blues (w/ KP),BL2Sq2,PATTERN DANCE,2nd Sequence 2,5.33,-3.50,-2.80,-2.10,-1.40,-0.70,0.70,1.40,2.10,2.80,3.50
+Blues (w/ KP),BL2Sq3,PATTERN DANCE,2nd Sequence 3,6.00,-3.50,-2.80,-2.10,-1.40,-0.70,0.70,1.40,2.10,2.80,3.50
+Blues (w/ KP),BL2Sq4,PATTERN DANCE,2nd Sequence 4,6.66,-3.50,-2.80,-2.10,-1.40,-0.70,0.70,1.40,2.10,2.80,3.50
+Blues (w/ KP),BL3SqB,PATTERN DANCE,3rd Sequence B,3.33,-2.50,-2.00,-1.50,-1.00,-0.50,0.50,1.00,1.50,2.00,2.50
+Blues (w/ KP),BL3Sq1,PATTERN DANCE,3rd Sequence 1,4.66,-3.50,-2.80,-2.10,-1.40,-0.70,0.70,1.40,2.10,2.80,3.50
+Blues (w/ KP),BL3Sq2,PATTERN DANCE,3rd Sequence 2,5.33,-3.50,-2.80,-2.10,-1.40,-0.70,0.70,1.40,2.10,2.80,3.50
+Blues (w/ KP),BL3Sq3,PATTERN DANCE,3rd Sequence 3,6.00,-3.50,-2.80,-2.10,-1.40,-0.70,0.70,1.40,2.10,2.80,3.50
+Blues (w/ KP),BL3Sq4,PATTERN DANCE,3rd Sequence 4,6.66,-3.50,-2.80,-2.10,-1.40,-0.70,0.70,1.40,2.10,2.80,3.50
+Fourteenstep (w/o KP),FO1SqB,PATTERN DANCE,1st Sequence B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Fourteenstep (w/o KP),FO1Sq1,PATTERN DANCE,1st Sequence 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Fourteenstep (w/o KP),FO2SqB,PATTERN DANCE,2nd Sequence B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Fourteenstep (w/o KP),FO2Sq1,PATTERN DANCE,2nd Sequence 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Fourteenstep (w/o KP),FO3SqB,PATTERN DANCE,3rd Sequence B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Fourteenstep (w/o KP),FO3Sq1,PATTERN DANCE,3rd Sequence 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Fourteenstep (w/o KP),FO4SqB,PATTERN DANCE,4th Sequence B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Fourteenstep (w/o KP),FO4Sq1,PATTERN DANCE,4th Sequence 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Foxtrot (w/o KP),FT1SqB,PATTERN DANCE,1st Sequence B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Foxtrot (w/o KP),FT1Sq1,PATTERN DANCE,1st Sequence 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Foxtrot (w/o KP),FT2SqB,PATTERN DANCE,2nd Sequence B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Foxtrot (w/o KP),FT2Sq1,PATTERN DANCE,2nd Sequence 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Foxtrot (w/o KP),FT3SqB,PATTERN DANCE,3rd Sequence B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Foxtrot (w/o KP),FT3Sq1,PATTERN DANCE,3rd Sequence 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Foxtrot (w/o KP),FT4SqB,PATTERN DANCE,4th Sequence B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Foxtrot (w/o KP),FT4Sq1,PATTERN DANCE,4th Sequence 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Rocker Foxtrot (w/o KP),RF1SqB,PATTERN DANCE,1st Sequence B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Rocker Foxtrot (w/o KP),RF1Sq1,PATTERN DANCE,1st Sequence 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Rocker Foxtrot (w/o KP),RF2SqB,PATTERN DANCE,2nd Sequence B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Rocker Foxtrot (w/o KP),RF2Sq1,PATTERN DANCE,2nd Sequence 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Rocker Foxtrot (w/o KP),RF3SqB,PATTERN DANCE,3rd Sequence B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Rocker Foxtrot (w/o KP),RF3Sq1,PATTERN DANCE,3rd Sequence 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Rocker Foxtrot (w/o KP),RF4SqB,PATTERN DANCE,4th Sequence B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Rocker Foxtrot (w/o KP),RF4Sq1,PATTERN DANCE,4th Sequence 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Tea-Time Foxtrot (w/o KP),TTF1Sq1SeB,PATTERN DANCE,1st Sequence 1st Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Tea-Time Foxtrot (w/o KP),TTF1Sq1Se1,PATTERN DANCE,1st Sequence 1st Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Tea-Time Foxtrot (w/o KP),TTF1Sq2SeB,PATTERN DANCE,1st Sequence 2nd Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Tea-Time Foxtrot (w/o KP),TTF1Sq2Se1,PATTERN DANCE,1st Sequence 2nd Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Tea-Time Foxtrot (w/o KP),TTF2Sq1SeB,PATTERN DANCE,2nd Sequence 1st Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Tea-Time Foxtrot (w/o KP),TTF2Sq1Se1,PATTERN DANCE,2nd Sequence 1st Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Tea-Time Foxtrot (w/o KP),TTF2Sq2SeB,PATTERN DANCE,2nd Sequence 2nd Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Tea-Time Foxtrot (w/o KP),TTF2Sq2Se1,PATTERN DANCE,2nd Sequence 2nd Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Ten Fox (w/o KP),TFO1SqB,PATTERN DANCE,1st Sequence B,5.00,-3.75,-3.00,-2.25,-1.50,-0.75,0.75,1.50,2.25,3.00,3.75
+Ten Fox (w/o KP),TFO1Sq1,PATTERN DANCE,1st Sequence 1,7.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Ten Fox (w/o KP),TFO2SqB,PATTERN DANCE,2nd Sequence B,5.00,-3.75,-3.00,-2.25,-1.50,-0.75,0.75,1.50,2.25,3.00,3.75
+Ten Fox (w/o KP),TFO2Sq1,PATTERN DANCE,2nd Sequence 1,7.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Swing Dance (w/o KP),SD1SqB,PATTERN DANCE,1st Sequence B,5.00,-3.75,-3.00,-2.25,-1.50,-0.75,0.75,1.50,2.25,3.00,3.75
+Swing Dance (w/o KP),SD1Sq1,PATTERN DANCE,1st Sequence 1,7.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Swing Dance (w/o KP),SD2SqB,PATTERN DANCE,2nd Sequence B,5.00,-3.75,-3.00,-2.25,-1.50,-0.75,0.75,1.50,2.25,3.00,3.75
+Swing Dance (w/o KP),SD2Sq1,PATTERN DANCE,2nd Sequence 1,7.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Dutch Waltz (w/o KP),DW1SqB,PATTERN DANCE,1st Sequence B,5.00,-3.75,-3.00,-2.25,-1.50,-0.75,0.75,1.50,2.25,3.00,3.75
+Dutch Waltz (w/o KP),DW1Sq1,PATTERN DANCE,1st Sequence 1,7.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Dutch Waltz (w/o KP),DW2SqB,PATTERN DANCE,2nd Sequence B,5.00,-3.75,-3.00,-2.25,-1.50,-0.75,0.75,1.50,2.25,3.00,3.75
+Dutch Waltz (w/o KP),DW2Sq1,PATTERN DANCE,2nd Sequence 1,7.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Willow Waltz (w/o KP),WiW1SqB,PATTERN DANCE,1st Sequence B,5.00,-3.75,-3.00,-2.25,-1.50,-0.75,0.75,1.50,2.25,3.00,3.75
+Willow Waltz (w/o KP),WiW1Sq1,PATTERN DANCE,1st Sequence 1,7.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Willow Waltz (w/o KP),WiW2SqB,PATTERN DANCE,2nd Sequence B,5.00,-3.75,-3.00,-2.25,-1.50,-0.75,0.75,1.50,2.25,3.00,3.75
+Willow Waltz (w/o KP),WiW2Sq1,PATTERN DANCE,2nd Sequence 1,7.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+European Waltz (w/o KP),EW1SqB,PATTERN DANCE,1st Sequence B,5.00,-3.75,-3.00,-2.25,-1.50,-0.75,0.75,1.50,2.25,3.00,3.75
+European Waltz (w/o KP),EW1Sq1,PATTERN DANCE,1st Sequence 1,7.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+European Waltz (w/o KP),EW2SqB,PATTERN DANCE,2nd Sequence B,5.00,-3.75,-3.00,-2.25,-1.50,-0.75,0.75,1.50,2.25,3.00,3.75
+European Waltz (w/o KP),EW2Sq1,PATTERN DANCE,2nd Sequence 1,7.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+American Waltz (w/o KP),AW1SqB,PATTERN DANCE,1st Sequence B,5.00,-3.75,-3.00,-2.25,-1.50,-0.75,0.75,1.50,2.25,3.00,3.75
+American Waltz (w/o KP),AW1Sq1,PATTERN DANCE,1st Sequence 1,7.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+American Waltz (w/o KP),AW2SqB,PATTERN DANCE,2nd Sequence B,5.00,-3.75,-3.00,-2.25,-1.50,-0.75,0.75,1.50,2.25,3.00,3.75
+American Waltz (w/o KP),AW2Sq1,PATTERN DANCE,2nd Sequence 1,7.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Westminster Waltz (w/o KP),WW1Sq1SeB,PATTERN DANCE,1st Sequence 1st Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Westminster Waltz (w/o KP),WW1Sq1Se1,PATTERN DANCE,1st Sequence 1st Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Westminster Waltz (w/o KP),WW1Sq2SeB,PATTERN DANCE,1st Sequence 2nd Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Westminster Waltz (w/o KP),WW1Sq2Se1,PATTERN DANCE,1st Sequence 2nd Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Westminster Waltz (w/o KP),WW2Sq1SeB,PATTERN DANCE,2nd Sequence 1st Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Westminster Waltz (w/o KP),WW2Sq1Se1,PATTERN DANCE,2nd Sequence 1st Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Westminster Waltz (w/o KP),WW2Sq2SeB,PATTERN DANCE,2nd Sequence 2nd Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Westminster Waltz (w/o KP),WW2Sq2Se1,PATTERN DANCE,2nd Sequence 2nd Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Viennese Waltz (w/o KP),VW1SqB,PATTERN DANCE,1st Sequence B,3.33,-2.50,-2.00,-1.50,-1.00,-0.50,0.50,1.00,1.50,2.00,2.50
+Viennese Waltz (w/o KP),VW1Sq1,PATTERN DANCE,1st Sequence 1,4.66,-3.50,-2.80,-2.10,-1.40,-0.70,0.70,1.40,2.10,2.80,3.50
+Viennese Waltz (w/o KP),VW2SqB,PATTERN DANCE,2nd Sequence B,3.33,-2.50,-2.00,-1.50,-1.00,-0.50,0.50,1.00,1.50,2.00,2.50
+Viennese Waltz (w/o KP),VW2Sq1,PATTERN DANCE,2nd Sequence 1,4.66,-3.50,-2.80,-2.10,-1.40,-0.70,0.70,1.40,2.10,2.80,3.50
+Viennese Waltz (w/o KP),VW3SqB,PATTERN DANCE,3rd Sequence B,3.33,-2.50,-2.00,-1.50,-1.00,-0.50,0.50,1.00,1.50,2.00,2.50
+Viennese Waltz (w/o KP),VW3Sq1,PATTERN DANCE,3rd Sequence 1,4.66,-3.50,-2.80,-2.10,-1.40,-0.70,0.70,1.40,2.10,2.80,3.50
+Austrian Waltz (w/o KP),OW1Sq1SeB,PATTERN DANCE,1st Sequence 1st Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Austrian Waltz (w/o KP),OW1Sq1Se1,PATTERN DANCE,1st Sequence 1st Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Austrian Waltz (w/o KP),OW1Sq2SeB,PATTERN DANCE,1st Sequence 2nd Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Austrian Waltz (w/o KP),OW1Sq2Se1,PATTERN DANCE,1st Sequence 2nd Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Austrian Waltz (w/o KP),OW2Sq1SeB,PATTERN DANCE,2nd Sequence 1st Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Austrian Waltz (w/o KP),OW2Sq1Se1,PATTERN DANCE,2nd Sequence 1st Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Austrian Waltz (w/o KP),OW2Sq2SeB,PATTERN DANCE,2nd Sequence 2nd Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Austrian Waltz (w/o KP),OW2Sq2Se1,PATTERN DANCE,2nd Sequence 2nd Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Starlight Waltz (w/o KP),SW1Sq1SeB,PATTERN DANCE,1st Sequence 1st Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Starlight Waltz (w/o KP),SW1Sq1Se1,PATTERN DANCE,1st Sequence 1st Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Starlight Waltz (w/o KP),SW1Sq2SeB,PATTERN DANCE,1st Sequence 2nd Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Starlight Waltz (w/o KP),SW1Sq2Se1,PATTERN DANCE,1st Sequence 2nd Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Starlight Waltz (w/o KP),SW2Sq1SeB,PATTERN DANCE,2nd Sequence 1st Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Starlight Waltz (w/o KP),SW2Sq1Se1,PATTERN DANCE,2nd Sequence 1st Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Starlight Waltz (w/o KP),SW2Sq2SeB,PATTERN DANCE,2nd Sequence 2nd Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Starlight Waltz (w/o KP),SW2Sq2Se1,PATTERN DANCE,2nd Sequence 2nd Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Ravensburger Waltz (w/o KP),RW1Sq1SeB,PATTERN DANCE,1st Sequence 1st Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Ravensburger Waltz (w/o KP),RW1Sq1Se1,PATTERN DANCE,1st Sequence 1st Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Ravensburger Waltz (w/o KP),RW1Sq2SeB,PATTERN DANCE,1st Sequence 2nd Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Ravensburger Waltz (w/o KP),RW1Sq2Se1,PATTERN DANCE,1st Sequence 2nd Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Ravensburger Waltz (w/o KP),RW2Sq1SeB,PATTERN DANCE,2nd Sequence 1st Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Ravensburger Waltz (w/o KP),RW2Sq1Se1,PATTERN DANCE,2nd Sequence 1st Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Ravensburger Waltz (w/o KP),RW2Sq2SeB,PATTERN DANCE,2nd Sequence 2nd Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Ravensburger Waltz (w/o KP),RW2Sq2Se1,PATTERN DANCE,2nd Sequence 2nd Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Golden Waltz (w/o KP),GW1Sq1SeB,PATTERN DANCE,1st Sequence 1st Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Golden Waltz (w/o KP),GW1Sq1Se1,PATTERN DANCE,1st Sequence 1st Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Golden Waltz (w/o KP),GW1Sq2SeB,PATTERN DANCE,1st Sequence 2nd Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Golden Waltz (w/o KP),GW1Sq2Se1,PATTERN DANCE,1st Sequence 2nd Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Golden Waltz (w/o KP),GW2Sq1SeB,PATTERN DANCE,2nd Sequence 1st Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Golden Waltz (w/o KP),GW2Sq1Se1,PATTERN DANCE,2nd Sequence 1st Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Golden Waltz (w/o KP),GW2Sq2SeB,PATTERN DANCE,2nd Sequence 2nd Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Golden Waltz (w/o KP),GW2Sq2Se1,PATTERN DANCE,2nd Sequence 2nd Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Hickory Hoedown (w/o KP),HHO1SqB,PATTERN DANCE,1st Sequence B,5.00,-3.75,-3.00,-2.25,-1.50,-0.75,0.75,1.50,2.25,3.00,3.75
+Hickory Hoedown (w/o KP),HHO1Sq1,PATTERN DANCE,1st Sequence 1,7.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Hickory Hoedown (w/o KP),HHO2SqB,PATTERN DANCE,2nd Sequence B,5.00,-3.75,-3.00,-2.25,-1.50,-0.75,0.75,1.50,2.25,3.00,3.75
+Hickory Hoedown (w/o KP),HHO2Sq1,PATTERN DANCE,2nd Sequence 1,7.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Kilian (w/o KP),KI1SqB,PATTERN DANCE,1st Sequence B,1.67,-1.25,-1.00,-0.75,-0.50,-0.25,0.25,0.50,0.75,1.00,1.25
+Kilian (w/o KP),KI1Sq1,PATTERN DANCE,1st Sequence 1,2.33,-1.75,-1.40,-1.05,-0.70,-0.35,0.35,0.70,1.05,1.40,1.75
+Kilian (w/o KP),KI2SqB,PATTERN DANCE,2nd Sequence B,1.67,-1.25,-1.00,-0.75,-0.50,-0.25,0.25,0.50,0.75,1.00,1.25
+Kilian (w/o KP),K12Sq1,PATTERN DANCE,2nd Sequence 1,2.33,-1.75,-1.40,-1.05,-0.70,-0.35,0.35,0.70,1.05,1.40,1.75
+Kilian (w/o KP),KI3SqB,PATTERN DANCE,3rd Sequence B,1.67,-1.25,-1.00,-0.75,-0.50,-0.25,0.25,0.50,0.75,1.00,1.25
+Kilian (w/o KP),KI3Sq1,PATTERN DANCE,3rd Sequence 1,2.33,-1.75,-1.40,-1.05,-0.70,-0.35,0.35,0.70,1.05,1.40,1.75
+Kilian (w/o KP),KI4SqB,PATTERN DANCE,4th Sequence B,1.67,-1.25,-1.00,-0.75,-0.50,-0.25,0.25,0.50,0.75,1.00,1.25
+Kilian (w/o KP),KI4Sq1,PATTERN DANCE,4th Sequence 1,2.33,-1.75,-1.40,-1.05,-0.70,-0.35,0.35,0.70,1.05,1.40,1.75
+Kilian (w/o KP),KI5SqB,PATTERN DANCE,5th Sequence B,1.67,-1.25,-1.00,-0.75,-0.50,-0.25,0.25,0.50,0.75,1.00,1.25
+Kilian (w/o KP),KI5Sq1,PATTERN DANCE,5th Sequence 1,2.33,-1.75,-1.40,-1.05,-0.70,-0.35,0.35,0.70,1.05,1.40,1.75
+Kilian (w/o KP),KI6SqB,PATTERN DANCE,6th Sequence B,1.67,-1.25,-1.00,-0.75,-0.50,-0.25,0.25,0.50,0.75,1.00,1.25
+Kilian (w/o KP),KI6Sq1,PATTERN DANCE,6th Sequence 1,2.33,-1.75,-1.40,-1.05,-0.70,-0.35,0.35,0.70,1.05,1.40,1.75
+Yankee Polka (w/o KP),YP1Sq1SeB,PATTERN DANCE,1st Sequence 1st Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Yankee Polka (w/o KP),YP1Sq1Se1,PATTERN DANCE,1st Sequence 1st Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Yankee Polka (w/o KP),YP1Sq2SeB,PATTERN DANCE,1st Sequence 2nd Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Yankee Polka (w/o KP),YP1Sq2Se1,PATTERN DANCE,1st Sequence 2nd Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Yankee Polka (w/o KP),YP2Sq1SeB,PATTERN DANCE,2nd Sequence 1st Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Yankee Polka (w/o KP),YP2Sq1Se1,PATTERN DANCE,2nd Sequence 1st Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Yankee Polka (w/o KP),YP2Sq2SeB,PATTERN DANCE,2nd Sequence 2nd Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Yankee Polka (w/o KP),YP2Sq2Se1,PATTERN DANCE,2nd Sequence 2nd Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Quickstep (w/o KP),QS1SqB,PATTERN DANCE,1st Sequence B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Quickstep (w/o KP),QS1Sq1,PATTERN DANCE,1st Sequence 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Quickstep (w/o KP),QS2SqB,PATTERN DANCE,2nd Sequence B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Quickstep (w/o KP),QS2Sq1,PATTERN DANCE,2nd Sequence 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Quickstep (w/o KP),QS3SqB,PATTERN DANCE,3rd Sequence B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Quickstep (w/o KP),QS3Sq1,PATTERN DANCE,3rd Sequence 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Quickstep (w/o KP),QS4SqB,PATTERN DANCE,4th Sequence B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Quickstep (w/o KP),QS4Sq1,PATTERN DANCE,4th Sequence 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Finnstep (w/o KP),FS1Sq1SeB,PATTERN DANCE,1st Sequence 1st Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Finnstep (w/o KP),FS1Sq1Se1,PATTERN DANCE,1st Sequence 1st Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Finnstep (w/o KP),FS1Sq2SeB,PATTERN DANCE,1st Sequence 2nd Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Finnstep (w/o KP),FS1Sq2Se1,PATTERN DANCE,1st Sequence 2nd Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Finnstep (w/o KP),FS2Sq1SeB,PATTERN DANCE,2nd Sequence 1st Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Finnstep (w/o KP),FS2Sq1Se1,PATTERN DANCE,2nd Sequence 1st Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Finnstep (w/o KP),FS2Sq2SeB,PATTERN DANCE,2nd Sequence 2nd Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Finnstep (w/o KP),FS2Sq2Se1,PATTERN DANCE,2nd Sequence 2nd Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Paso Doble (w/o KP),PD1SqB,PATTERN DANCE,1st Sequence B,3.33,-2.50,-2.00,-1.50,-1.00,-0.50,0.50,1.00,1.50,2.00,2.50
+Paso Doble (w/o KP),PD1Sq1,PATTERN DANCE,1st Sequence 1,4.66,-3.50,-2.80,-2.10,-1.40,-0.70,0.70,1.40,2.10,2.80,3.50
+Paso Doble (w/o KP),PD2SqB,PATTERN DANCE,2nd Sequence B,3.33,-2.50,-2.00,-1.50,-1.00,-0.50,0.50,1.00,1.50,2.00,2.50
+Paso Doble (w/o KP),PD2Sq1,PATTERN DANCE,2nd Sequence 1,4.66,-3.50,-2.80,-2.10,-1.40,-0.70,0.70,1.40,2.10,2.80,3.50
+Paso Doble (w/o KP),PD3SqB,PATTERN DANCE,3rd Sequence B,3.33,-2.50,-2.00,-1.50,-1.00,-0.50,0.50,1.00,1.50,2.00,2.50
+Paso Doble (w/o KP),PD3Sq1,PATTERN DANCE,3rd Sequence 1,4.66,-3.50,-2.80,-2.10,-1.40,-0.70,0.70,1.40,2.10,2.80,3.50
+Rhumba (w/o KP),RH1SqB,PATTERN DANCE,1st Sequence B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Rhumba (w/o KP),RH1Sq1,PATTERN DANCE,1st Sequence 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Rhumba (w/o KP),RH2SqB,PATTERN DANCE,2nd Sequence B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Rhumba (w/o KP),RH2Sq1,PATTERN DANCE,2nd Sequence 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Rhumba (w/o KP),RH3SqB,PATTERN DANCE,3rd Sequence B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Rhumba (w/o KP),RH3Sq1,PATTERN DANCE,3rd Sequence 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Rhumba (w/o KP),RH4SqB,PATTERN DANCE,4th Sequence B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Rhumba (w/o KP),RH4Sq1,PATTERN DANCE,4th Sequence 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Cha Cha Congelado (w/o KP),CC1SqB,PATTERN DANCE,1st Sequence B,5.00,-3.75,-3.00,-2.25,-1.50,-0.75,0.75,1.50,2.25,3.00,3.75
+Cha Cha Congelado (w/o KP),CC1Sq1,PATTERN DANCE,1st Sequence 1,7.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Cha Cha Congelado (w/o KP),CC2SqB,PATTERN DANCE,2nd Sequence B,5.00,-3.75,-3.00,-2.25,-1.50,-0.75,0.75,1.50,2.25,3.00,3.75
+Cha Cha Congelado (w/o KP),CC2Sq1,PATTERN DANCE,2nd Sequence 1,7.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Silver Samba (w/o KP),SS1Sq1SeB,PATTERN DANCE,1st Sequence 1st Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Silver Samba (w/o KP),SS1Sq1Se1,PATTERN DANCE,1st Sequence 1st Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Silver Samba (w/o KP),SS1Sq2SeB,PATTERN DANCE,1st Sequence 2nd Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Silver Samba (w/o KP),SS1Sq2Se1,PATTERN DANCE,1st Sequence 2nd Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Silver Samba (w/o KP),SS2Sq1SeB,PATTERN DANCE,2nd Sequence 1st Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Silver Samba (w/o KP),SS2Sq1Se1,PATTERN DANCE,2nd Sequence 1st Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Silver Samba (w/o KP),SS2Sq2SeB,PATTERN DANCE,2nd Sequence 2nd Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Silver Samba (w/o KP),SS2Sq2Se1,PATTERN DANCE,2nd Sequence 2nd Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Tango Fiesta (w/o KP),TF1SqB,PATTERN DANCE,1st Sequence B,5.00,-3.75,-3.00,-2.25,-1.50,-0.75,0.75,1.50,2.25,3.00,3.75
+Tango Fiesta (w/o KP),TF1Sq1,PATTERN DANCE,1st Sequence 1,7.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Tango Fiesta (w/o KP),TF2SqB,PATTERN DANCE,2nd Sequence B,5.00,-3.75,-3.00,-2.25,-1.50,-0.75,0.75,1.50,2.25,3.00,3.75
+Tango Fiesta (w/o KP),TF2Sq1,PATTERN DANCE,2nd Sequence 1,7.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Tango Canasta (w/o KP),TC1SqB,PATTERN DANCE,1st Sequence B,3.33,-2.50,-2.00,-1.50,-1.00,-0.50,0.50,1.00,1.50,2.00,2.50
+Tango Canasta (w/o KP),TC1Sq1,PATTERN DANCE,1st Sequence 1,4.66,-3.50,-2.80,-2.10,-1.40,-0.70,0.70,1.40,2.10,2.80,3.50
+Tango Canasta (w/o KP),TC2SqB,PATTERN DANCE,2nd Sequence B,3.33,-2.50,-2.00,-1.50,-1.00,-0.50,0.50,1.00,1.50,2.00,2.50
+Tango Canasta (w/o KP),TC2Sq1,PATTERN DANCE,2nd Sequence 1,4.66,-3.50,-2.80,-2.10,-1.40,-0.70,0.70,1.40,2.10,2.80,3.50
+Tango Canasta (w/o KP),TC3SqB,PATTERN DANCE,3rd Sequence B,3.33,-2.50,-2.00,-1.50,-1.00,-0.50,0.50,1.00,1.50,2.00,2.50
+Tango Canasta (w/o KP),TC3Sq1,PATTERN DANCE,3rd Sequence 1,4.66,-3.50,-2.80,-2.10,-1.40,-0.70,0.70,1.40,2.10,2.80,3.50
+Tango (w/o KP),TA1SqB,PATTERN DANCE,1st Sequence B,5.00,-3.75,-3.00,-2.25,-1.50,-0.75,0.75,1.50,2.25,3.00,3.75
+Tango (w/o KP),TA1Sq1,PATTERN DANCE,1st Sequence 1,7.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Tango (w/o KP),TA2SqB,PATTERN DANCE,2nd Sequence B,5.00,-3.75,-3.00,-2.25,-1.50,-0.75,0.75,1.50,2.25,3.00,3.75
+Tango (w/o KP),TA2Sq1,PATTERN DANCE,2nd Sequence 1,7.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Argentine Tango (w/o KP),AT1Sq1SeB,PATTERN DANCE,1st Sequence 1st Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Argentine Tango (w/o KP),AT1Sq1Se1,PATTERN DANCE,1st Sequence 1st Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Argentine Tango (w/o KP),AT1Sq2SeB,PATTERN DANCE,1st Sequence 2nd Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Argentine Tango (w/o KP),AT1Sq2Se1,PATTERN DANCE,1st Sequence 2nd Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Argentine Tango (w/o KP),AT2Sq1SeB,PATTERN DANCE,2nd Sequence 1st Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Argentine Tango (w/o KP),AT2Sq1Se1,PATTERN DANCE,2nd Sequence 1st Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Argentine Tango (w/o KP),AT2Sq2SeB,PATTERN DANCE,2nd Sequence 2nd Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Argentine Tango (w/o KP),AT2Sq2Se1,PATTERN DANCE,2nd Sequence 2nd Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Tango Romantica (w/o KP),TR1Sq1SeB,PATTERN DANCE,1st Sequence 1st Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Tango Romantica (w/o KP),TR1Sq1Se1,PATTERN DANCE,1st Sequence 1st Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Tango Romantica (w/o KP),TR1Sq2SeB,PATTERN DANCE,1st Sequence 2nd Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Tango Romantica (w/o KP),TR1Sq2Se1,PATTERN DANCE,1st Sequence 2nd Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Tango Romantica (w/o KP),TR2Sq1SeB,PATTERN DANCE,2nd Sequence 1st Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Tango Romantica (w/o KP),TR2Sq1Se1,PATTERN DANCE,2nd Sequence 1st Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Tango Romantica (w/o KP),TR2Sq2SeB,PATTERN DANCE,2nd Sequence 2nd Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Tango Romantica (w/o KP),TR2Sq2Se1,PATTERN DANCE,2nd Sequence 2nd Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Rhythm Blues (w/o KP),RB1SqB,PATTERN DANCE,1st Sequence B,5.00,-3.75,-3.00,-2.25,-1.50,-0.75,0.75,1.50,2.25,3.00,3.75
+Rhythm Blues (w/o KP),RB1Sq1,PATTERN DANCE,1st Sequence 1,7.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Rhythm Blues (w/o KP),RB2SqB,PATTERN DANCE,2nd Sequence B,5.00,-3.75,-3.00,-2.25,-1.50,-0.75,0.75,1.50,2.25,3.00,3.75
+Rhythm Blues (w/o KP),RB2Sq1,PATTERN DANCE,2nd Sequence 1,7.00,-5.25,-4.20,-3.15,-2.10,-1.05,1.05,2.10,3.15,4.20,5.25
+Blues (w/o KP),BL1SqB,PATTERN DANCE,1st Sequence B,3.33,-2.50,-2.00,-1.50,-1.00,-0.50,0.50,1.00,1.50,2.00,2.50
+Blues (w/o KP),BL1Sq1,PATTERN DANCE,1st Sequence 1,4.66,-3.50,-2.80,-2.10,-1.40,-0.70,0.70,1.40,2.10,2.80,3.50
+Blues (w/o KP),BL2SqB,PATTERN DANCE,2nd Sequence B,3.33,-2.50,-2.00,-1.50,-1.00,-0.50,0.50,1.00,1.50,2.00,2.50
+Blues (w/o KP),BL2Sq1,PATTERN DANCE,2nd Sequence 1,4.66,-3.50,-2.80,-2.10,-1.40,-0.70,0.70,1.40,2.10,2.80,3.50
+Blues (w/o KP),BL3SqB,PATTERN DANCE,3rd Sequence B,3.33,-2.50,-2.00,-1.50,-1.00,-0.50,0.50,1.00,1.50,2.00,2.50
+Blues (w/o KP),BL3Sq1,PATTERN DANCE,3rd Sequence 1,4.66,-3.50,-2.80,-2.10,-1.40,-0.70,0.70,1.40,2.10,2.80,3.50
+Midnight Blues (w/o KP),MB1Sq1SeB,PATTERN DANCE,1st Sequence 1st Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Midnight Blues (w/o KP),MB1Sq1Se1,PATTERN DANCE,1st Sequence 1st Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Midnight Blues (w/o KP),MB1Sq2SeB,PATTERN DANCE,1st Sequence 2nd Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Midnight Blues (w/o KP),MB1Sq2Se1,PATTERN DANCE,1st Sequence 2nd Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Midnight Blues (w/o KP),MB2Sq1SeB,PATTERN DANCE,2nd Sequence 1st Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Midnight Blues (w/o KP),MB2Sq1Se1,PATTERN DANCE,2nd Sequence 1st Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Midnight Blues (w/o KP),MB2Sq2SeB,PATTERN DANCE,2nd Sequence 2nd Section B,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Midnight Blues (w/o KP),MB2Sq2Se1,PATTERN DANCE,2nd Sequence 2nd Section 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Rhumba Sequence (Junior),1RHB,RHYTHM/FREE DANCE,Base,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Rhumba Sequence (Junior),1RH1,RHYTHM/FREE DANCE,Level 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Rhumba Sequence (Junior),1RH2,RHYTHM/FREE DANCE,Level 2,4.00,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Rhumba Sequence (Junior),1RH3,RHYTHM/FREE DANCE,Level 3,4.75,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Rhumba Sequence (Junior),1RH4,RHYTHM/FREE DANCE,Level 4,5.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Quickstep Sequence (Junior),1QSB,RHYTHM/FREE DANCE,Base,2.50,-1.88,-1.50,-1.13,-0.75,-0.38,0.38,0.75,1.13,1.50,1.88
+Quickstep Sequence (Junior),1QS1,RHYTHM/FREE DANCE,Level 1,3.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Quickstep Sequence (Junior),1QS2,RHYTHM/FREE DANCE,Level 2,4.00,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Quickstep Sequence (Junior),1QS3,RHYTHM/FREE DANCE,Level 3,4.75,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Quickstep Sequence (Junior),1QS4,RHYTHM/FREE DANCE,Level 4,5.50,-2.63,-2.10,-1.58,-1.05,-0.53,0.53,1.05,1.58,2.10,2.63
+Pattern Dance Type Step Sequence Style D (Senior),PStB,RHYTHM/FREE DANCE,Base,5.00,-3.75,-3.00,-2.25,-1.50,-0.75,0.75,1.50,2.25,3.00,3.75
+Pattern Dance Type Step Sequence Style D (Senior),PSt1,RHYTHM/FREE DANCE,Level 1,7.45,-5.59,-4.47,-3.35,-2.24,-1.12,1.12,2.24,3.35,4.47,5.59
+Pattern Dance Type Step Sequence Style D (Senior),PSt2,RHYTHM/FREE DANCE,Level 2,7.95,-5.59,-4.47,-3.35,-2.24,-1.12,1.12,2.24,3.35,4.47,5.59
+Pattern Dance Type Step Sequence Style D (Senior),PSt3,RHYTHM/FREE DANCE,Level 3,8.70,-5.59,-4.47,-3.35,-2.24,-1.12,1.12,2.24,3.35,4.47,5.59
+Pattern Dance Type Step Sequence Style D (Senior),PSt4,RHYTHM/FREE DANCE,Level 4,9.45,-5.59,-4.47,-3.35,-2.24,-1.12,1.12,2.24,3.35,4.47,5.59
+Dance Spin,DSpB,RHYTHM/FREE DANCE,Base,1.80,-1.35,-1.08,-0.81,-0.54,-0.27,0.27,0.54,0.81,1.08,1.35
+Dance Spin,DSp1,RHYTHM/FREE DANCE,Level 1,3.75,-2.81,-2.25,-1.69,-1.13,-0.56,0.56,1.13,1.69,2.25,2.81
+Dance Spin,DSp2,RHYTHM/FREE DANCE,Level 2,4.50,-2.81,-2.25,-1.69,-1.13,-0.56,0.56,1.13,1.69,2.25,2.81
+Dance Spin,DSp3,RHYTHM/FREE DANCE,Level 3,5.25,-2.81,-2.25,-1.69,-1.13,-0.56,0.56,1.13,1.69,2.25,2.81
+Dance Spin,DSp4,RHYTHM/FREE DANCE,Level 4,6.00,-2.81,-2.25,-1.69,-1.13,-0.56,0.56,1.13,1.69,2.25,2.81
+Stationary Lift,StaLiB,RHYTHM/FREE DANCE,Base,1.15,-0.86,-0.69,-0.52,-0.35,-0.17,0.17,0.35,0.52,0.69,0.86
+Stationary Lift,StaLi1,RHYTHM/FREE DANCE,Level 1,3.20,-2.40,-1.92,-1.44,-0.96,-0.48,0.48,0.96,1.44,1.92,2.40
+Stationary Lift,StaLi2,RHYTHM/FREE DANCE,Level 2,3.95,-2.40,-1.92,-1.44,-0.96,-0.48,0.48,0.96,1.44,1.92,2.40
+Stationary Lift,StaLi3,RHYTHM/FREE DANCE,Level 3,4.70,-2.40,-1.92,-1.44,-0.96,-0.48,0.48,0.96,1.44,1.92,2.40
+Stationary Lift,StaLi4,RHYTHM/FREE DANCE,Level 4,5.45,-2.40,-1.92,-1.44,-0.96,-0.48,0.48,0.96,1.44,1.92,2.40
+Straight Line Lift,SILI B,RHYTHM/FREE DANCE,Base,1.15,-0.86,-0.69,-0.52,-0.35,-0.17,0.17,0.35,0.52,0.69,0.86
+Straight Line Lift,SILI1,RHYTHM/FREE DANCE,Level 1,3.20,-2.40,-1.92,-1.44,-0.96,-0.48,0.48,0.96,1.44,1.92,2.40
+Straight Line Lift,SILI2,RHYTHM/FREE DANCE,Level 2,3.95,-2.40,-1.92,-1.44,-0.96,-0.48,0.48,0.96,1.44,1.92,2.40
+Straight Line Lift,SILI3,RHYTHM/FREE DANCE,Level 3,4.70,-2.40,-1.92,-1.44,-0.96,-0.48,0.48,0.96,1.44,1.92,2.40
+Straight Line Lift,SILI4,RHYTHM/FREE DANCE,Level 4,5.45,-2.40,-1.92,-1.44,-0.96,-0.48,0.48,0.96,1.44,1.92,2.40
+Curve Lift,CuLiB,RHYTHM/FREE DANCE,Base,1.15,-0.86,-0.69,-0.52,-0.35,-0.17,0.17,0.35,0.52,0.69,0.86
+Curve Lift,CuLi1,RHYTHM/FREE DANCE,Level 1,3.20,-2.40,-1.92,-1.44,-0.96,-0.48,0.48,0.96,1.44,1.92,2.40
+Curve Lift,CuLi2,RHYTHM/FREE DANCE,Level 2,3.95,-2.40,-1.92,-1.44,-0.96,-0.48,0.48,0.96,1.44,1.92,2.40
+Curve Lift,CuLi3,RHYTHM/FREE DANCE,Level 3,4.70,-2.40,-1.92,-1.44,-0.96,-0.48,0.48,0.96,1.44,1.92,2.40
+Curve Lift,CuLi4,RHYTHM/FREE DANCE,Level 4,5.45,-2.40,-1.92,-1.44,-0.96,-0.48,0.48,0.96,1.44,1.92,2.40
+Rotational Lift,RoLiB,RHYTHM/FREE DANCE,Base,1.15,-0.86,-0.69,-0.52,-0.35,-0.17,0.17,0.35,0.52,0.69,0.86
+Rotational Lift,RoLi1,RHYTHM/FREE DANCE,Level 1,3.20,-2.40,-1.92,-1.44,-0.96,-0.48,0.48,0.96,1.44,1.92,2.40
+Rotational Lift,RoLi2,RHYTHM/FREE DANCE,Level 2,3.95,-2.40,-1.92,-1.44,-0.96,-0.48,0.48,0.96,1.44,1.92,2.40
+Rotational Lift,RoLi3,RHYTHM/FREE DANCE,Level 3,4.70,-2.40,-1.92,-1.44,-0.96,-0.48,0.48,0.96,1.44,1.92,2.40
+Rotational Lift,RoLi4,RHYTHM/FREE DANCE,Level 4,5.45,-2.40,-1.92,-1.44,-0.96,-0.48,0.48,0.96,1.44,1.92,2.40
+Sequential Twizzles Woman (RD,FD-Novice),SqTwWB,RHYTHM/FREE DANCE,Base,1.05,-0.79,-0.63,-0.47,-0.32,-0.16,0.16,0.32,0.47,0.63,0.79
+Sequential Twizzles Woman (RD,FD-Novice),SqTwW1,RHYTHM/FREE DANCE,Level 1,2.67,-2.00,-1.60,-1.20,-0.80,-0.40,0.40,0.80,1.20,1.60,2.00
+Sequential Twizzles Woman (RD,FD-Novice),SqTwW2,RHYTHM/FREE DANCE,Level 2,2.92,-2.00,-1.60,-1.20,-0.80,-0.40,0.40,0.80,1.20,1.60,2.00
+Sequential Twizzles Woman (RD,FD-Novice),SqTwW3,RHYTHM/FREE DANCE,Level 3,3.30,-2.00,-1.60,-1.20,-0.80,-0.40,0.40,0.80,1.20,1.60,2.00
+Sequential Twizzles Woman (RD,FD-Novice),SqTwW4,RHYTHM/FREE DANCE,Level 4,3.67,-2.00,-1.60,-1.20,-0.80,-0.40,0.40,0.80,1.20,1.60,2.00
+Sequential Twizzles Man (RD,FD-Novice),SqTwMB,RHYTHM/FREE DANCE,Base,1.05,-0.79,-0.63,-0.47,-0.32,-0.16,0.16,0.32,0.47,0.63,0.79
+Sequential Twizzles Man (RD,FD-Novice),SqTwM1,RHYTHM/FREE DANCE,Level 1,2.67,-2.00,-1.60,-1.20,-0.80,-0.40,0.40,0.80,1.20,1.60,2.00
+Sequential Twizzles Man (RD,FD-Novice),SqTwM2,RHYTHM/FREE DANCE,Level 2,2.92,-2.00,-1.60,-1.20,-0.80,-0.40,0.40,0.80,1.20,1.60,2.00
+Sequential Twizzles Man (RD,FD-Novice),SqTwM3,RHYTHM/FREE DANCE,Level 3,3.30,-2.00,-1.60,-1.20,-0.80,-0.40,0.40,0.80,1.20,1.60,2.00
+Sequential Twizzles Man (RD,FD-Novice),SqTwM4,RHYTHM/FREE DANCE,Level 4,3.67,-2.00,-1.60,-1.20,-0.80,-0.40,0.40,0.80,1.20,1.60,2.00
+Synchronized Twizzles Woman (FD),SyTwWB,RHYTHM/FREE DANCE,Base,0.80,-0.60,-0.48,-0.36,-0.24,-0.12,0.12,0.24,0.36,0.48,0.60
+Synchronized Twizzles Woman (FD),SyTwW1,RHYTHM/FREE DANCE,Level 1,2.42,-1.82,-1.45,-1.09,-0.73,-0.36,0.36,0.73,1.09,1.45,1.82
+Synchronized Twizzles Woman (FD),SyTwW2,RHYTHM/FREE DANCE,Level 2,2.67,-1.82,-1.45,-1.09,-0.73,-0.36,0.36,0.73,1.09,1.45,1.82
+Synchronized Twizzles Woman (FD),SyTwW3,RHYTHM/FREE DANCE,Level 3,3.05,-1.82,-1.45,-1.09,-0.73,-0.36,0.36,0.73,1.09,1.45,1.82
+Synchronized Twizzles Woman (FD),SyTwW4,RHYTHM/FREE DANCE,Level 4,3.42,-1.82,-1.45,-1.09,-0.73,-0.36,0.36,0.73,1.09,1.45,1.82
+Synchronized Twizzles Man (FD),SyTwMB,RHYTHM/FREE DANCE,Base,0.80,-0.60,-0.48,-0.36,-0.24,-0.12,0.12,0.24,0.36,0.48,0.60
+Synchronized Twizzles Man (FD),SyTwM1,RHYTHM/FREE DANCE,Level 1,2.42,-1.82,-1.45,-1.09,-0.73,-0.36,0.36,0.73,1.09,1.45,1.82
+Synchronized Twizzles Man (FD),SyTwM2,RHYTHM/FREE DANCE,Level 2,2.67,-1.82,-1.45,-1.09,-0.73,-0.36,0.36,0.73,1.09,1.45,1.82
+Synchronized Twizzles Man (FD),SyTwM3,RHYTHM/FREE DANCE,Level 3,3.05,-1.82,-1.45,-1.09,-0.73,-0.36,0.36,0.73,1.09,1.45,1.82
+Synchronized Twizzles Man (FD),SyTwM4,RHYTHM/FREE DANCE,Level 4,3.42,-1.82,-1.45,-1.09,-0.73,-0.36,0.36,0.73,1.09,1.45,1.82
+One Foot Turns Sequence Woman,OFTWB,RHYTHM/FREE DANCE,Base,0.80,-0.60,-0.48,-0.36,-0.24,-0.12,0.12,0.24,0.36,0.48,0.60
+One Foot Turns Sequence Woman,OFTW1,RHYTHM/FREE DANCE,Level 1,2.42,-1.82,-1.45,-1.09,-0.73,-0.36,0.36,0.73,1.09,1.45,1.82
+One Foot Turns Sequence Woman,OFTW2,RHYTHM/FREE DANCE,Level 2,2.67,-1.82,-1.45,-1.09,-0.73,-0.36,0.36,0.73,1.09,1.45,1.82
+One Foot Turns Sequence Woman,OFTW3,RHYTHM/FREE DANCE,Level 3,3.05,-1.82,-1.45,-1.09,-0.73,-0.36,0.36,0.73,1.09,1.45,1.82
+One Foot Turns Sequence Woman,OFTW4,RHYTHM/FREE DANCE,Level 4,3.42,-1.82,-1.45,-1.09,-0.73,-0.36,0.36,0.73,1.09,1.45,1.82
+One Foot Turns Sequence Man,OFTMB,RHYTHM/FREE DANCE,Base,0.80,-0.60,-0.48,-0.36,-0.24,-0.12,0.12,0.24,0.36,0.48,0.60
+One Foot Turns Sequence Man,OFTM1,RHYTHM/FREE DANCE,Level 1,2.42,-1.82,-1.45,-1.09,-0.73,-0.36,0.36,0.73,1.09,1.45,1.82
+One Foot Turns Sequence Man,OFTM2,RHYTHM/FREE DANCE,Level 2,2.67,-1.82,-1.45,-1.09,-0.73,-0.36,0.36,0.73,1.09,1.45,1.82
+One Foot Turns Sequence Man,OFTM3,RHYTHM/FREE DANCE,Level 3,3.05,-1.82,-1.45,-1.09,-0.73,-0.36,0.36,0.73,1.09,1.45,1.82
+One Foot Turns Sequence Man,OFTM4,RHYTHM/FREE DANCE,Level 4,3.42,-1.82,-1.45,-1.09,-0.73,-0.36,0.36,0.73,1.09,1.45,1.82
+Diagonal Step Sequence Style B Woman,DiStWB,RHYTHM/FREE DANCE,Base,2.25,-1.69,-1.35,-1.01,-0.68,-0.34,0.34,0.68,1.01,1.35,1.69
+Diagonal Step Sequence Style B Woman,DiStW1,RHYTHM/FREE DANCE,Level 1,3.48,-2.61,-2.09,-1.57,-1.04,-0.52,0.52,1.04,1.57,2.09,2.61
+Diagonal Step Sequence Style B Woman,DiStW2,RHYTHM/FREE DANCE,Level 2,3.73,-2.61,-2.09,-1.57,-1.04,-0.52,0.52,1.04,1.57,2.09,2.61
+Diagonal Step Sequence Style B Woman,DiStW3,RHYTHM/FREE DANCE,Level 3,4.10,-2.61,-2.09,-1.57,-1.04,-0.52,0.52,1.04,1.57,2.09,2.61
+Diagonal Step Sequence Style B Woman,DiStW4,RHYTHM/FREE DANCE,Level 4,4.48,-2.61,-2.09,-1.57,-1.04,-0.52,0.52,1.04,1.57,2.09,2.61
+Diagonal Step Sequence Style B Man,DiStMB,RHYTHM/FREE DANCE,Base,2.25,-1.69,-1.35,-1.01,-0.68,-0.34,0.34,0.68,1.01,1.35,1.69
+Diagonal Step Sequence Style B Man,DiStM1,RHYTHM/FREE DANCE,Level 1,3.48,-2.61,-2.09,-1.57,-1.04,-0.52,0.52,1.04,1.57,2.09,2.61
+Diagonal Step Sequence Style B Man,DiStM2,RHYTHM/FREE DANCE,Level 2,3.73,-2.61,-2.09,-1.57,-1.04,-0.52,0.52,1.04,1.57,2.09,2.61
+Diagonal Step Sequence Style B Man,DiStM3,RHYTHM/FREE DANCE,Level 3,4.10,-2.61,-2.09,-1.57,-1.04,-0.52,0.52,1.04,1.57,2.09,2.61
+Diagonal Step Sequence Style B Man,DiStM4,RHYTHM/FREE DANCE,Level 4,4.48,-2.61,-2.09,-1.57,-1.04,-0.52,0.52,1.04,1.57,2.09,2.61
+Midline Step Sequence Style B Woman,MiStWB,RHYTHM/FREE DANCE,Base,2.25,-1.69,-1.35,-1.01,-0.68,-0.34,0.34,0.68,1.01,1.35,1.69
+Midline Step Sequence Style B Woman,MiStW1,RHYTHM/FREE DANCE,Level 1,3.48,-2.61,-2.09,-1.57,-1.04,-0.52,0.52,1.04,1.57,2.09,2.61
+Midline Step Sequence Style B Woman,MiStW2,RHYTHM/FREE DANCE,Level 2,3.73,-2.61,-2.09,-1.57,-1.04,-0.52,0.52,1.04,1.57,2.09,2.61
+Midline Step Sequence Style B Woman,MiStW3,RHYTHM/FREE DANCE,Level 3,4.10,-2.61,-2.09,-1.57,-1.04,-0.52,0.52,1.04,1.57,2.09,2.61
+Midline Step Sequence Style B Woman,MiStW4,RHYTHM/FREE DANCE,Level 4,4.48,-2.61,-2.09,-1.57,-1.04,-0.52,0.52,1.04,1.57,2.09,2.61
+Midline Step Sequence Style B Man,MiSIMB,RHYTHM/FREE DANCE,Base,2.25,-1.69,-1.35,-1.01,-0.68,-0.34,0.34,0.68,1.01,1.35,1.69
+Midline Step Sequence Style B Man,MiStM1,RHYTHM/FREE DANCE,Level 1,3.48,-2.61,-2.09,-1.57,-1.04,-0.52,0.52,1.04,1.57,2.09,2.61
+Midline Step Sequence Style B Man,MiStM2,RHYTHM/FREE DANCE,Level 2,3.73,-2.61,-2.09,-1.57,-1.04,-0.52,0.52,1.04,1.57,2.09,2.61
+Midline Step Sequence Style B Man,MiStM3,RHYTHM/FREE DANCE,Level 3,4.10,-2.61,-2.09,-1.57,-1.04,-0.52,0.52,1.04,1.57,2.09,2.61
+Midline Step Sequence Style B Man,MiStM4,RHYTHM/FREE DANCE,Level 4,4.48,-2.61,-2.09,-1.57,-1.04,-0.52,0.52,1.04,1.57,2.09,2.61
+Circular Step Sequence Style B Woman,CIStWB,RHYTHM/FREE DANCE,Base,2.25,-1.69,-1.35,-1.01,-0.68,-0.34,0.34,0.68,1.01,1.35,1.69
+Circular Step Sequence Style B Woman,CiStW1,RHYTHM/FREE DANCE,Level 1,3.48,-2.61,-2.09,-1.57,-1.04,-0.52,0.52,1.04,1.57,2.09,2.61
+Circular Step Sequence Style B Woman,CiStW2,RHYTHM/FREE DANCE,Level 2,3.73,-2.61,-2.09,-1.57,-1.04,-0.52,0.52,1.04,1.57,2.09,2.61
+Circular Step Sequence Style B Woman,CiStW3,RHYTHM/FREE DANCE,Level 3,4.10,-2.61,-2.09,-1.57,-1.04,-0.52,0.52,1.04,1.57,2.09,2.61
+Circular Step Sequence Style B Woman,CiStW4,RHYTHM/FREE DANCE,Level 4,4.48,-2.61,-2.09,-1.57,-1.04,-0.52,0.52,1.04,1.57,2.09,2.61
+Circular Step Sequence Style B Man,CiStMB,RHYTHM/FREE DANCE,Base,2.25,-1.69,-1.35,-1.01,-0.68,-0.34,0.34,0.68,1.01,1.35,1.69
+Circular Step Sequence Style B Man,CiStM1,RHYTHM/FREE DANCE,Level 1,3.48,-2.61,-2.09,-1.57,-1.04,-0.52,0.52,1.04,1.57,2.09,2.61
+Circular Step Sequence Style B Man,CiStM2,RHYTHM/FREE DANCE,Level 2,3.73,-2.61,-2.09,-1.57,-1.04,-0.52,0.52,1.04,1.57,2.09,2.61
+Circular Step Sequence Style B Man,CiStM3,RHYTHM/FREE DANCE,Level 3,4.10,-2.61,-2.09,-1.57,-1.04,-0.52,0.52,1.04,1.57,2.09,2.61
+Circular Step Sequence Style B Man,CiStM4,RHYTHM/FREE DANCE,Level 4,4.48,-2.61,-2.09,-1.57,-1.04,-0.52,0.52,1.04,1.57,2.09,2.61
+Serpentine Step Sequence Style B Woman,SeStWB,RHYTHM/FREE DANCE,Base,2.25,-1.69,-1.35,-1.01,-0.68,-0.34,0.34,0.68,1.01,1.35,1.69
+Serpentine Step Sequence Style B Woman,SeStW1,RHYTHM/FREE DANCE,Level 1,3.48,-2.61,-2.09,-1.57,-1.04,-0.52,0.52,1.04,1.57,2.09,2.61
+Serpentine Step Sequence Style B Woman,SeStW2,RHYTHM/FREE DANCE,Level 2,3.73,-2.61,-2.09,-1.57,-1.04,-0.52,0.52,1.04,1.57,2.09,2.61
+Serpentine Step Sequence Style B Woman,SeStW3,RHYTHM/FREE DANCE,Level 3,4.10,-2.61,-2.09,-1.57,-1.04,-0.52,0.52,1.04,1.57,2.09,2.61
+Serpentine Step Sequence Style B Woman,SeStW4,RHYTHM/FREE DANCE,Level 4,4.48,-2.61,-2.09,-1.57,-1.04,-0.52,0.52,1.04,1.57,2.09,2.61
+Serpentine Step Sequence Style B Man,SeStMB,RHYTHM/FREE DANCE,Base,2.25,-1.69,-1.35,-1.01,-0.68,-0.34,0.34,0.68,1.01,1.35,1.69
+Serpentine Step Sequence Style B Man,SeStM1,RHYTHM/FREE DANCE,Level 1,3.48,-2.61,-2.09,-1.57,-1.04,-0.52,0.52,1.04,1.57,2.09,2.61
+Serpentine Step Sequence Style B Man,SeStM2,RHYTHM/FREE DANCE,Level 2,3.73,-2.61,-2.09,-1.57,-1.04,-0.52,0.52,1.04,1.57,2.09,2.61
+Serpentine Step Sequence Style B Man,SeStM3,RHYTHM/FREE DANCE,Level 3,4.10,-2.61,-2.09,-1.57,-1.04,-0.52,0.52,1.04,1.57,2.09,2.61
+Serpentine Step Sequence Style B Man,SeStM4,RHYTHM/FREE DANCE,Level 4,4.48,-2.61,-2.09,-1.57,-1.04,-0.52,0.52,1.04,1.57,2.09,2.61
+Choreographic Assisted Jump/Lifting Movement,ChAJ1,CHOREOGRAPHIC,Level 1,1.10,-1.10,-0.88,-0.66,-0.44,-0.22,0.83,1.66,2.49,3.32,4.15
+Choreographic Character Step Sequence,ChSt1,CHOREOGRAPHIC,Level 1,1.10,-1.10,-0.88,-0.66,-0.44,-0.22,0.83,1.66,2.49,3.32,4.15
+Choreographic Hydroblading Movement,ChHy1,CHOREOGRAPHIC,Level 1,1.10,-1.10,-0.88,-0.66,-0.44,-0.22,0.83,1.66,2.49,3.32,4.15
+Choreographic Lift,ChLi1,CHOREOGRAPHIC,Level 1,1.10,-1.10,-0.88,-0.66,-0.44,-0.22,0.83,1.66,2.49,3.32,4.15
+Choreographic Rhythm Sequence,ChRS1,CHOREOGRAPHIC,Level 1,2.00,-2.00,-1.60,-1.20,-0.80,-0.40,1.50,3.00,4.50,6.00,7.50
+Choreographic Sliding Movements,ChSl1,CHOREOGRAPHIC,Level 1,1.10,-1.10,-0.88,-0.66,-0.44,-0.22,0.83,1.66,2.49,3.32,4.15
+Choreographic Spinning Movement,ChSp1,CHOREOGRAPHIC,Level 1,1.10,-1.10,-0.88,-0.66,-0.44,-0.22,0.83,1.66,2.49,3.32,4.15
+Choreographic Twizzling Movement,ChTw1,CHOREOGRAPHIC,Level 1,1.10,-1.10,-0.88,-0.66,-0.44,-0.22,0.83,1.66,2.49,3.32,4.15

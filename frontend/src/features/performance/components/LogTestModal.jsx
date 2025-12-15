@@ -125,7 +125,7 @@ export function LogTestModal({ skater, testToEdit, onSaved, trigger, canDelete, 
       <DialogTrigger asChild>
         {trigger || <Button><Plus className="h-4 w-4 mr-2" /> Log Test</Button>}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="w-[95vw] max-w-5xl max-h-[90vh] flex flex-col">
         <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
                 {testToEdit ? 'Edit Test Record' : 'Log Test Result'}

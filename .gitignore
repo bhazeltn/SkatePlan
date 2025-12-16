@@ -54,3 +54,11 @@ yarn-error.log*
 # Docker
 docker-compose.override.yml
 docker-compose.prod.yml
+
+# Claude Code
+.claudeignore
+.claude/
+
+# Documentation (optional - you might want to commit these)
+# docs/specs/*.md
+

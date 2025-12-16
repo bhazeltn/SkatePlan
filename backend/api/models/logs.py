@@ -3,6 +3,7 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
 from datetime import date
+from django_cryptography.fields import encrypt
 from .users import User
 from .skaters import Skater
 from .planning import AthleteSeason
@@ -54,8 +55,8 @@ class SessionLog(models.Model):
     wellbeing_mental_focus_notes = models.TextField(blank=True, null=True)
 
     # Notes
-    coach_notes = models.TextField(blank=True, null=True)
-    skater_notes = models.TextField(blank=True, null=True)
+    coach_notes = encrypt(models.TextField(blank=True, null=True))
+    skater_notes = encrypt(models.TextField(blank=True, null=True))
 
     attendance = models.JSONField(default=list, blank=True)
 

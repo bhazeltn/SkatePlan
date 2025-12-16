@@ -1,8 +1,9 @@
 from django.db import models
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
+from django_cryptography.fields import encrypt
 from .users import User
-from .core import Federation
+from .core import Federation, FederationLevel
 
 
 class Skater(models.Model):
@@ -59,16 +60,22 @@ class AthleteProfile(models.Model):
     )
 
     # --- Contact Info (For Invites) ---
-    skater_email = models.EmailField(blank=True, null=True)
-    guardian_name = models.CharField(max_length=255, blank=True, null=True)
-    guardian_email = models.EmailField(blank=True, null=True)
+    skater_email = encrypt(models.EmailField(blank=True, null=True))
+    guardian_name = encrypt(models.CharField(max_length=255, blank=True, null=True))
+    guardian_email = encrypt(models.EmailField(blank=True, null=True))
 
     # --- Emergency & Safety ---
-    emergency_contact_name = models.CharField(max_length=255, blank=True, null=True)
-    emergency_contact_phone = models.CharField(max_length=50, blank=True, null=True)
+    emergency_contact_name = encrypt(
+        models.CharField(max_length=255, blank=True, null=True)
+    )
+    emergency_contact_phone = encrypt(
+        models.CharField(max_length=50, blank=True, null=True)
+    )
 
-    relevant_medical_notes = models.TextField(
-        blank=True, null=True, help_text="Allergies, conditions, etc."
+    relevant_medical_notes = encrypt(
+        models.TextField(
+            blank=True, null=True, help_text="Allergies, conditions, etc."
+        )
     )
 
     def __str__(self):
@@ -84,6 +91,15 @@ class SinglesEntity(models.Model):
         Federation, on_delete=models.SET_NULL, null=True, blank=True
     )
     current_level = models.CharField(max_length=100, blank=True, null=True)
+
+    # Optional link to structured level data (for enhanced features)
+    current_level_structured = models.ForeignKey(
+        FederationLevel,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="skaters_at_level",
+    )
 
     def __str__(self):
         return f"{self.skater.full_name} (Singles)"

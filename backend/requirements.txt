@@ -1,11 +1,13 @@
 # This file lists all Python dependencies for the project
 
 # Django Core
-django
+# Pinned to 4.2 due to django-cryptography incompatibility with Django 5
+Django>=4.2,<5.0
 djangorestframework
 django-cors-headers
 django-cryptography # For encrypted fields
 django-redis # For Redis cache
+django-ratelimit
 
 # Database (Postgres)
 psycopg2-binary

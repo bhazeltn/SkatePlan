@@ -3,6 +3,7 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from .users import User
 from .skaters import Skater
+from .competitions import Program
 
 
 class AthleteSeason(models.Model):
@@ -93,6 +94,11 @@ class Macrocycle(models.Model):
 
 
 class WeeklyPlan(models.Model):
+    """
+    Holistic weekly container for an athlete.
+    Links to AthleteSeason (person), not just a discipline.
+    """
+
     id = models.AutoField(primary_key=True)
     athlete_season = models.ForeignKey(
         AthleteSeason, on_delete=models.CASCADE, related_name="weekly_plans"
@@ -100,11 +106,118 @@ class WeeklyPlan(models.Model):
     week_start = models.DateField()
 
     theme = models.CharField(max_length=255, blank=True, null=True)
+    notes = models.TextField(blank=True, null=True)
+
+    max_session_hours = models.FloatField(null=True, blank=True)
+    max_session_count = models.IntegerField(null=True, blank=True)
+
     session_breakdown = models.JSONField(default=dict, blank=True)
 
     class Meta:
         unique_together = ("athlete_season", "week_start")
         ordering = ["week_start"]
+
+    def __str__(self):
+        return f"Week of {self.week_start} ({self.athlete_season})"
+
+
+class PlannedSession(models.Model):
+    """
+    An individual session within a weekly plan.
+    Supports all session types for holistic load management.
+    """
+
+    class SessionType(models.TextChoices):
+        # Training
+        ON_ICE = "ON_ICE", "On Ice"
+        OFF_ICE = "OFF_ICE", "Off Ice"
+        CLASS = "CLASS", "Class / Dance"
+        CONDITIONING = "CONDITIONING", "Conditioning"
+        # Development
+        PROGRAM_DEVELOPMENT = "PROGRAM_DEVELOPMENT", "Program Development"
+        CHOREOGRAPHY = "CHOREOGRAPHY", "Choreography"
+        MUSIC_EDIT = "MUSIC_EDIT", "Music Edit"
+        # Events
+        CLINIC = "CLINIC", "Clinic / Seminar"
+        SHOW = "SHOW", "Ice Show"
+        EXHIBITION = "EXHIBITION", "Exhibition"
+        TEST_SESSION = "TEST_SESSION", "Test Session"
+        # Competition
+        COMPETITION = "COMPETITION", "Competition"
+        TRAVEL = "TRAVEL", "Travel"
+        # Recovery
+        REST = "REST", "Rest Day"
+        RECOVERY = "RECOVERY", "Active Recovery"
+        OTHER = "OTHER", "Other"
+
+    class DayOfWeek(models.TextChoices):
+        MONDAY = "MONDAY", "Monday"
+        TUESDAY = "TUESDAY", "Tuesday"
+        WEDNESDAY = "WEDNESDAY", "Wednesday"
+        THURSDAY = "THURSDAY", "Thursday"
+        FRIDAY = "FRIDAY", "Friday"
+        SATURDAY = "SATURDAY", "Saturday"
+        SUNDAY = "SUNDAY", "Sunday"
+
+    id = models.AutoField(primary_key=True)
+    weekly_plan = models.ForeignKey(
+        WeeklyPlan, on_delete=models.CASCADE, related_name="planned_sessions"
+    )
+    yearly_plan = models.ForeignKey(
+        YearlyPlan,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sessions",
+        help_text="Link to specific discipline plan",
+    )
+
+    day_of_week = models.CharField(max_length=10, choices=DayOfWeek.choices)
+    planned_time = models.TimeField(null=True, blank=True)
+    planned_duration = models.IntegerField(help_text="Duration in minutes")
+
+    session_type = models.CharField(
+        max_length=20,
+        choices=SessionType.choices,
+        default=SessionType.ON_ICE,
+    )
+
+    # Event Specific Fields
+    event_name = models.CharField(max_length=255, blank=True, null=True)
+    event_location = models.CharField(max_length=255, blank=True, null=True)
+    cost = models.DecimalField(
+        max_digits=8, decimal_places=2, null=True, blank=True
+    )
+    program = models.ForeignKey(
+        Program,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="planned_sessions",
+    )
+
+    focus = models.TextField(blank=True, null=True)
+    planned_elements = models.JSONField(default=list, blank=True)
+
+    created_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, related_name="created_sessions"
+    )
+    
+    class Status(models.TextChoices):
+        PLANNED = "PLANNED", "Planned"
+        COMPLETED = "COMPLETED", "Completed"
+        MISSED = "MISSED", "Missed"
+        CANCELLED = "CANCELLED", "Cancelled"
+
+    status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.PLANNED
+    )
+
+    class Meta:
+        ordering = ["day_of_week", "planned_time"]
+
+    def __str__(self):
+        return f"{self.get_session_type_display()} on {self.get_day_of_week_display()}"
 
 
 class Goal(models.Model):

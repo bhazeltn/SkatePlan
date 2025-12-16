@@ -57,6 +57,103 @@ class User(AbstractBaseUser, PermissionsMixin):
         return self.email
 
 
+class Organization(models.Model):
+    """
+    Represents a federation, club, or academy.
+    Can have multiple coaches and athletes.
+    """
+
+    class OrganizationType(models.TextChoices):
+        FEDERATION = "FEDERATION", "National Federation"
+        CLUB = "CLUB", "Skating Club"
+        ACADEMY = "ACADEMY", "Training Academy"
+
+    class SubscriptionTier(models.TextChoices):
+        FREE = "FREE", "Free"
+        BASIC = "BASIC", "Basic - $50/month"
+        PRO = "PRO", "Pro - $200/month"
+        FEDERATION = "FEDERATION", "Federation - $500/month"
+
+    id = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=255)
+    organization_type = models.CharField(
+        max_length=20, choices=OrganizationType.choices
+    )
+
+    # Billing
+    subscription_tier = models.CharField(
+        max_length=20,
+        choices=SubscriptionTier.choices,
+        default=SubscriptionTier.FREE,
+    )
+
+    # Settings
+    max_coaches = models.IntegerField(null=True, blank=True)  # null = unlimited
+    max_athletes = models.IntegerField(null=True, blank=True)
+
+    # Contact
+    primary_contact = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, related_name="managed_organizations"
+    )
+    billing_email = models.EmailField()
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.name
+
+
+class OrganizationMembership(models.Model):
+    """
+    Links users (coaches, athletes) to an organization.
+    Defines their role within the organization.
+    """
+
+    class OrgRole(models.TextChoices):
+        ADMIN = "ADMIN", "Administrator"
+        COACH = "COACH", "Coach"
+        ATHLETE = "ATHLETE", "Athlete"
+
+    organization = models.ForeignKey(
+        Organization, on_delete=models.CASCADE, related_name="memberships"
+    )
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="org_memberships"
+    )
+    role = models.CharField(max_length=20, choices=OrgRole.choices)
+
+    joined_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("organization", "user")
+
+    def __str__(self):
+        return f"{self.user.email} -> {self.organization.name} ({self.role})"
+
+
+class OrganizationInvite(models.Model):
+    """
+    Invitations to join an organization.
+    """
+
+    organization = models.ForeignKey(
+        Organization, on_delete=models.CASCADE, related_name="invites"
+    )
+    email = models.EmailField()
+    role = models.CharField(max_length=20, choices=OrganizationMembership.OrgRole.choices)
+
+    invited_by = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="sent_org_invites"
+    )
+    token = models.UUIDField(default=uuid.uuid4, unique=True)
+    expires_at = models.DateTimeField()
+    accepted_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"Invite {self.email} to {self.organization.name}"
+
+
 class Invitation(models.Model):
     # --- EXTENDED ROLES FOR INVITES ---
     class InviteRole(models.TextChoices):

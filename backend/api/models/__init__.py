@@ -1,5 +1,5 @@
 # Import everything to expose it at api.models
-from .users import User, UserManager, Invitation
+from .users import User, UserManager, Invitation, Organization, OrganizationMembership
 from .core import Federation, SkatingElement
 
 # ADDED AthleteProfile below

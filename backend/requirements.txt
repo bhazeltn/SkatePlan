@@ -26,3 +26,11 @@ python-dotenv
 gunicorn
 django-anymail[sendinblue]
 pdfplumber==0.10.3
+
+# Testing & Quality
+pytest-django
+pytest-cov
+black
+flake8
+isort
+pre-commit

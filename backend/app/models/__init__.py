@@ -1,6 +1,12 @@
 """Model registry — import all models so Alembic autogenerate sees them."""
 from app.core.database import Base
 from app.models.audit import SafeSportTextHistoryLedger
+from app.models.competition import (
+    Competition,
+    CompetitionEntry,
+    CompetitionExecutedElement,
+    CompetitionSegmentResult,
+)
 from app.models.federation import CompetitionLevel, Federation, FederationStream
 from app.models.grant import ExternalAccessGrant
 from app.models.program import Program, ProgramElement
@@ -26,4 +32,8 @@ __all__ = [
     "TrainingSession",
     "Program",
     "ProgramElement",
+    "Competition",
+    "CompetitionEntry",
+    "CompetitionSegmentResult",
+    "CompetitionExecutedElement",
 ]

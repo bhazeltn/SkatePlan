@@ -1,0 +1,61 @@
+{
+  "federation_code": "PHI",
+  "federation_name": "Philippine Skating Union",
+  "streams": [
+    {
+      "stream_name": "Competitive",
+      "stream_display": "Competitive",
+      "discipline": "Singles",
+      "levels": [
+        {
+          "name": "Pre-Juvenile",
+          "order": 1,
+          "is_adult": false,
+          "isu_anchor": "DEVELOPMENTAL"
+        },
+        {
+          "name": "Juvenile",
+          "order": 2,
+          "is_adult": false,
+          "isu_anchor": "DEVELOPMENTAL"
+        },
+        {
+          "name": "Pre-Novice",
+          "order": 3,
+          "is_adult": false,
+          "isu_anchor": "DEVELOPMENTAL"
+        },
+        {
+          "name": "Basic Novice",
+          "order": 4,
+          "is_adult": false,
+          "isu_anchor": "DEVELOPMENTAL"
+        },
+        {
+          "name": "Intermediate Novice",
+          "order": 5,
+          "is_adult": false,
+          "isu_anchor": "DEVELOPMENTAL"
+        },
+        {
+          "name": "Advanced Novice",
+          "order": 6,
+          "is_adult": false,
+          "isu_anchor": "NOVICE_ADV"
+        },
+        {
+          "name": "Junior",
+          "order": 7,
+          "is_adult": false,
+          "isu_anchor": "JUNIOR"
+        },
+        {
+          "name": "Senior",
+          "order": 8,
+          "is_adult": false,
+          "isu_anchor": "SENIOR"
+        }
+      ]
+    }
+  ]
+}

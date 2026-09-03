@@ -1,0 +1,392 @@
+[
+  {
+    "model": "api.federation",
+    "pk": 1,
+    "fields": { "name": "Federació Andorrana d'Esports de Gel", "code": "AND", "iso_code": "ad" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 2,
+    "fields": { "name": "Federacion Argentina De Patinaje Sobre Hielo", "code": "ARG", "iso_code": "ar" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 3,
+    "fields": { "name": "Figure Skating Federation Of Armenia", "code": "ARM", "iso_code": "am" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 4,
+    "fields": { "name": "Ice Skating Australia Limited", "code": "AUS", "iso_code": "au" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 5,
+    "fields": { "name": "Skate Austria", "code": "AUT", "iso_code": "at" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 6,
+    "fields": { "name": "The Skating Federation Of Azerbaijan Republic", "code": "AZE", "iso_code": "az" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 7,
+    "fields": { "name": "Skating Union of Belarus", "code": "BLR", "iso_code": "by" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 8,
+    "fields": { "name": "Federation Royale Belge de Patinage Artistique", "code": "BEL", "iso_code": "be" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 9,
+    "fields": { "name": "Skating Federation Of Bosnia And Herzegovina", "code": "BIH", "iso_code": "ba" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 10,
+    "fields": { "name": "Brazilian Ice Sports Federation", "code": "BRA", "iso_code": "br" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 11,
+    "fields": { "name": "Bulgarian Skating Federation", "code": "BUL", "iso_code": "bg" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 12,
+    "fields": { "name": "Skate Canada", "code": "CAN", "iso_code": "ca" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 13,
+    "fields": { "name": "Chilean National Figure Skating Federation", "code": "CHI", "iso_code": "cl" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 14,
+    "fields": { "name": "Chinese Figure Skating Association", "code": "CHN", "iso_code": "cn" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 15,
+    "fields": { "name": "Croatian Skating Federation", "code": "CRO", "iso_code": "hr" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 16,
+    "fields": { "name": "Cyprus Skating Federation", "code": "CYP", "iso_code": "cy" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 17,
+    "fields": { "name": "Czech Figure Skating Association", "code": "CZE", "iso_code": "cz" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 18,
+    "fields": { "name": "Danish Skate Union", "code": "DEN", "iso_code": "dk" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 19,
+    "fields": { "name": "Ecuadorian Skating Federation", "code": "ECU", "iso_code": "ec" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 20,
+    "fields": { "name": "Ice Skate Egypt", "code": "EGY", "iso_code": "eg" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 21,
+    "fields": { "name": "Federación Española de Deportes de Hielo", "code": "ESP", "iso_code": "es" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 22,
+    "fields": { "name": "The Estonian Skating Union", "code": "EST", "iso_code": "ee" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 23,
+    "fields": { "name": "Skating Finland", "code": "FIN", "iso_code": "fi" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 24,
+    "fields": { "name": "French Federation of Ice Sports", "code": "FRA", "iso_code": "fr" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 25,
+    "fields": { "name": "British Ice Skating", "code": "GBR", "iso_code": "gb" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 26,
+    "fields": { "name": "Georgian Figure Skating Federation", "code": "GEO", "iso_code": "ge" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 27,
+    "fields": { "name": "Deutsche Eislauf-Union e.V.", "code": "GER", "iso_code": "de" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 28,
+    "fields": { "name": "Hellenic Winter Sports Federation", "code": "GRE", "iso_code": "gr" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 29,
+    "fields": { "name": "Hong Kong China Skating Union", "code": "HKG", "iso_code": "hk" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 30,
+    "fields": { "name": "Hungarian National Skating Federation", "code": "HUN", "iso_code": "hu" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 31,
+    "fields": { "name": "Indonesia Ice Skating Federation", "code": "INA", "iso_code": "id" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 32,
+    "fields": { "name": "Ice Skating Association of India", "code": "IND", "iso_code": "in" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 33,
+    "fields": { "name": "Ice Skating Association of Ireland", "code": "IRL", "iso_code": "ie" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 34,
+    "fields": { "name": "Icelandic Skating Association", "code": "ISL", "iso_code": "is" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 35,
+    "fields": { "name": "Israel Ice Skating Federation", "code": "ISR", "iso_code": "il" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 36,
+    "fields": { "name": "Italian Ice Sports Federation", "code": "ITA", "iso_code": "it" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 37,
+    "fields": { "name": "Japan Skating Federation", "code": "JPN", "iso_code": "jp" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 38,
+    "fields": { "name": "Kazakhstan Figure Skating Union", "code": "KAZ", "iso_code": "kz" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 39,
+    "fields": { "name": "Skating Federation of the Kyrgyz Republic", "code": "KGZ", "iso_code": "kg" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 40,
+    "fields": { "name": "Korea Skating Union", "code": "KOR", "iso_code": "kr" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 41,
+    "fields": { "name": "Kuwait Figure Skating Federation", "code": "KWT", "iso_code": "kw" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 42,
+    "fields": { "name": "Latvian Skating Association", "code": "LAT", "iso_code": "lv" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 43,
+    "fields": { "name": "Liechtensteiner Eislauf Verband", "code": "LIE", "iso_code": "li" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 44,
+    "fields": { "name": "Lithuanian Skating Federation", "code": "LTU", "iso_code": "lt" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 45,
+    "fields": { "name": "Union Luxembourgeoise de Patinage", "code": "LUX", "iso_code": "lu" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 46,
+    "fields": { "name": "Association of Moroccan Ice Sports", "code": "MAR", "iso_code": "ma" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 47,
+    "fields": { "name": "Ice Skating Association of Malaysia", "code": "MAS", "iso_code": "my" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 48,
+    "fields": { "name": "Figure Skating Federation of the Republic of Moldova", "code": "MDA", "iso_code": "md" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 49,
+    "fields": { "name": "Federacion Mexicana de Patinaje Sobre Hielo", "code": "MEX", "iso_code": "mx" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 50,
+    "fields": { "name": "Skating Union of Mongolia", "code": "MGL", "iso_code": "mn" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 51,
+    "fields": { "name": "Skating Federation of North Macedonia", "code": "MKD", "iso_code": "mk" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 52,
+    "fields": { "name": "Federation Monegasque De Patinage", "code": "MON", "iso_code": "mc" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 53,
+    "fields": { "name": "Koninklijke Nederlandsche Schaatsenrijders Bond", "code": "NED", "iso_code": "nl" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 54,
+    "fields": { "name": "Norges Skøyteforbund", "code": "NOR", "iso_code": "no" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 55,
+    "fields": { "name": "New Zealand Ice Figure Skating Association", "code": "NZL", "iso_code": "nz" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 56,
+    "fields": { "name": "Peruvian Ice Skating Federation", "code": "PER", "iso_code": "pe" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 57,
+    "fields": { "name": "Philippine Skating Union", "code": "PHI", "iso_code": "ph" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 58,
+    "fields": { "name": "Polish Figure Skating Association", "code": "POL", "iso_code": "pl" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 59,
+    "fields": { "name": "Portuguese Winter Sports Federation", "code": "POR", "iso_code": "pt" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 60,
+    "fields": { "name": "Skating Association of the DPR Korea", "code": "PRK", "iso_code": "kp" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 61,
+    "fields": { "name": "Romanian Skating Federation", "code": "ROU", "iso_code": "ro" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 62,
+    "fields": { "name": "South African Figure Skating Association", "code": "RSA", "iso_code": "za" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 63,
+    "fields": { "name": "The Figure Skating Federation of Russia", "code": "RUS", "iso_code": "ru" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 64,
+    "fields": { "name": "Singapore Ice Skating Association", "code": "SGP", "iso_code": "sg" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 65,
+    "fields": { "name": "Slovene Skating Union", "code": "SLO", "iso_code": "si" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 66,
+    "fields": { "name": "Serbian Skating Association", "code": "SRB", "iso_code": "rs" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 67,
+    "fields": { "name": "Swiss Ice Skating", "code": "SUI", "iso_code": "ch" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 68,
+    "fields": { "name": "Slovak Figure Skating Association", "code": "SVK", "iso_code": "sk" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 69,
+    "fields": { "name": "Swedish Figure Skating Association", "code": "SWE", "iso_code": "se" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 70,
+    "fields": { "name": "Figure and Speed Skating Association of Thailand", "code": "THA", "iso_code": "th" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 71,
+    "fields": { "name": "National Center of Turkmenistan for Winter Sport", "code": "TKM", "iso_code": "tm" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 72,
+    "fields": { "name": "Chinese Taipei Skating Union", "code": "TPE", "iso_code": "tw" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 73,
+    "fields": { "name": "Turkish Ice Skating Federation", "code": "TUR", "iso_code": "tr" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 74,
+    "fields": { "name": "United Arab Emirates Winter Sports Federation", "code": "UAE", "iso_code": "ae" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 75,
+    "fields": { "name": "Ukrainian Figure Skating Federation", "code": "UKR", "iso_code": "ua" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 76,
+    "fields": { "name": "The United States Figure Skating Association", "code": "USA", "iso_code": "us" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 77,
+    "fields": { "name": "Winter Sports Association of Uzbekistan", "code": "UZB", "iso_code": "uz" }
+  },
+  {
+    "model": "api.federation",
+    "pk": 78,
+    "fields": { "name": "Skating Federation of Vietnam", "code": "VIE", "iso_code": "vn" }
+  }
+]

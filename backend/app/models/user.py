@@ -9,6 +9,7 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
+    Text,
     func,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -46,7 +47,19 @@ class SkaterProfile(Base):
     )
     date_of_birth: Mapped[date | None] = mapped_column(Date)
     home_club: Mapped[str | None] = mapped_column(String(255))
-    federation_id: Mapped[str | None] = mapped_column(String(120))
+    # Sprint 0 free-text federation registration number (renamed from federation_id).
+    federation_registration_id: Mapped[str | None] = mapped_column(String(120))
+    # Sprint 1 normalized FKs.
+    federation_id: Mapped[int | None] = mapped_column(
+        ForeignKey("federations.id", ondelete="SET NULL")
+    )
+    current_level_id: Mapped[int | None] = mapped_column(
+        ForeignKey("competition_levels.level_id", ondelete="SET NULL")
+    )
+    # Critical, audited, redactable medical/injury free-text.
+    # active_history=True forces the prior value to load before replacement so
+    # the audit listener can capture it in the history ledger.
+    medical_notes: Mapped[str | None] = mapped_column(Text, active_history=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

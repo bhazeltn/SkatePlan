@@ -1,0 +1,659 @@
+{
+  "federation_code": "CAN",
+  "federation_name": "Skate Canada",
+  "streams": [
+    {
+      "stream_name": "Podium_Singles",
+      "stream_display": "Podium Pathway",
+      "discipline": "Singles",
+      "levels": [
+        {
+          "name": "Pre-Juvenile",
+          "order": 1,
+          "is_adult": false,
+          "isu_anchor": "DEVELOPMENTAL"
+        },
+        {
+          "name": "Juvenile",
+          "order": 2,
+          "is_adult": false,
+          "isu_anchor": "DEVELOPMENTAL"
+        },
+        {
+          "name": "Pre-Novice",
+          "order": 3,
+          "is_adult": false,
+          "isu_anchor": "NOVICE_ADV"
+        },
+        {
+          "name": "Novice",
+          "order": 4,
+          "is_adult": false,
+          "isu_anchor": "NOVICE_ADV"
+        },
+        {
+          "name": "Junior",
+          "order": 5,
+          "is_adult": false,
+          "isu_anchor": "JUNIOR"
+        },
+        {
+          "name": "Senior",
+          "order": 6,
+          "is_adult": false,
+          "isu_anchor": "SENIOR"
+        }
+      ]
+    },
+    {
+      "stream_name": "Podium_Pairs",
+      "stream_display": "Podium Pathway",
+      "discipline": "Pairs",
+      "levels": [
+        {
+          "name": "Juvenile",
+          "order": 101,
+          "is_adult": false,
+          "isu_anchor": "DEVELOPMENTAL"
+        },
+        {
+          "name": "Pre-Novice",
+          "order": 102,
+          "is_adult": false,
+          "isu_anchor": "NOVICE_ADV"
+        },
+        {
+          "name": "Novice",
+          "order": 103,
+          "is_adult": false,
+          "isu_anchor": "NOVICE_ADV"
+        },
+        {
+          "name": "Junior",
+          "order": 104,
+          "is_adult": false,
+          "isu_anchor": "JUNIOR"
+        },
+        {
+          "name": "Senior",
+          "order": 105,
+          "is_adult": false,
+          "isu_anchor": "SENIOR"
+        }
+      ]
+    },
+    {
+      "stream_name": "Podium_Ice_Dance",
+      "stream_display": "Podium Pathway",
+      "discipline": "Ice_Dance",
+      "levels": [
+        {
+          "name": "Pre-Juvenile",
+          "order": 201,
+          "is_adult": false,
+          "isu_anchor": "DEVELOPMENTAL"
+        },
+        {
+          "name": "Juvenile",
+          "order": 202,
+          "is_adult": false,
+          "isu_anchor": "DEVELOPMENTAL"
+        },
+        {
+          "name": "Pre-Novice",
+          "order": 203,
+          "is_adult": false,
+          "isu_anchor": "NOVICE_ADV"
+        },
+        {
+          "name": "Novice",
+          "order": 204,
+          "is_adult": false,
+          "isu_anchor": "NOVICE_ADV"
+        },
+        {
+          "name": "Junior",
+          "order": 205,
+          "is_adult": false,
+          "isu_anchor": "JUNIOR"
+        },
+        {
+          "name": "Senior",
+          "order": 206,
+          "is_adult": false,
+          "isu_anchor": "SENIOR"
+        }
+      ]
+    },
+    {
+      "stream_name": "Podium_Solo_Dance",
+      "stream_display": "Podium Pathway",
+      "discipline": "Solo_Dance",
+      "levels": [
+        {
+          "name": "Novice Solo",
+          "order": 301,
+          "is_adult": false,
+          "isu_anchor": "NOVICE_ADV"
+        },
+        {
+          "name": "Junior Solo",
+          "order": 302,
+          "is_adult": false,
+          "isu_anchor": "JUNIOR"
+        },
+        {
+          "name": "Senior Solo",
+          "order": 303,
+          "is_adult": false,
+          "isu_anchor": "SENIOR"
+        }
+      ]
+    },
+    {
+      "stream_name": "Podium_Synchro",
+      "stream_display": "Podium Pathway",
+      "discipline": "Synchro",
+      "levels": [
+        {
+          "name": "Novice",
+          "order": 401,
+          "is_adult": false,
+          "isu_anchor": "NOVICE_ADV"
+        },
+        {
+          "name": "Junior",
+          "order": 402,
+          "is_adult": false,
+          "isu_anchor": "JUNIOR"
+        },
+        {
+          "name": "Senior / Senior Elite 12",
+          "order": 403,
+          "is_adult": false,
+          "isu_anchor": "SENIOR"
+        }
+      ]
+    },
+    {
+      "stream_name": "STARSkate_Singles",
+      "stream_display": "STARSkate",
+      "discipline": "Singles",
+      "levels": [
+        {
+          "name": "STAR 1",
+          "order": 1001,
+          "is_adult": false,
+          "isu_anchor": null
+        },
+        {
+          "name": "STAR 2",
+          "order": 1002,
+          "is_adult": false,
+          "isu_anchor": null
+        },
+        {
+          "name": "STAR 3",
+          "order": 1003,
+          "is_adult": false,
+          "isu_anchor": null
+        },
+        {
+          "name": "STAR 4",
+          "order": 1004,
+          "is_adult": false,
+          "isu_anchor": null
+        },
+        {
+          "name": "STAR 5",
+          "order": 1005,
+          "is_adult": false,
+          "isu_anchor": null
+        },
+        {
+          "name": "STAR 6",
+          "order": 1006,
+          "is_adult": false,
+          "isu_anchor": null
+        },
+        {
+          "name": "STAR 7",
+          "order": 1007,
+          "is_adult": false,
+          "isu_anchor": null
+        },
+        {
+          "name": "STAR 8",
+          "order": 1008,
+          "is_adult": false,
+          "isu_anchor": null
+        },
+        {
+          "name": "STAR 9",
+          "order": 1009,
+          "is_adult": false,
+          "isu_anchor": null
+        },
+        {
+          "name": "STAR 10",
+          "order": 1010,
+          "is_adult": false,
+          "isu_anchor": null
+        },
+        {
+          "name": "Gold",
+          "order": 1011,
+          "is_adult": false,
+          "isu_anchor": null
+        }
+      ]
+    },
+    {
+      "stream_name": "STARSkate_Artistic",
+      "stream_display": "STARSkate",
+      "discipline": "Artistic",
+      "levels": [
+        {
+          "name": "STAR 5",
+          "order": 1101,
+          "is_adult": false,
+          "isu_anchor": null
+        },
+        {
+          "name": "STAR 7",
+          "order": 1102,
+          "is_adult": false,
+          "isu_anchor": null
+        },
+        {
+          "name": "STAR 9",
+          "order": 1103,
+          "is_adult": false,
+          "isu_anchor": null
+        },
+        {
+          "name": "Gold",
+          "order": 1104,
+          "is_adult": false,
+          "isu_anchor": null
+        }
+      ]
+    },
+    {
+      "stream_name": "STARSkate_Pairs",
+      "stream_display": "STARSkate",
+      "discipline": "Pairs",
+      "levels": [
+        {
+          "name": "Introductory Pairs",
+          "order": 1201,
+          "is_adult": false,
+          "isu_anchor": null
+        },
+        {
+          "name": "Open Pairs",
+          "order": 1202,
+          "is_adult": false,
+          "isu_anchor": null
+        }
+      ]
+    },
+    {
+      "stream_name": "STARSkate_Ice_Dance",
+      "stream_display": "STARSkate",
+      "discipline": "Ice_Dance",
+      "levels": [
+        {
+          "name": "STAR 2/3",
+          "order": 1301,
+          "is_adult": false,
+          "isu_anchor": null
+        },
+        {
+          "name": "STAR 4/5",
+          "order": 1302,
+          "is_adult": false,
+          "isu_anchor": null
+        },
+        {
+          "name": "STAR 6/7",
+          "order": 1303,
+          "is_adult": false,
+          "isu_anchor": null
+        },
+        {
+          "name": "STAR 8/9",
+          "order": 1304,
+          "is_adult": false,
+          "isu_anchor": null
+        },
+        {
+          "name": "STAR 10/Gold",
+          "order": 1305,
+          "is_adult": false,
+          "isu_anchor": null
+        },
+        {
+          "name": "Diamond",
+          "order": 1306,
+          "is_adult": false,
+          "isu_anchor": null
+        }
+      ]
+    },
+    {
+      "stream_name": "STARSkate_Solo_Dance",
+      "stream_display": "STARSkate",
+      "discipline": "Solo_Dance",
+      "levels": [
+        {
+          "name": "STAR 2/3",
+          "order": 1401,
+          "is_adult": false,
+          "isu_anchor": null
+        },
+        {
+          "name": "STAR 4/5",
+          "order": 1402,
+          "is_adult": false,
+          "isu_anchor": null
+        },
+        {
+          "name": "STAR 6/7",
+          "order": 1403,
+          "is_adult": false,
+          "isu_anchor": null
+        },
+        {
+          "name": "STAR 8/9",
+          "order": 1404,
+          "is_adult": false,
+          "isu_anchor": null
+        },
+        {
+          "name": "STAR 10/Gold",
+          "order": 1405,
+          "is_adult": false,
+          "isu_anchor": null
+        },
+        {
+          "name": "Open Solo Rhythm Dance",
+          "order": 1406,
+          "is_adult": false,
+          "isu_anchor": null
+        }
+      ]
+    },
+    {
+      "stream_name": "STARSkate_Synchro",
+      "stream_display": "STARSkate",
+      "discipline": "Synchro",
+      "levels": [
+        {
+          "name": "STAR 3",
+          "order": 1501,
+          "is_adult": false,
+          "isu_anchor": null
+        },
+        {
+          "name": "STAR 4",
+          "order": 1502,
+          "is_adult": false,
+          "isu_anchor": null
+        },
+        {
+          "name": "STAR 6",
+          "order": 1503,
+          "is_adult": false,
+          "isu_anchor": null
+        },
+        {
+          "name": "STAR 8",
+          "order": 1504,
+          "is_adult": false,
+          "isu_anchor": null
+        },
+        {
+          "name": "Gold",
+          "order": 1505,
+          "is_adult": false,
+          "isu_anchor": null
+        },
+        {
+          "name": "Open",
+          "order": 1506,
+          "is_adult": false,
+          "isu_anchor": null
+        }
+      ]
+    },
+    {
+      "stream_name": "Adult_Singles",
+      "stream_display": "Adult",
+      "discipline": "Singles",
+      "levels": [
+        {
+          "name": "Adult Intro Open",
+          "order": 2001,
+          "is_adult": true,
+          "isu_anchor": null
+        },
+        {
+          "name": "Adult Bronze",
+          "order": 2002,
+          "is_adult": true,
+          "isu_anchor": null
+        },
+        {
+          "name": "Adult Silver",
+          "order": 2003,
+          "is_adult": true,
+          "isu_anchor": null
+        },
+        {
+          "name": "Adult Gold",
+          "order": 2004,
+          "is_adult": true,
+          "isu_anchor": null
+        },
+        {
+          "name": "Adult Masters",
+          "order": 2005,
+          "is_adult": true,
+          "isu_anchor": null
+        },
+        {
+          "name": "Adult Masters Elite",
+          "order": 2006,
+          "is_adult": true,
+          "isu_anchor": null
+        }
+      ]
+    },
+    {
+      "stream_name": "Adult_Artistic",
+      "stream_display": "Adult",
+      "discipline": "Artistic",
+      "levels": [
+        {
+          "name": "Adult Introductory Artistic",
+          "order": 2101,
+          "is_adult": true,
+          "isu_anchor": null
+        },
+        {
+          "name": "Adult Bronze Artistic",
+          "order": 2102,
+          "is_adult": true,
+          "isu_anchor": null
+        },
+        {
+          "name": "Adult Silver Artistic",
+          "order": 2103,
+          "is_adult": true,
+          "isu_anchor": null
+        },
+        {
+          "name": "Adult Gold Artistic",
+          "order": 2104,
+          "is_adult": true,
+          "isu_anchor": null
+        },
+        {
+          "name": "Adult Elite Artistic",
+          "order": 2105,
+          "is_adult": true,
+          "isu_anchor": null
+        },
+        {
+          "name": "Adult Open Partner Artistic",
+          "order": 2106,
+          "is_adult": true,
+          "isu_anchor": null
+        },
+        {
+          "name": "Adult Open Masters Partner Artistic",
+          "order": 2107,
+          "is_adult": true,
+          "isu_anchor": null
+        }
+      ]
+    },
+    {
+      "stream_name": "Adult_Synchro",
+      "stream_display": "Adult",
+      "discipline": "Synchro",
+      "levels": [
+        {
+          "name": "Adult SyS I",
+          "order": 2201,
+          "is_adult": true,
+          "isu_anchor": null
+        },
+        {
+          "name": "Adult SyS II",
+          "order": 2202,
+          "is_adult": true,
+          "isu_anchor": null
+        },
+        {
+          "name": "Adult SyS III",
+          "order": 2203,
+          "is_adult": true,
+          "isu_anchor": null
+        }
+      ]
+    },
+    {
+      "stream_name": "Adult_Pairs",
+      "stream_display": "Adult",
+      "discipline": "Pairs",
+      "levels": [
+        {
+          "name": "Adult Pair",
+          "order": 2301,
+          "is_adult": true,
+          "isu_anchor": null
+        },
+        {
+          "name": "Adult Masters Pairs",
+          "order": 2302,
+          "is_adult": true,
+          "isu_anchor": null
+        }
+      ]
+    },
+    {
+      "stream_name": "Adult_Ice_Dance",
+      "stream_display": "Adult",
+      "discipline": "Ice_Dance",
+      "levels": [
+        {
+          "name": "Adult STAR 4/5 Pattern",
+          "order": 2401,
+          "is_adult": true,
+          "isu_anchor": null
+        },
+        {
+          "name": "Adult STAR 6/7 Pattern",
+          "order": 2402,
+          "is_adult": true,
+          "isu_anchor": null
+        },
+        {
+          "name": "Adult STAR 8/9 Pattern",
+          "order": 2403,
+          "is_adult": true,
+          "isu_anchor": null
+        },
+        {
+          "name": "Adult STAR 10/Gold Pattern",
+          "order": 2404,
+          "is_adult": true,
+          "isu_anchor": null
+        },
+        {
+          "name": "Adult Elite Pattern",
+          "order": 2405,
+          "is_adult": true,
+          "isu_anchor": null
+        },
+        {
+          "name": "Adult Bronze Free Dance",
+          "order": 2406,
+          "is_adult": true,
+          "isu_anchor": null
+        },
+        {
+          "name": "Adult Silver Free Dance",
+          "order": 2407,
+          "is_adult": true,
+          "isu_anchor": null
+        },
+        {
+          "name": "Adult Gold Free Dance",
+          "order": 2408,
+          "is_adult": true,
+          "isu_anchor": null
+        }
+      ]
+    },
+    {
+      "stream_name": "Adult_Solo_Dance",
+      "stream_display": "Adult",
+      "discipline": "Solo_Dance",
+      "levels": [
+        {
+          "name": "Adult Bronze Solo (STAR 4/5)",
+          "order": 2501,
+          "is_adult": true,
+          "isu_anchor": null
+        },
+        {
+          "name": "Adult Silver Solo (STAR 6/7)",
+          "order": 2502,
+          "is_adult": true,
+          "isu_anchor": null
+        },
+        {
+          "name": "Adult Gold Solo (STAR 8/9)",
+          "order": 2503,
+          "is_adult": true,
+          "isu_anchor": null
+        },
+        {
+          "name": "Adult Elite Solo (STAR 10/Gold)",
+          "order": 2504,
+          "is_adult": true,
+          "isu_anchor": null
+        },
+        {
+          "name": "Adult Open Solo Rhythm Dance",
+          "order": 2505,
+          "is_adult": true,
+          "isu_anchor": null
+        }
+      ]
+    }
+  ]
+}

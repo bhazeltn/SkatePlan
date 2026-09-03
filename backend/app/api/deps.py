@@ -7,11 +7,16 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError
 from sqlalchemy.orm import Session
 
+from sqlalchemy import select
+
 from app.core.database import get_db
 from app.core.security import decode_access_token
-from app.models.user import SkaterProfile, User
+from app.models.enums import AccessState
+from app.models.user import AccountProxyLink, SkaterProfile, User
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+
+MINOR_PROXY_MESSAGE = "Minor account access must route through verified parent proxy"
 
 
 class SafeSportTier(str, Enum):
@@ -74,12 +79,45 @@ def enforce_safesport_access(user: User, db: Session) -> SafeSportTier:
     if tier == SafeSportTier.tier_1:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=(
-                "SafeSport Tier 1: skaters under 13 cannot access the system "
-                "directly. Parent-proxy access is required."
-            ),
+            detail=MINOR_PROXY_MESSAGE,
         )
     return tier
+
+
+def _has_active_proxy_link(user_id: int, db: Session) -> bool:
+    link = db.execute(
+        select(AccountProxyLink).where(
+            AccountProxyLink.skater_id == user_id,
+            AccountProxyLink.is_active_observer.is_(True),
+            AccountProxyLink.access_state == AccessState.active,
+        )
+    ).first()
+    return link is not None
+
+
+def require_schedule_mutation_access(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> User:
+    """Gate mutating schedule operations by SafeSport tier.
+
+    - Tier 1 (<13): always rejected (parent proxy required).
+    - Tier 2 (13-17): allowed ONLY with an active verified parent-proxy link.
+    - Tier 3 (18+) and non-skater users (coach/admin): allowed.
+    """
+    profile = db.get(SkaterProfile, current_user.id)
+    if profile is None or profile.date_of_birth is None:
+        return current_user  # coach/admin/parent — not tier-gated here.
+
+    tier = classify_safesport_tier(profile.date_of_birth)
+    if tier == SafeSportTier.tier_1:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=MINOR_PROXY_MESSAGE)
+    if tier == SafeSportTier.tier_2 and not _has_active_proxy_link(current_user.id, db):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tier 2 schedule mutation requires an active verified parent-proxy link",
+        )
+    return current_user
 
 
 def get_current_skater_gated(

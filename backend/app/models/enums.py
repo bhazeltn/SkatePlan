@@ -22,3 +22,9 @@ class RoleInUnit(str, enum.Enum):
     primary = "primary"
     secondary = "secondary"
     choreographer = "choreographer"
+
+
+class AccessTier(str, enum.Enum):
+    """External-sharing dual-track access tiers."""
+    assessor_masked = "assessor_masked"
+    hpd_full = "hpd_full"

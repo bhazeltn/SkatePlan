@@ -18,7 +18,9 @@ class OrchestrateSkaterRequest(BaseModel):
     # Skater profile
     date_of_birth: date
     home_club: Optional[str] = None
-    federation_id: Optional[str] = None
+    federation_registration_id: Optional[str] = None
+    federation_id: Optional[int] = None
+    current_level_id: Optional[int] = None
 
     # Training unit
     unit_name: str

@@ -22,7 +22,13 @@ def create_access_token(subject: str | int, role: str, expires_delta: Optional[t
     expire = datetime.now(timezone.utc) + (
         expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     )
-    to_encode: dict[str, Any] = {"sub": str(subject), "role": role, "exp": expire}
+    to_encode: dict[str, Any] = {
+        "sub": str(subject),
+        "user_id": int(subject),
+        "role": role,
+        "system_role": role,
+        "exp": expire,
+    }
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 

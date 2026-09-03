@@ -1,0 +1,49 @@
+"""Seed the 78 member federations from federation_data.json (Django-fixture shape)."""
+import json
+import os
+
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+
+from app.core.database import SessionLocal
+from app.models.federation import Federation
+from app.seeds import SEEDS_DIR
+
+JSON_PATH = os.path.join(SEEDS_DIR, "federation_data.json")
+
+
+def _load_records() -> list[dict]:
+    with open(JSON_PATH, encoding="utf-8") as fh:
+        raw = json.load(fh)
+    records = []
+    for entry in raw:
+        fields = entry["fields"]
+        records.append(
+            {
+                "name": fields["name"],
+                "code": fields["code"],
+                "iso_code": fields.get("iso_code"),
+            }
+        )
+    return records
+
+
+def seed_federations() -> int:
+    """Idempotent upsert of federations, keyed by unique code."""
+    records = _load_records()
+    session = SessionLocal()
+    try:
+        for rec in records:
+            stmt = pg_insert(Federation).values(**rec)
+            stmt = stmt.on_conflict_do_update(
+                index_elements=["code"],
+                set_={"name": rec["name"], "iso_code": rec["iso_code"]},
+            )
+            session.execute(stmt)
+        session.commit()
+    finally:
+        session.close()
+    return len(records)
+
+
+if __name__ == "__main__":
+    print("federations seeded:", seed_federations())

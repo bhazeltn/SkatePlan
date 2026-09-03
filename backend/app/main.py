@@ -3,6 +3,10 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.router import api_router
+from app.core.audit import configure_audit_listeners
+
+# Register SafeSport audit-trail listeners at import time.
+configure_audit_listeners()
 
 app = FastAPI(title="SkatePlan API", version="0.1.0")
 

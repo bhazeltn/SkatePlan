@@ -1,15 +1,14 @@
 """Atomic skater onboarding (orchestrate) tests."""
-from datetime import date
-
 from sqlalchemy import func, select
 
 from app.models.enums import SystemRole
 from app.models.training import CoachAssignment, TrainingUnit, TrainingUnitRoster
-from app.models.user import SkaterProfile
+from app.models.user import SkaterProfile, User
 
 
 def _counts(db):
     return {
+        "users": db.scalar(select(func.count()).select_from(User)),
         "profiles": db.scalar(select(func.count()).select_from(SkaterProfile)),
         "units": db.scalar(select(func.count()).select_from(TrainingUnit)),
         "roster": db.scalar(select(func.count()).select_from(TrainingUnitRoster)),
@@ -35,12 +34,15 @@ def test_orchestrate_success_persists_all(client, make_user, db):
     )
     assert resp.status_code == 201, resp.text
     c = _counts(db)
-    assert c == {"profiles": 1, "units": 1, "roster": 1, "assignments": 1}
+    assert c["profiles"] == 1 and c["units"] == 1
+    assert c["roster"] == 1 and c["assignments"] == 1
+
+    assignment = db.scalar(select(CoachAssignment))
+    assert assignment.role_in_unit.value == "primary"
 
 
 def test_orchestrate_rollback_on_bad_coach(client, db):
-    """Invalid coach FK must roll back everything — nothing persisted."""
-    before = _counts(db)
+    """Invalid coach FK must roll back everything — zero orphaned rows."""
     resp = client.post(
         "/api/skaters/orchestrate",
         json={
@@ -54,10 +56,5 @@ def test_orchestrate_rollback_on_bad_coach(client, db):
         },
     )
     assert resp.status_code == 400, resp.text
-    after = _counts(db)
-    assert after == before == {"profiles": 0, "units": 0, "roster": 0, "assignments": 0}
-
-    # Ensure the would-be skater user was also not left behind.
-    from app.models.user import User
-    leftover = db.scalar(select(func.count()).select_from(User).where(User.email == "skater2@ex.com"))
-    assert leftover == 0
+    c = _counts(db)
+    assert c == {"users": 0, "profiles": 0, "units": 0, "roster": 0, "assignments": 0}

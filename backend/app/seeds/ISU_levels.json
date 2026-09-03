@@ -1,0 +1,179 @@
+{
+  "federation_code": "ISU",
+  "federation_name": "International Skating Union",
+  "streams": [
+    {
+      "stream_name": "Singles",
+      "stream_display": "Singles",
+      "discipline": "Singles",
+      "levels": [
+        {
+          "name": "Basic Novice",
+          "order": 1,
+          "is_adult": false,
+          "isu_anchor": "DEVELOPMENTAL"
+        },
+        {
+          "name": "Intermediate Novice",
+          "order": 2,
+          "is_adult": false,
+          "isu_anchor": "DEVELOPMENTAL"
+        },
+        {
+          "name": "Advanced Novice",
+          "order": 3,
+          "is_adult": false,
+          "isu_anchor": "NOVICE_ADV"
+        },
+        {
+          "name": "Junior",
+          "order": 4,
+          "is_adult": false,
+          "isu_anchor": "JUNIOR"
+        },
+        {
+          "name": "Senior",
+          "order": 5,
+          "is_adult": false,
+          "isu_anchor": "SENIOR"
+        }
+      ]
+    },
+    {
+      "stream_name": "Pairs",
+      "stream_display": "Pairs",
+      "discipline": "Pairs",
+      "levels": [
+        {
+          "name": "Basic Novice",
+          "order": 101,
+          "is_adult": false,
+          "isu_anchor": "DEVELOPMENTAL"
+        },
+        {
+          "name": "Advanced Novice",
+          "order": 102,
+          "is_adult": false,
+          "isu_anchor": "NOVICE_ADV"
+        },
+        {
+          "name": "Junior",
+          "order": 103,
+          "is_adult": false,
+          "isu_anchor": "JUNIOR"
+        },
+        {
+          "name": "Senior",
+          "order": 104,
+          "is_adult": false,
+          "isu_anchor": "SENIOR"
+        }
+      ]
+    },
+    {
+      "stream_name": "Solo_Dance",
+      "stream_display": "Solo Dance",
+      "discipline": "Solo_Dance",
+      "levels": [
+        {
+          "name": "Basic Novice",
+          "order": 201,
+          "is_adult": false,
+          "isu_anchor": "DEVELOPMENTAL"
+        },
+        {
+          "name": "Intermediate Novice",
+          "order": 202,
+          "is_adult": false,
+          "isu_anchor": "DEVELOPMENTAL"
+        },
+        {
+          "name": "Advanced Novice",
+          "order": 203,
+          "is_adult": false,
+          "isu_anchor": "NOVICE_ADV"
+        },
+        {
+          "name": "Junior",
+          "order": 204,
+          "is_adult": false,
+          "isu_anchor": "JUNIOR"
+        },
+        {
+          "name": "Senior",
+          "order": 205,
+          "is_adult": false,
+          "isu_anchor": "SENIOR"
+        }
+      ]
+    },
+    {
+      "stream_name": "Ice_Dance",
+      "stream_display": "Ice Dance",
+      "discipline": "Ice_Dance",
+      "levels": [
+        {
+          "name": "Basic Novice",
+          "order": 301,
+          "is_adult": false,
+          "isu_anchor": "DEVELOPMENTAL"
+        },
+        {
+          "name": "Intermediate Novice",
+          "order": 302,
+          "is_adult": false,
+          "isu_anchor": "DEVELOPMENTAL"
+        },
+        {
+          "name": "Advanced Novice",
+          "order": 303,
+          "is_adult": false,
+          "isu_anchor": "NOVICE_ADV"
+        },
+        {
+          "name": "Junior",
+          "order": 304,
+          "is_adult": false,
+          "isu_anchor": "JUNIOR"
+        },
+        {
+          "name": "Senior",
+          "order": 305,
+          "is_adult": false,
+          "isu_anchor": "SENIOR"
+        }
+      ]
+    },
+    {
+      "stream_name": "Synchro",
+      "stream_display": "Synchronized Skating",
+      "discipline": "Synchro",
+      "levels": [
+        {
+          "name": "Synchro 9",
+          "order": 403,
+          "is_adult": false,
+          "isu_anchor": null
+        },
+        {
+          "name": "Advanced Novice",
+          "order": 401,
+          "is_adult": false,
+          "isu_anchor": "NOVICE_ADV"
+        },
+        {
+          "name": "Junior",
+          "order": 402,
+          "is_adult": false,
+          "isu_anchor": "JUNIOR"
+        },
+        {
+          "name": "Senior",
+          "order": 404,
+          "is_adult": false,
+          "isu_anchor": "SENIOR"
+        }
+      ]
+    }
+  ]
+}

@@ -11,6 +11,8 @@ from app.models.user import User
 
 # Tables cleaned between tests (children first for FK order).
 _CLEAN_TABLES = [
+    "jump_attempt_logs",
+    "training_session_logs",
     "competition_executed_elements",
     "competition_segment_results",
     "competition_entries",

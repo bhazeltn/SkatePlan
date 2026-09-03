@@ -11,7 +11,8 @@ from sqlalchemy import select
 
 from app.core.database import get_db
 from app.core.security import decode_access_token
-from app.models.enums import AccessState
+from app.models.enums import AccessState, SystemRole
+from app.models.training import CoachAssignment, TrainingUnitRoster
 from app.models.user import AccountProxyLink, SkaterProfile, User
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
@@ -118,6 +119,55 @@ def require_schedule_mutation_access(
             detail="Tier 2 schedule mutation requires an active verified parent-proxy link",
         )
     return current_user
+
+
+def _is_assigned_coach(coach_user_id: int, skater_id: int, db: Session) -> bool:
+    """True if the coach is assigned to a training unit rostering the skater."""
+    stmt = (
+        select(CoachAssignment.assignment_id)
+        .join(
+            TrainingUnitRoster,
+            TrainingUnitRoster.training_unit_id == CoachAssignment.training_unit_id,
+        )
+        .where(
+            CoachAssignment.coach_user_id == coach_user_id,
+            TrainingUnitRoster.skater_id == skater_id,
+        )
+    )
+    return db.execute(stmt).first() is not None
+
+
+def _parent_proxy_authorized(parent_user_id: int, skater_id: int, db: Session) -> bool:
+    stmt = select(AccountProxyLink).where(
+        AccountProxyLink.parent_user_id == parent_user_id,
+        AccountProxyLink.skater_id == skater_id,
+        AccountProxyLink.is_active_observer.is_(True),
+        AccountProxyLink.access_state == AccessState.active,
+    )
+    return db.execute(stmt).first() is not None
+
+
+def authorize_skater_access(current_user: User, skater_id: int, db: Session) -> None:
+    """Enforce SafeSport data boundaries for a skater's training data.
+
+    Allowed: admins; the skater themselves (Tier 2/3 — Tier 1 rejected); an
+    assigned coach; an authorized active parent proxy. Everyone else -> 403.
+    """
+    if current_user.system_role == SystemRole.admin:
+        return
+    if current_user.id == skater_id:
+        enforce_safesport_access(current_user, db)  # Tier 1 -> 403
+        return
+    if current_user.system_role == SystemRole.coach and _is_assigned_coach(
+        current_user.id, skater_id, db
+    ):
+        return
+    if _parent_proxy_authorized(current_user.id, skater_id, db):
+        return
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Not authorized to access this skater's data",
+    )
 
 
 def get_current_skater_gated(

@@ -13,6 +13,7 @@ from app.models.program import Program, ProgramElement
 from app.models.scoring import ScaleOfValues
 from app.models.session import TrainingSession
 from app.models.training import CoachAssignment, TrainingUnit, TrainingUnitRoster
+from app.models.training_log import JumpAttemptLog, TrainingSessionLog
 from app.models.user import AccountProxyLink, SkaterProfile, User
 
 __all__ = [
@@ -30,6 +31,8 @@ __all__ = [
     "CompetitionLevel",
     "ExternalAccessGrant",
     "TrainingSession",
+    "TrainingSessionLog",
+    "JumpAttemptLog",
     "Program",
     "ProgramElement",
     "Competition",

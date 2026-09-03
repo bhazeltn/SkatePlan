@@ -11,6 +11,8 @@ from app.models.user import User
 
 # Tables cleaned between tests (children first for FK order).
 _CLEAN_TABLES = [
+    "program_elements",
+    "programs",
     "external_access_grants",
     "training_sessions",
     "coach_assignments",

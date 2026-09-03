@@ -3,6 +3,7 @@ from app.core.database import Base
 from app.models.audit import SafeSportTextHistoryLedger
 from app.models.federation import CompetitionLevel, Federation, FederationStream
 from app.models.grant import ExternalAccessGrant
+from app.models.program import Program, ProgramElement
 from app.models.scoring import ScaleOfValues
 from app.models.session import TrainingSession
 from app.models.training import CoachAssignment, TrainingUnit, TrainingUnitRoster
@@ -23,4 +24,6 @@ __all__ = [
     "CompetitionLevel",
     "ExternalAccessGrant",
     "TrainingSession",
+    "Program",
+    "ProgramElement",
 ]

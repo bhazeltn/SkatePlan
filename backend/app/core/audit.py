@@ -67,8 +67,11 @@ def _before_flush(session: Session, _flush_context, _instances) -> None:
 
 def configure_audit_listeners() -> None:
     """Register the audit listener and declare tracked critical columns."""
+    from app.models.injury import InjuryRecord
     from app.models.user import SkaterProfile
 
     _TRACKED[SkaterProfile] = {"medical_notes": "skater_id"}
+    # Injury restrictions are SafeSport-sensitive medical text — audit changes.
+    _TRACKED[InjuryRecord] = {"restrictions": "id"}
     if not event.contains(Session, "before_flush", _before_flush):
         event.listen(Session, "before_flush", _before_flush)

@@ -7,10 +7,13 @@ from app.api import (
     competitions,
     external,
     federations,
+    injuries,
+    meetings,
     programs,
     schedule,
     scoring,
     skaters,
+    standards,
     training,
 )
 
@@ -27,6 +30,12 @@ api_router.include_router(competitions.router)
 api_router.include_router(competitions.skater_router)
 api_router.include_router(training.session_router)
 api_router.include_router(training.skater_router)
+api_router.include_router(injuries.router)
+api_router.include_router(injuries.skater_router)
+api_router.include_router(meetings.router)
+api_router.include_router(meetings.skater_router)
+api_router.include_router(standards.router)
+api_router.include_router(standards.skater_router)
 
 
 @api_router.get("/health", tags=["health"])

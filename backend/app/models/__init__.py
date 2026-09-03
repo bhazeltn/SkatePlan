@@ -9,7 +9,14 @@ from app.models.competition import (
 )
 from app.models.federation import CompetitionLevel, Federation, FederationStream
 from app.models.grant import ExternalAccessGrant
+from app.models.injury import InjuryRecord
+from app.models.meeting import CoachMeeting
 from app.models.program import Program, ProgramElement
+from app.models.standard import (
+    DevelopmentStandard,
+    SkaterBenchmarkAssessment,
+    StandardBenchmark,
+)
 from app.models.scoring import ScaleOfValues
 from app.models.session import TrainingSession
 from app.models.training import CoachAssignment, TrainingUnit, TrainingUnitRoster
@@ -39,4 +46,9 @@ __all__ = [
     "CompetitionEntry",
     "CompetitionSegmentResult",
     "CompetitionExecutedElement",
+    "InjuryRecord",
+    "CoachMeeting",
+    "DevelopmentStandard",
+    "StandardBenchmark",
+    "SkaterBenchmarkAssessment",
 ]

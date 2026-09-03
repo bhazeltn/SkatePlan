@@ -1,4 +1,5 @@
 """User and skater-profile / proxy-link models."""
+import uuid
 from datetime import date, datetime
 
 from sqlalchemy import (
@@ -10,6 +11,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    Uuid,
     func,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -60,6 +62,11 @@ class SkaterProfile(Base):
     # active_history=True forces the prior value to load before replacement so
     # the audit listener can capture it in the history ledger.
     medical_notes: Mapped[str | None] = mapped_column(Text, active_history=True)
+    # Sprint 5 additive: optional link to a holistic development standard used
+    # as the target for gap analysis.
+    target_standard_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("development_standards.id", ondelete="SET NULL")
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

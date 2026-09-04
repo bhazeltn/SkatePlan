@@ -22,6 +22,8 @@ class OrchestrateSkaterRequest(BaseModel):
     federation_id: Optional[int] = None
     current_level_id: Optional[int] = None
     competitive_level: Optional[str] = None
+    # Coach-provided contact email; stored on the profile, not the auth account.
+    contact_email: Optional[EmailStr] = None
 
     # Training unit (name optional; derived from home_club/skater when absent)
     unit_name: Optional[str] = None

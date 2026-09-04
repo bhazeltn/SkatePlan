@@ -1,4 +1,6 @@
 """Skater onboarding orchestration (atomic multi-write)."""
+from uuid import uuid4
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -16,22 +18,31 @@ def _bad_request(detail: str) -> HTTPException:
     return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=detail)
 
 
+def _new_skater_user(payload: OrchestrateSkaterRequest) -> User:
+    """Build a skater User. Password optional.
+
+    With email+password an active login account is created; otherwise a
+    login-less placeholder athlete (unactivated, no usable password).
+    """
+    active = bool(payload.email and payload.password)
+    return User(
+        email=payload.email if active else f"skater-{uuid4().hex}@placeholder.skateplan.local",
+        password_hash=hash_password(payload.password) if active else "",
+        system_role=SystemRole.athlete,
+        first_name=payload.first_name,
+        last_name=payload.last_name,
+        is_account_active=active,
+    )
+
+
 def _resolve_skater_user(payload: OrchestrateSkaterRequest, db: Session) -> User:
-    """Return an existing skater user or create a new one (flushed)."""
+    """Return an existing skater user or create one (flushed)."""
     if payload.skater_user_id is not None:
         user = db.get(User, payload.skater_user_id)
         if user is None:
             raise _bad_request(f"skater_user_id {payload.skater_user_id} not found")
         return user
-    if not (payload.email and payload.password):
-        raise _bad_request("email and password required to create a new skater user")
-    user = User(
-        email=payload.email,
-        password_hash=hash_password(payload.password),
-        system_role=SystemRole.athlete,
-        first_name=payload.first_name,
-        last_name=payload.last_name,
-    )
+    user = _new_skater_user(payload)
     db.add(user)
     db.flush()
     return user
@@ -46,6 +57,7 @@ def _build_profile(payload: OrchestrateSkaterRequest, skater_id: int) -> SkaterP
         federation_id=payload.federation_id,
         current_level_id=payload.current_level_id,
         competitive_level=payload.competitive_level,
+        contact_email=payload.contact_email,
     )
 
 

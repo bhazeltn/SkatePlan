@@ -31,6 +31,10 @@ class User(Base):
     )
     first_name: Mapped[str | None] = mapped_column(String(120))
     last_name: Mapped[str | None] = mapped_column(String(120))
+    # False for placeholder athlete records created without login credentials.
+    is_account_active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="true"
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
@@ -61,6 +65,9 @@ class SkaterProfile(Base):
     # Standard singles competitive level (StarSkate..Adult); independent of the
     # federation-specific competition_levels table.
     competitive_level: Mapped[str | None] = mapped_column(String(50))
+    # Coach-provided contact email for the skater/guardian. Distinct from the
+    # auth account email; present even for placeholder (login-less) athletes.
+    contact_email: Mapped[str | None] = mapped_column(String(255))
     # Critical, audited, redactable medical/injury free-text.
     # active_history=True forces the prior value to load before replacement so
     # the audit listener can capture it in the history ledger.

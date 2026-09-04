@@ -18,6 +18,7 @@ export interface RegisterCoachPayload {
 export interface OrchestrateSkaterPayload {
   email?: string;
   password?: string;
+  contact_email?: string;
   first_name?: string;
   last_name?: string;
   date_of_birth: string; // ISO yyyy-mm-dd (SafeSport tier source of truth)

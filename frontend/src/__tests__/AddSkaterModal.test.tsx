@@ -127,6 +127,6 @@ describe("Add Skater modal — figure-skating onboarding fields", () => {
     expect(body.competitive_level).toBe("Senior");
     expect(body.home_club).toBe("Ice Palace");
     expect(body.coach_user_id).toBe(10);
-    expect(body.email).toBe("mia@example.com");
+    expect(body.contact_email).toBe("mia@example.com");
   });
 });

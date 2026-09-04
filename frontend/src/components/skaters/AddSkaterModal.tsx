@@ -41,7 +41,8 @@ function buildPayload(
     home_club: f.home_club || undefined,
     federation_id: fedId ?? undefined,
     competitive_level: f.competitive_level || undefined,
-    email: email || undefined,
+    // Coach-provided contact email; stored on the profile, no login account.
+    contact_email: email || undefined,
     coach_user_id: userId,
     role_in_unit: "primary",
   };

@@ -2,6 +2,7 @@
 from sqlalchemy import func, select
 
 from app.models.enums import SystemRole
+from app.models.federation import Federation
 from app.models.training import CoachAssignment, TrainingUnit, TrainingUnitRoster
 from app.models.user import SkaterProfile, User
 
@@ -82,3 +83,48 @@ def test_orchestrate_rollback_on_bad_coach(client, db):
     assert resp.status_code == 400, resp.text
     c = _counts(db)
     assert c == {"users": 0, "profiles": 0, "units": 0, "roster": 0, "assignments": 0}
+
+
+def test_orchestrate_creates_athlete_without_password(client, make_user, db):
+    """A coach can add a skater as an athlete record with NO password.
+
+    The skater is linked to the coach and stores federation_id,
+    competitive_level, home_club and contact_email, while the auth user is an
+    unactivated placeholder (no usable password, is_account_active False).
+    """
+    coach = make_user("coachnp@ex.com", role=SystemRole.coach)
+    fed = db.scalar(select(Federation).limit(1))
+    if fed is None:  # seed table normally populated; create one if empty
+        fed = Federation(name="Skate Canada", code="SKC", iso_code="ca")
+        db.add(fed)
+        db.commit()
+
+    resp = client.post(
+        "/api/skaters/orchestrate",
+        json={
+            "first_name": "No",
+            "last_name": "Password",
+            "date_of_birth": "2010-01-01",
+            "home_club": "Ice Palace",
+            "federation_id": fed.id,
+            "competitive_level": "Senior",
+            "contact_email": "contact@ex.com",
+            "coach_user_id": coach.id,
+        },
+    )
+    assert resp.status_code == 201, resp.text
+
+    profile = db.scalar(select(SkaterProfile))
+    assert profile.competitive_level == "Senior"
+    assert profile.home_club == "Ice Palace"
+    assert profile.federation_id == fed.id
+    assert profile.contact_email == "contact@ex.com"
+
+    placeholder = db.get(User, profile.skater_id)
+    assert placeholder.is_account_active is False
+    assert placeholder.password_hash == ""
+
+    assignment = db.scalar(select(CoachAssignment))
+    assert assignment.coach_user_id == coach.id
+    roster = db.scalar(select(TrainingUnitRoster))
+    assert roster.skater_id == profile.skater_id

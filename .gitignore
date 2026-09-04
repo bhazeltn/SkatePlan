@@ -21,6 +21,8 @@ prompt_history/
 ai_notes/
 *.ai.md
 *llm*context*
+.abacus.donotdelete
+
 
 # ==========================================
 # Python & FastAPI Backend
@@ -61,6 +63,7 @@ pnpm-debug.log*
 *.sqlite3
 *.db
 *.sql.gz
+*.log
 
 # VM & Platform specifics
 .abacus.donotdelete

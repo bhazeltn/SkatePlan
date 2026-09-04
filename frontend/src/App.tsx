@@ -2,6 +2,7 @@ import { Route, Routes } from "react-router-dom";
 import { LoginPage } from "@/pages/LoginPage";
 import { RegisterPage } from "@/pages/RegisterPage";
 import { DashboardPage } from "@/pages/DashboardPage";
+import { SkaterProfilePage } from "@/pages/SkaterProfilePage";
 import { PlaceholderPage } from "@/pages/PlaceholderPage";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 
@@ -31,6 +32,14 @@ export default function App() {
         element={
           <ProtectedRoute>
             <DashboardPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/skaters/:id"
+        element={
+          <ProtectedRoute>
+            <SkaterProfilePage />
           </ProtectedRoute>
         }
       />

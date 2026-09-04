@@ -4,8 +4,11 @@ import type {
   LoginResponse,
   OrchestrateSkaterPayload,
   OrchestrateSkaterResponse,
+  ProgramCreatePayload,
   RegisterCoachPayload,
   Skater,
+  SkaterDetail,
+  SovElement,
 } from "@/lib/types";
 
 // Base URL points at the live backend by default (same origin in production).
@@ -68,6 +71,31 @@ export function orchestrateSkater(
 
 export function listSkaters(token?: string | null): Promise<Skater[]> {
   return request<Skater[]>("/api/skaters", {}, token);
+}
+
+// Full profile hub payload: GET /api/skaters/{id}.
+export function getSkater(
+  id: number | string,
+  token?: string | null
+): Promise<SkaterDetail> {
+  return request<SkaterDetail>(`/api/skaters/${id}`, {}, token);
+}
+
+// Singles Scale of Values reference for the program builder: GET /api/sov/elements.
+export function listSovElements(token?: string | null): Promise<SovElement[]> {
+  return request<SovElement[]>("/api/sov/elements", {}, token);
+}
+
+// Persist a new program layout: POST /api/programs.
+export function createProgram(
+  payload: ProgramCreatePayload,
+  token?: string | null
+): Promise<{ id: string }> {
+  return request<{ id: string }>(
+    "/api/programs",
+    { method: "POST", body: JSON.stringify(payload) },
+    token
+  );
 }
 
 // Reference list for the onboarding federation combobox: GET /api/federations.

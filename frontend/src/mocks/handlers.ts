@@ -25,6 +25,9 @@ export const mockSkaters: Skater[] = [
     last_name: "Nguyen",
     home_club: "Glacier FSC",
     level_name: "Senior",
+    competitive_level: "Senior",
+    federation_name: "Philippine Skating Union",
+    country_code: "ph",
     weekly_ice_minutes: 540,
     has_active_restriction: true,
   },
@@ -34,10 +37,44 @@ export const mockSkaters: Skater[] = [
     last_name: "Torres",
     home_club: "Summit SC",
     level_name: "Junior",
+    competitive_level: "Junior",
+    federation_name: "Skate Canada",
+    country_code: "ca",
     weekly_ice_minutes: 420,
     has_active_restriction: false,
   },
 ];
+
+// Singles Scale of Values lookup served by GET /api/sov/elements.
+export const mockSovElements = [
+  { element_code: "3Lz", element_name: "Triple Lutz", base_value: 5.9 },
+  { element_code: "2A", element_name: "Double Axel", base_value: 3.3 },
+  { element_code: "3T", element_name: "Triple Toeloop", base_value: 4.2 },
+  { element_code: "CCoSp4", element_name: "Change Combo Spin L4", base_value: 3.5 },
+  { element_code: "StSq3", element_name: "Step Sequence L3", base_value: 3.3 },
+];
+
+// Full skater profile served by GET /api/skaters/:id.
+export const mockSkaterDetail = {
+  skater_id: 1,
+  first_name: "Ava",
+  last_name: "Nguyen",
+  home_club: "Glacier FSC",
+  competitive_level: "Senior",
+  federation_name: "Philippine Skating Union",
+  country_code: "ph",
+  has_active_restriction: true,
+  restrictions: [
+    {
+      title: "Ankle sprain",
+      restrictions: "Triple jump restriction / No impact landing",
+      status: "active",
+    },
+  ],
+  programs: [
+    { id: "p-fs", program_type: "FS", title: "Free Skate 2026", season: "2025-26" },
+  ],
+};
 
 // Aggregated Action & Risk Hub payload served by GET /api/dashboard.
 // Competitions are intentionally out of date order so the UI's ascending sort
@@ -50,6 +87,9 @@ export const mockDashboard = {
       last_name: "Nguyen",
       home_club: "Glacier FSC",
       level_name: "Senior",
+      competitive_level: "Senior",
+      federation_name: "Philippine Skating Union",
+      country_code: "ph",
       has_active_restriction: true,
     },
     {
@@ -58,6 +98,9 @@ export const mockDashboard = {
       last_name: "Torres",
       home_club: "Summit SC",
       level_name: "Junior",
+      competitive_level: "Junior",
+      federation_name: "Skate Canada",
+      country_code: "ca",
       has_active_restriction: false,
     },
   ],
@@ -153,6 +196,12 @@ export const handlers = [
     );
   }),
   http.get("*/api/federations", () => HttpResponse.json(mockFederations)),
+  http.get("*/api/sov/elements", () => HttpResponse.json(mockSovElements)),
+  http.get("*/api/skaters/:id", () => HttpResponse.json(mockSkaterDetail)),
   http.get("*/api/skaters", () => HttpResponse.json(mockSkaters)),
+  http.post("*/api/programs", async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json({ id: "new-prog", ...body }, { status: 201 });
+  }),
   http.get("*/api/dashboard", () => HttpResponse.json(mockDashboard)),
 ];

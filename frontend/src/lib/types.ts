@@ -52,8 +52,56 @@ export interface Skater {
   last_name: string;
   home_club?: string | null;
   level_name?: string | null;
+  competitive_level?: string | null;
+  federation_name?: string | null;
+  country_code?: string | null;
   weekly_ice_minutes?: number;
   has_active_restriction?: boolean;
+}
+
+export interface SovElement {
+  element_code: string;
+  element_name: string;
+  base_value: number;
+}
+
+export interface SkaterProgram {
+  id: string;
+  program_type: string;
+  title: string;
+  season?: string | null;
+}
+
+export interface SkaterRestriction {
+  title: string;
+  restrictions?: string | null;
+  status: string;
+}
+
+export interface SkaterDetail {
+  skater_id: number;
+  first_name: string;
+  last_name: string;
+  home_club?: string | null;
+  competitive_level?: string | null;
+  federation_name?: string | null;
+  country_code?: string | null;
+  has_active_restriction: boolean;
+  restrictions: SkaterRestriction[];
+  programs: SkaterProgram[];
+}
+
+export interface ProgramElementPayload {
+  segment_order: number;
+  element_code: string;
+  is_second_half_bonus: boolean;
+}
+
+export interface ProgramCreatePayload {
+  skater_id: number;
+  program_type: string;
+  title: string;
+  program_elements: ProgramElementPayload[];
 }
 
 export interface DashboardAlert {
@@ -86,6 +134,9 @@ export interface DashboardRosterSkater {
   last_name: string;
   home_club?: string | null;
   level_name?: string | null;
+  competitive_level?: string | null;
+  federation_name?: string | null;
+  country_code?: string | null;
   has_active_restriction: boolean;
 }
 

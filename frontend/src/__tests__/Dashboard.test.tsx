@@ -94,6 +94,23 @@ describe("Coach dashboard — Action & Risk Hub", () => {
     expect(within(cards[0]).getByText(/Ava/)).toBeInTheDocument();
   });
 
+  it("renders flag, federation and home club on roster cards", async () => {
+    seedSession();
+    renderWithProviders(<DashboardPage />);
+    const cards = await screen.findAllByTestId("skater-card");
+    const first = within(cards[0]);
+    expect(first.getByText(/Philippine Skating Union/)).toBeInTheDocument();
+    expect(first.getByText(/Glacier FSC/)).toBeInTheDocument();
+    expect(first.getByText(/🇵🇭/)).toBeInTheDocument();
+  });
+
+  it("links each roster card to the skater profile", async () => {
+    seedSession();
+    renderWithProviders(<DashboardPage />);
+    const cards = await screen.findAllByTestId("skater-card");
+    expect(cards[0].closest("a")).toHaveAttribute("href", "/skaters/1");
+  });
+
   it("does not render generic vanity counter cards", async () => {
     seedSession();
     renderWithProviders(<DashboardPage />);

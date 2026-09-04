@@ -13,7 +13,9 @@ from app.api import (
     programs,
     schedule,
     scoring,
+    skater_records,
     skaters,
+    sov,
     standards,
     training,
 )
@@ -22,6 +24,8 @@ api_router = APIRouter()
 api_router.include_router(auth.router)
 api_router.include_router(dashboard.router)
 api_router.include_router(skaters.router)
+api_router.include_router(skater_records.router)
+api_router.include_router(sov.router)
 api_router.include_router(schedule.router)
 api_router.include_router(admin.router)
 api_router.include_router(federations.router)

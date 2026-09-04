@@ -42,6 +42,9 @@ class DashboardRosterSkater(BaseModel):
     last_name: str
     home_club: str | None = None
     level_name: str | None = None
+    competitive_level: str | None = None
+    federation_name: str | None = None
+    country_code: str | None = None
     has_active_restriction: bool
 
 

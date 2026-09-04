@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.competition import Competition, CompetitionEntry
-from app.models.federation import CompetitionLevel
+from app.models.federation import CompetitionLevel, Federation
 from app.models.injury import InjuryRecord
 from app.models.program import Program
 from app.models.standard import (
@@ -196,6 +196,18 @@ def _level_name(profile: SkaterProfile | None, db: Session) -> str | None:
     return level.level_name if level else None
 
 
+def _fed_info(
+    profile: SkaterProfile | None, db: Session
+) -> tuple[str | None, str | None]:
+    """Return (federation_name, iso_country_code) for a skater profile."""
+    if profile is None or profile.federation_id is None:
+        return None, None
+    fed = db.get(Federation, profile.federation_id)
+    if fed is None:
+        return None, None
+    return fed.name, fed.iso_code
+
+
 def _build_roster(
     skaters: list[User], injuries: list[InjuryRecord], db: Session
 ) -> list[DashboardRosterSkater]:
@@ -203,6 +215,7 @@ def _build_roster(
     roster: list[DashboardRosterSkater] = []
     for skater in sorted(skaters, key=lambda u: (u.last_name, u.first_name)):
         profile = db.get(SkaterProfile, skater.id)
+        fed_name, country_code = _fed_info(profile, db)
         roster.append(
             DashboardRosterSkater(
                 skater_id=skater.id,
@@ -210,6 +223,9 @@ def _build_roster(
                 last_name=skater.last_name,
                 home_club=profile.home_club if profile else None,
                 level_name=_level_name(profile, db),
+                competitive_level=profile.competitive_level if profile else None,
+                federation_name=fed_name,
+                country_code=country_code,
                 has_active_restriction=skater.id in restricted_ids,
             )
         )

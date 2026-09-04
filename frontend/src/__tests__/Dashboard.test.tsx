@@ -127,7 +127,7 @@ describe("Skater onboarding from the dashboard", () => {
     await user.type(within(dialog).getByLabelText(/first name/i), "Mia");
     await user.type(within(dialog).getByLabelText(/last name/i), "Park");
     await user.type(within(dialog).getByLabelText(/date of birth/i), "2010-05-01");
-    await user.type(within(dialog).getByLabelText(/training unit/i), "Senior Group");
+    await user.type(within(dialog).getByLabelText(/home club|rink/i), "Senior Group");
 
     // The coach_id is derived from the session — never a manual input.
     expect(within(dialog).queryByLabelText(/coach id/i)).not.toBeInTheDocument();
@@ -140,16 +140,17 @@ describe("Skater onboarding from the dashboard", () => {
     const body = captured as unknown as Record<string, unknown>;
     expect(body.coach_user_id).toBe(10);
     expect(body.date_of_birth).toBe("2010-05-01");
-    expect(body.unit_name).toBe("Senior Group");
+    expect(body.home_club).toBe("Senior Group");
     expect(body.first_name).toBe("Mia");
   });
 
-  it("exposes a parent/guardian field in the onboarding dialog", async () => {
+  it("exposes a parent/guardian field for a minor in the onboarding dialog", async () => {
     seedSession();
     const user = userEvent.setup();
     renderWithProviders(<DashboardPage />);
     await user.click(await screen.findByRole("button", { name: /add skater/i }));
     const dialog = await screen.findByRole("dialog");
+    await user.type(within(dialog).getByLabelText(/date of birth/i), "2012-06-01");
     expect(within(dialog).getByLabelText(/parent|guardian/i)).toBeInTheDocument();
   });
 });

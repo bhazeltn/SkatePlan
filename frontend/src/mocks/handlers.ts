@@ -9,6 +9,15 @@ function fakeJwt(userId: number, role: string): string {
   return `${header}.${payload}.sig`;
 }
 
+// Federations served by GET /api/federations. Intentionally NOT in country
+// order so the combobox's alphabetical-by-country sort is exercised by tests.
+export const mockFederations = [
+  { id: 1, name: "Philippine Skating Union", code: "PHI", country: "Philippines" },
+  { id: 2, name: "Skate Canada", code: "CAN", country: "Canada" },
+  { id: 3, name: "U.S. Figure Skating", code: "USA", country: "United States" },
+  { id: 4, name: "Australian Ice Skating Association", code: "AUS", country: "Australia" },
+];
+
 export const mockSkaters: Skater[] = [
   {
     skater_id: 1,
@@ -130,7 +139,7 @@ export const handlers = [
   }),
   http.post("*/api/skaters/orchestrate", async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>;
-    if (!body.date_of_birth || !body.unit_name || !body.coach_user_id) {
+    if (!body.date_of_birth || !body.coach_user_id) {
       return HttpResponse.json({ detail: "Missing fields" }, { status: 400 });
     }
     return HttpResponse.json(
@@ -143,6 +152,7 @@ export const handlers = [
       { status: 201 }
     );
   }),
+  http.get("*/api/federations", () => HttpResponse.json(mockFederations)),
   http.get("*/api/skaters", () => HttpResponse.json(mockSkaters)),
   http.get("*/api/dashboard", () => HttpResponse.json(mockDashboard)),
 ];

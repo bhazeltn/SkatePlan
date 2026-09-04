@@ -1,5 +1,6 @@
 import type {
   DashboardSummary,
+  Federation,
   LoginResponse,
   OrchestrateSkaterPayload,
   OrchestrateSkaterResponse,
@@ -67,6 +68,11 @@ export function orchestrateSkater(
 
 export function listSkaters(token?: string | null): Promise<Skater[]> {
   return request<Skater[]>("/api/skaters", {}, token);
+}
+
+// Reference list for the onboarding federation combobox: GET /api/federations.
+export function listFederations(token?: string | null): Promise<Federation[]> {
+  return request<Federation[]>("/api/federations", {}, token);
 }
 
 // Aggregated coach Action & Risk Hub: GET /api/dashboard.

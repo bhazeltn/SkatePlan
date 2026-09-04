@@ -3,11 +3,32 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.countries import country_name
 from app.core.database import get_db
 from app.models.federation import CompetitionLevel, Federation, FederationStream
-from app.schemas.federation import FederationLevelsOut, LevelOut, StreamOut
+from app.schemas.federation import (
+    FederationLevelsOut,
+    FederationOut,
+    LevelOut,
+    StreamOut,
+)
 
 router = APIRouter(prefix="/federations", tags=["federations"])
+
+
+@router.get("", response_model=list[FederationOut])
+def list_federations(db: Session = Depends(get_db)) -> list[FederationOut]:
+    """Return all federations with a resolved country name, sorted
+    alphabetically by country then federation name."""
+    rows = db.execute(select(Federation)).scalars().all()
+    out = [
+        FederationOut(
+            id=f.id, name=f.name, code=f.code, country=country_name(f.iso_code)
+        )
+        for f in rows
+    ]
+    out.sort(key=lambda f: (f.country.lower(), f.name.lower()))
+    return out
 
 
 def _levels_for(stream_id: int, db: Session) -> list[LevelOut]:

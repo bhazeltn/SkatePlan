@@ -25,9 +25,17 @@ export interface OrchestrateSkaterPayload {
   federation_registration_id?: string;
   federation_id?: number;
   current_level_id?: number;
-  unit_name: string;
+  competitive_level?: string;
+  unit_name?: string;
   coach_user_id: number;
   role_in_unit?: "primary" | "secondary" | "choreographer";
+}
+
+export interface Federation {
+  id: number;
+  name: string;
+  code: string;
+  country: string;
 }
 
 export interface OrchestrateSkaterResponse {

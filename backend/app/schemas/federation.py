@@ -4,6 +4,13 @@ from typing import Optional
 from pydantic import BaseModel
 
 
+class FederationOut(BaseModel):
+    id: int
+    name: str
+    code: str
+    country: str
+
+
 class LevelOut(BaseModel):
     level_name: str
     sort_order: Optional[int] = None

@@ -41,6 +41,30 @@ def test_orchestrate_success_persists_all(client, make_user, db):
     assert assignment.role_in_unit.value == "primary"
 
 
+def test_orchestrate_persists_competitive_level_without_unit_name(client, make_user, db):
+    """unit_name is optional; competitive_level and home_club must persist."""
+    coach = make_user("coach2@ex.com", role=SystemRole.coach)
+    resp = client.post(
+        "/api/skaters/orchestrate",
+        json={
+            "email": "levelskater@ex.com",
+            "password": "Skater123!",
+            "first_name": "Level",
+            "last_name": "Skater",
+            "date_of_birth": "2000-01-01",
+            "home_club": "Ice Palace",
+            "competitive_level": "Senior",
+            "coach_user_id": coach.id,
+        },
+    )
+    assert resp.status_code == 201, resp.text
+    profile = db.scalar(select(SkaterProfile))
+    assert profile.competitive_level == "Senior"
+    assert profile.home_club == "Ice Palace"
+    unit = db.scalar(select(TrainingUnit))
+    assert unit.unit_name == "Ice Palace"  # derived from home_club
+
+
 def test_orchestrate_rollback_on_bad_coach(client, db):
     """Invalid coach FK must roll back everything — zero orphaned rows."""
     resp = client.post(

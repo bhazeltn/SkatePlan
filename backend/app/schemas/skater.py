@@ -21,9 +21,10 @@ class OrchestrateSkaterRequest(BaseModel):
     federation_registration_id: Optional[str] = None
     federation_id: Optional[int] = None
     current_level_id: Optional[int] = None
+    competitive_level: Optional[str] = None
 
-    # Training unit
-    unit_name: str
+    # Training unit (name optional; derived from home_club/skater when absent)
+    unit_name: Optional[str] = None
 
     # Coach assignment
     coach_user_id: int

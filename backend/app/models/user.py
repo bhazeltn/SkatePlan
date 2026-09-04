@@ -58,6 +58,9 @@ class SkaterProfile(Base):
     current_level_id: Mapped[int | None] = mapped_column(
         ForeignKey("competition_levels.level_id", ondelete="SET NULL")
     )
+    # Standard singles competitive level (StarSkate..Adult); independent of the
+    # federation-specific competition_levels table.
+    competitive_level: Mapped[str | None] = mapped_column(String(50))
     # Critical, audited, redactable medical/injury free-text.
     # active_history=True forces the prior value to load before replacement so
     # the audit listener can capture it in the history ledger.

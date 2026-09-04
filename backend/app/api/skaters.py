@@ -45,7 +45,18 @@ def _build_profile(payload: OrchestrateSkaterRequest, skater_id: int) -> SkaterP
         federation_registration_id=payload.federation_registration_id,
         federation_id=payload.federation_id,
         current_level_id=payload.current_level_id,
+        competitive_level=payload.competitive_level,
     )
+
+
+def _unit_name_for(payload: OrchestrateSkaterRequest) -> str:
+    """Derive a training-unit name when none is supplied by the client."""
+    if payload.unit_name:
+        return payload.unit_name
+    if payload.home_club:
+        return payload.home_club
+    who = " ".join(filter(None, [payload.first_name, payload.last_name])).strip()
+    return f"{who} unit" if who else "Training unit"
 
 
 def _attach_unit(
@@ -53,7 +64,9 @@ def _attach_unit(
 ) -> tuple[TrainingUnit, TrainingUnitRoster, CoachAssignment]:
     """Create the training unit, roster entry and coach assignment."""
     unit = TrainingUnit(
-        discipline_type=DisciplineType.singles, unit_name=payload.unit_name, is_active=True
+        discipline_type=DisciplineType.singles,
+        unit_name=_unit_name_for(payload),
+        is_active=True,
     )
     db.add(unit)
     db.flush()

@@ -101,7 +101,7 @@ def test_gap_analysis_grouped_by_pillar(client, make_user, db):
 
 def _assessment_payload():
     return {
-        "benchmark_framework": "Junior Level Exit Standard - International Track",
+        "benchmark_framework": "Junior Level Benchmark Standard - International Track",
         "evaluation_date": "2026-02-01",
         "pillar_scores": {
             "technical": "Acquiring",
@@ -138,7 +138,7 @@ def test_post_gap_analysis_persists_assessment(client, make_user):
     body = resp.json()
     saved = body.get("latest_assessment") or body
     assert saved["benchmark_framework"] == (
-        "Junior Level Exit Standard - International Track")
+        "Junior Level Benchmark Standard - International Track")
     assert saved["pillar_scores"]["technical"] == "Acquiring"
     assert saved["coach_notes"].startswith("Focus on jump")
 

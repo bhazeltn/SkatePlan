@@ -74,16 +74,21 @@ describe("Skater profile hub", () => {
     expect(screen.getByText(/Land 2A clean/i)).toBeInTheDocument();
   });
 
-  it("shows the coach LTD Exit Standard assessment on the Gap Analysis tab", async () => {
+  it("shows the benchmark assessment empty state on the Gap Analysis tab", async () => {
     seedSession();
     renderProfile();
     await screen.findByText(/Ava Nguyen/);
     await userEvent.click(screen.getByRole("tab", { name: /gap analysis/i }));
-    expect(await screen.findByText(/exit standard/i)).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: /technical/i })
+      await screen.findByText(/No benchmark assessment on record/i)
     ).toBeInTheDocument();
-    expect(screen.getByText(/developing/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: /New Benchmark Assessment|New Assessment|Conduct Benchmark Assessment/i,
+      })
+    ).toBeInTheDocument();
+    // Legacy "exit standard" copy must no longer appear.
+    expect(screen.queryAllByText(/exit standard/i)).toHaveLength(0);
   });
 
   it("lists existing programs and a build-new-program action on the Programs tab", async () => {

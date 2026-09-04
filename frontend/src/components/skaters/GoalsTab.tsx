@@ -8,7 +8,7 @@ function targetText(entry: GapEntry): string {
   return `Target ${Number(entry.target).toFixed(2)}`;
 }
 
-/** Skater-driven view: the milestone targets pulled from the exit standard. */
+/** Skater-driven view: the milestone targets pulled from the benchmark standard. */
 export function GoalsTab({ skaterId }: { skaterId: number | string }) {
   const { report, loading, error } = useGapReport(skaterId);
 
@@ -18,7 +18,7 @@ export function GoalsTab({ skaterId }: { skaterId: number | string }) {
   if (error || !report) {
     return (
       <p className="text-sm text-slate-400">
-        No milestone targets set yet. Assign an exit standard to see goals.
+        No milestone targets set yet. Assign a benchmark standard to see goals.
       </p>
     );
   }
@@ -30,7 +30,7 @@ export function GoalsTab({ skaterId }: { skaterId: number | string }) {
       <div>
         <h3 className="text-sm font-semibold text-slate-900">Milestone Targets</h3>
         <p className="text-xs text-slate-500">
-          What you are working toward for your exit standard.
+          What you are working toward for your benchmark standard.
         </p>
       </div>
       {goals.length === 0 ? (

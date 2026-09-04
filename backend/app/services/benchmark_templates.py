@@ -19,9 +19,9 @@ EXIT_TARGET = "Meeting Standard"
 PILLARS = ("technical", "skating_skills", "physical", "performance")
 
 _LEVELS = [
-    ("novice", "Novice", "Novice Level Exit Standard - Development Track"),
-    ("junior", "Junior", "Junior Level Exit Standard - International Track"),
-    ("senior", "Senior", "Senior Level Exit Standard - Elite Track"),
+    ("novice", "Novice", "Novice Level Benchmark Standard - Development Track"),
+    ("junior", "Junior", "Junior Level Benchmark Standard - International Track"),
+    ("senior", "Senior", "Senior Level Benchmark Standard - Elite Track"),
 ]
 
 

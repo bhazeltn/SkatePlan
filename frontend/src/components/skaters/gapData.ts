@@ -32,7 +32,7 @@ export function statusClass(status: string): string {
   return STATUS_CLASSES[status] ?? STATUS_CLASSES.not_started;
 }
 
-/** Fetch the LTD Exit Standard gap report; a 404 means no standard is set. */
+/** Fetch the benchmark gap report; a 404 means no standard is set. */
 export function useGapReport(skaterId: number | string) {
   const { token } = useAuth();
   const [report, setReport] = useState<GapReport | null>(null);

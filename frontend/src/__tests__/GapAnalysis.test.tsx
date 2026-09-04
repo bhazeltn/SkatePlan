@@ -36,15 +36,14 @@ describe("Competitive Development & Benchmark Assessment", () => {
     renderPage();
     const user = userEvent.setup();
 
-    // Skater selector populated from GET /api/skaters.
-    const skaterSelect = await screen.findByLabelText(/skater/i);
-    await user.selectOptions(skaterSelect, "1");
+    // Roster populated from GET /api/skaters; clicking a card opens the form.
+    await user.click(await screen.findByRole("button", { name: /Ava Nguyen/i }));
 
     // Benchmark template from GET /api/standards/templates (federation-neutral).
     const templateSelect = await screen.findByLabelText(/benchmark template/i);
     await user.selectOptions(
       templateSelect,
-      "Junior Level Exit Standard - International Track"
+      "Junior Level Benchmark Standard - International Track"
     );
 
     // Four editable pillars must be present.
@@ -59,10 +58,10 @@ describe("Competitive Development & Benchmark Assessment", () => {
     renderPage();
     const user = userEvent.setup();
 
-    await user.selectOptions(await screen.findByLabelText(/skater/i), "1");
+    await user.click(await screen.findByRole("button", { name: /Ava Nguyen/i }));
     await user.selectOptions(
       await screen.findByLabelText(/benchmark template/i),
-      "Junior Level Exit Standard - International Track"
+      "Junior Level Benchmark Standard - International Track"
     );
 
     await user.selectOptions(screen.getByLabelText(/technical/i), "Acquiring");

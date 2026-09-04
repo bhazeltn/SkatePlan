@@ -1,90 +1,98 @@
-import {
-  PILLAR_LABELS,
-  statusClass,
-  statusLabel,
-  useGapReport,
-} from "@/components/skaters/gapData";
-import type { GapEntry } from "@/lib/types";
+import { useState } from "react";
+import { GapAssessmentForm } from "@/components/gap/GapAssessmentForm";
+import { GapSummaryCard } from "@/components/gap/GapSummaryCard";
+import { useGapAssessment } from "@/components/gap/useGapAssessment";
+import type { SavedGapAssessment } from "@/lib/types";
 
-function measuredText(entry: GapEntry): string {
-  const measured =
-    entry.measured === null || entry.measured === undefined
-      ? "—"
-      : Number(entry.measured).toFixed(2);
-  const target =
-    entry.target === null || entry.target === undefined
-      ? "—"
-      : Number(entry.target).toFixed(2);
-  return `${measured} / ${target}`;
-}
-
-function BenchmarkRow({ entry }: { entry: GapEntry }) {
+/** Empty state shown when a skater has no benchmark assessment on record. */
+function EmptyState({ onStart }: { onStart: () => void }) {
   return (
-    <li
-      className="flex items-center justify-between gap-3 rounded-md border
-        border-slate-200 bg-white px-3 py-2"
+    <div
+      className="rounded-lg border border-dashed border-slate-300 bg-slate-50
+        p-6 text-center"
     >
-      <span className="text-sm font-medium text-slate-900">{entry.title}</span>
-      <span className="flex items-center gap-3">
-        <span className="tabular-nums text-xs text-slate-500">
-          {measuredText(entry)}
-        </span>
-        <span
-          className={`rounded-full px-2 py-0.5 text-xs font-medium ring-1
-            ring-inset ${statusClass(entry.status)}`}
-        >
-          {statusLabel(entry.status)}
-        </span>
-      </span>
-    </li>
+      <h3 className="text-sm font-semibold text-slate-900">
+        No benchmark assessment on record
+      </h3>
+      <p className="mx-auto mt-1 max-w-md text-xs text-slate-500">
+        Score this athlete's four development pillars against a competitive
+        benchmark standard to reveal the highest-priority focus areas.
+      </p>
+      <button
+        type="button"
+        onClick={onStart}
+        className="mt-4 rounded-md bg-slate-900 px-4 py-2 text-sm font-medium
+          text-white hover:bg-slate-700"
+      >
+        + New Benchmark Assessment
+      </button>
+    </div>
   );
 }
 
-/** Coach-driven view: LTD Exit Standard assessment grouped by pillar. */
-export function GapAnalysisTab({ skaterId }: { skaterId: number | string }) {
-  const { report, loading, error } = useGapReport(skaterId);
+/** Prefill the working draft from a saved assessment so it can be updated. */
+function prefill(
+  result: SavedGapAssessment,
+  gap: ReturnType<typeof useGapAssessment>
+): void {
+  gap.setFramework(result.benchmark_framework);
+  Object.entries(result.pillar_scores).forEach(([pillar, level]) =>
+    gap.setScore(pillar, level)
+  );
+  gap.setNotes(result.coach_notes ?? "");
+}
 
-  if (loading) {
-    return <p className="text-sm text-slate-400">Loading gap analysis…</p>;
-  }
-  if (error || !report) {
+/** Coach-driven view: interactive benchmark assessment for one athlete. Shows an
+ *  empty state, the scoring form, or the saved summary keyed off the result. */
+export function GapAnalysisTab({ skaterId }: { skaterId: number | string }) {
+  const gap = useGapAssessment(String(skaterId));
+  const [editing, setEditing] = useState(false);
+
+  const startNew = () => {
+    setEditing(true);
+  };
+
+  const startUpdate = () => {
+    if (gap.result) prefill(gap.result, gap);
+    setEditing(true);
+  };
+
+  const handleSubmit = async () => {
+    await gap.submit();
+    setEditing(false);
+  };
+
+  if (editing) {
     return (
-      <p className="text-sm text-slate-400">
-        No exit standard assigned yet. Set a target standard to assess the gap.
-      </p>
+      <GapAssessmentForm
+        templates={gap.templates}
+        framework={gap.framework}
+        scores={gap.scores}
+        notes={gap.notes}
+        onFramework={gap.setFramework}
+        onScore={gap.setScore}
+        onNotes={gap.setNotes}
+        onSubmit={handleSubmit}
+        disabled={gap.saving || !gap.framework}
+      />
     );
   }
 
-  const pillars = Object.keys(PILLAR_LABELS).filter(
-    (key) => (report.pillars[key] ?? []).length > 0
-  );
+  if (!gap.result) {
+    return <EmptyState onStart={startNew} />;
+  }
 
   return (
     <section className="space-y-4">
-      <div>
-        <h3 className="text-sm font-semibold text-slate-900">
-          LTD Exit Standard
-        </h3>
-        <p className="text-xs text-slate-500">
-          Coach assessment of technical exit benchmarks against the target standard.
-        </p>
-      </div>
-      {pillars.length === 0 ? (
-        <p className="text-sm text-slate-400">No benchmarks recorded yet.</p>
-      ) : (
-        pillars.map((key) => (
-          <div key={key} className="space-y-2">
-            <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              {PILLAR_LABELS[key]}
-            </h4>
-            <ul className="space-y-2">
-              {report.pillars[key].map((entry) => (
-                <BenchmarkRow key={entry.benchmark_id} entry={entry} />
-              ))}
-            </ul>
-          </div>
-        ))
-      )}
+      <GapSummaryCard assessment={gap.result} />
+      <button
+        type="button"
+        onClick={startUpdate}
+        className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm
+          font-medium text-slate-700 hover:bg-slate-50"
+      >
+        Update Assessment
+      </button>
     </section>
   );
 }

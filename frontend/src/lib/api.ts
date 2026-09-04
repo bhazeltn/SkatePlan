@@ -96,7 +96,7 @@ export function listSovElements(
   return request<SovElement[]>(`/api/sov/elements${query}`, {}, token);
 }
 
-// LTD Exit Standard gap report for a skater: GET /api/skaters/{id}/gap-analysis.
+// Benchmark gap report for a skater: GET /api/skaters/{id}/gap-analysis.
 export function getGapAnalysis(
   skaterId: number | string,
   token?: string | null

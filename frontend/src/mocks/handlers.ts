@@ -111,7 +111,7 @@ export const mockTemplates = [
   {
     key: "novice",
     level: "Novice",
-    label: "Novice Level Exit Standard - Development Track",
+    label: "Novice Level Benchmark Standard - Development Track",
     pillar_targets: {
       technical: "Meeting Standard",
       skating_skills: "Meeting Standard",
@@ -122,7 +122,7 @@ export const mockTemplates = [
   {
     key: "junior",
     level: "Junior",
-    label: "Junior Level Exit Standard - International Track",
+    label: "Junior Level Benchmark Standard - International Track",
     pillar_targets: {
       technical: "Meeting Standard",
       skating_skills: "Meeting Standard",
@@ -133,7 +133,7 @@ export const mockTemplates = [
   {
     key: "senior",
     level: "Senior",
-    label: "Senior Level Exit Standard - Elite Track",
+    label: "Senior Level Benchmark Standard - Elite Track",
     pillar_targets: {
       technical: "Meeting Standard",
       skating_skills: "Meeting Standard",

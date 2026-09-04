@@ -1,6 +1,7 @@
 import type {
   DashboardSummary,
   Federation,
+  GapReport,
   LoginResponse,
   OrchestrateSkaterPayload,
   OrchestrateSkaterResponse,
@@ -83,8 +84,21 @@ export function getSkater(
 }
 
 // Singles Scale of Values reference for the program builder: GET /api/sov/elements.
-export function listSovElements(token?: string | null): Promise<SovElement[]> {
-  return request<SovElement[]>("/api/sov/elements", {}, token);
+// When plannedOnly is true, execution-flag scored variants are excluded server-side.
+export function listSovElements(
+  token?: string | null,
+  plannedOnly = false
+): Promise<SovElement[]> {
+  const query = plannedOnly ? "?planned_only=true" : "";
+  return request<SovElement[]>(`/api/sov/elements${query}`, {}, token);
+}
+
+// LTD Exit Standard gap report for a skater: GET /api/skaters/{id}/gap-analysis.
+export function getGapAnalysis(
+  skaterId: number | string,
+  token?: string | null
+): Promise<GapReport> {
+  return request<GapReport>(`/api/skaters/${skaterId}/gap-analysis`, {}, token);
 }
 
 // Persist a new program layout: POST /api/programs.

@@ -44,7 +44,7 @@ describe("Skater profile hub", () => {
     expect(screen.getByText(/restricted/i)).toBeInTheDocument();
   });
 
-  it("renders the four profile tabs", async () => {
+  it("renders Goals and Gap Analysis as separate profile tabs", async () => {
     seedSession();
     renderProfile();
     await screen.findByText(/Ava Nguyen/);
@@ -52,12 +52,38 @@ describe("Skater profile hub", () => {
     expect(
       screen.getByRole("tab", { name: /health & load/i })
     ).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /^goals$/i })).toBeInTheDocument();
     expect(
-      screen.getByRole("tab", { name: /goals & standards/i })
+      screen.getByRole("tab", { name: /gap analysis/i })
     ).toBeInTheDocument();
     expect(
       screen.getByRole("tab", { name: /competitions/i })
     ).toBeInTheDocument();
+    // The old combined tab must no longer exist.
+    expect(
+      screen.queryByRole("tab", { name: /goals & standards/i })
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows skater-driven milestone targets on the Goals tab", async () => {
+    seedSession();
+    renderProfile();
+    await screen.findByText(/Ava Nguyen/);
+    await userEvent.click(screen.getByRole("tab", { name: /^goals$/i }));
+    expect(await screen.findByText(/milestone targets/i)).toBeInTheDocument();
+    expect(screen.getByText(/Land 2A clean/i)).toBeInTheDocument();
+  });
+
+  it("shows the coach LTD Exit Standard assessment on the Gap Analysis tab", async () => {
+    seedSession();
+    renderProfile();
+    await screen.findByText(/Ava Nguyen/);
+    await userEvent.click(screen.getByRole("tab", { name: /gap analysis/i }));
+    expect(await screen.findByText(/exit standard/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /technical/i })
+    ).toBeInTheDocument();
+    expect(screen.getByText(/developing/i)).toBeInTheDocument();
   });
 
   it("lists existing programs and a build-new-program action on the Programs tab", async () => {

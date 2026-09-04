@@ -61,6 +61,27 @@ describe("Program sandbox builder", () => {
     );
   });
 
+  it("offers only clean base elements, excluding execution-flag variants", async () => {
+    seedSession();
+    const user = userEvent.setup();
+    renderBuilder();
+    const input = await screen.findByRole("combobox", { name: /element/i });
+    await user.type(input, "2A");
+    // The clean base element is offered.
+    expect(
+      await screen.findByText("2A", { selector: "span" })
+    ).toBeInTheDocument();
+    // The quarter-rotation execution-flag variant must NOT be offered.
+    expect(screen.queryByText("2Aq")).not.toBeInTheDocument();
+    // Nor should the under-rotation variant surface for a different query.
+    await user.clear(input);
+    await user.type(input, "3T");
+    expect(
+      await screen.findByText("3T", { selector: "span" })
+    ).toBeInTheDocument();
+    expect(screen.queryByText("3T<")).not.toBeInTheDocument();
+  });
+
   it("saves a valid payload with ordered elements and per-element flags", async () => {
     seedSession();
     const user = userEvent.setup();

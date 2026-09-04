@@ -7,6 +7,8 @@ import { ProfileHeader } from "@/components/skaters/ProfileHeader";
 import { ProfileTabs, type ProfileTab } from "@/components/skaters/ProfileTabs";
 import { ProgramsTab } from "@/components/skaters/ProgramsTab";
 import { RestrictionsTab } from "@/components/skaters/RestrictionsTab";
+import { GoalsTab } from "@/components/skaters/GoalsTab";
+import { GapAnalysisTab } from "@/components/skaters/GapAnalysisTab";
 
 function EmptyTab({ label }: { label: string }) {
   return <p className="text-sm text-slate-400">{label}</p>;
@@ -35,8 +37,12 @@ function buildTabs(skater: SkaterDetail, onChanged: () => void): ProfileTab[] {
       ),
     },
     {
-      label: "Goals & Standards",
-      content: <EmptyTab label="Development standards coming soon." />,
+      label: "Goals",
+      content: <GoalsTab skaterId={skater.skater_id} />,
+    },
+    {
+      label: "Gap Analysis",
+      content: <GapAnalysisTab skaterId={skater.skater_id} />,
     },
     {
       label: "Competitions",

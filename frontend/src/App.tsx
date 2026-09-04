@@ -3,6 +3,7 @@ import { LoginPage } from "@/pages/LoginPage";
 import { RegisterPage } from "@/pages/RegisterPage";
 import { DashboardPage } from "@/pages/DashboardPage";
 import { SkaterProfilePage } from "@/pages/SkaterProfilePage";
+import { GapAnalysisPage } from "@/pages/GapAnalysisPage";
 import { PlaceholderPage } from "@/pages/PlaceholderPage";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 
@@ -11,7 +12,6 @@ const PROTECTED: { path: string; title: string }[] = [
   { path: "/programs", title: "Programs" },
   { path: "/sessions", title: "Sessions" },
   { path: "/competitions", title: "Competitions" },
-  { path: "/gap-analysis", title: "Gap Analysis" },
 ];
 
 export default function App() {
@@ -40,6 +40,14 @@ export default function App() {
         element={
           <ProtectedRoute>
             <SkaterProfilePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/gap-analysis"
+        element={
+          <ProtectedRoute>
+            <GapAnalysisPage />
           </ProtectedRoute>
         }
       />

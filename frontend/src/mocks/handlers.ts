@@ -45,14 +45,65 @@ export const mockSkaters: Skater[] = [
   },
 ];
 
-// Singles Scale of Values lookup served by GET /api/sov/elements.
+// Singles Scale of Values lookup served by GET /api/sov/elements. Includes a
+// few execution-flag variants so planned_only filtering can be exercised.
 export const mockSovElements = [
   { element_code: "3Lz", element_name: "Triple Lutz", base_value: 5.9 },
   { element_code: "2A", element_name: "Double Axel", base_value: 3.3 },
   { element_code: "3T", element_name: "Triple Toeloop", base_value: 4.2 },
   { element_code: "CCoSp4", element_name: "Change Combo Spin L4", base_value: 3.5 },
   { element_code: "StSq3", element_name: "Step Sequence L3", base_value: 3.3 },
+  { element_code: "2Aq", element_name: "Double Axel (q)", base_value: 3.3 },
+  { element_code: "3T<", element_name: "Triple Toeloop (UR)", base_value: 2.94 },
 ];
+
+// Step/choreo sequences legitimately contain "q"; only true execution-flag
+// variants should be filtered when planned_only is requested.
+function isFlaggedCode(code: string): boolean {
+  const stripped = code.replace(/StSq|ChSq/g, "");
+  return /[<>qe!*]/.test(stripped);
+}
+
+// Gap report served by GET /api/skaters/:id/gap-analysis.
+export const mockGapReport = {
+  skater_id: 1,
+  target_standard_id: 7,
+  pillars: {
+    technical: [
+      {
+        benchmark_id: 1,
+        title: "Land 2A clean",
+        evaluation_mode: "binary",
+        status: "developing",
+        measured: 0,
+        target: 1,
+        delta: 1,
+      },
+      {
+        benchmark_id: 2,
+        title: "Triple Toeloop base value",
+        evaluation_mode: "numeric",
+        status: "met",
+        measured: 4.2,
+        target: 4.0,
+        delta: 0.2,
+      },
+    ],
+    skating_skills: [
+      {
+        benchmark_id: 3,
+        title: "Step Sequence Level 3",
+        evaluation_mode: "level",
+        status: "not_started",
+        measured: 1,
+        target: 3,
+        delta: 2,
+      },
+    ],
+    physical: [],
+    mental: [],
+  },
+};
 
 // Full skater profile served by GET /api/skaters/:id.
 export const mockSkaterDetail = {
@@ -197,7 +248,17 @@ export const handlers = [
     );
   }),
   http.get("*/api/federations", () => HttpResponse.json(mockFederations)),
-  http.get("*/api/sov/elements", () => HttpResponse.json(mockSovElements)),
+  http.get("*/api/sov/elements", ({ request }) => {
+    const plannedOnly =
+      new URL(request.url).searchParams.get("planned_only") === "true";
+    const rows = plannedOnly
+      ? mockSovElements.filter((e) => !isFlaggedCode(e.element_code))
+      : mockSovElements;
+    return HttpResponse.json(rows);
+  }),
+  http.get("*/api/skaters/:id/gap-analysis", () =>
+    HttpResponse.json(mockGapReport)
+  ),
   http.get("*/api/skaters/:id", () => HttpResponse.json(mockSkaterDetail)),
   http.get("*/api/skaters", () => HttpResponse.json(mockSkaters)),
   http.post("*/api/programs", async ({ request }) => {

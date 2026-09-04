@@ -106,6 +106,24 @@ export interface SkaterDetail {
   programs: SkaterProgram[];
 }
 
+export type GapStatus = "met" | "developing" | "not_started" | string;
+
+export interface GapEntry {
+  benchmark_id: number;
+  title: string;
+  evaluation_mode: string;
+  status: GapStatus;
+  measured?: number | null;
+  target?: number | null;
+  delta?: number | null;
+}
+
+export interface GapReport {
+  skater_id: number;
+  target_standard_id: number;
+  pillars: Record<string, GapEntry[]>;
+}
+
 export interface ProgramElementPayload {
   segment_order: number;
   element_code: string;

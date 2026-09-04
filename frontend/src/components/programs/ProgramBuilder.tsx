@@ -27,7 +27,7 @@ export function ProgramBuilder({
 
   useEffect(() => {
     let active = true;
-    listSovElements(token)
+    listSovElements(token, true)
       .then((rows) => active && setSov(rows))
       .catch(() => active && setSov([]));
     return () => {

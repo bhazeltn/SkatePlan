@@ -7,6 +7,14 @@ export interface LoginResponse {
   role: SystemRole;
 }
 
+export interface RegisterCoachPayload {
+  first_name: string;
+  last_name: string;
+  email: string;
+  password: string;
+  club?: string;
+}
+
 export interface OrchestrateSkaterPayload {
   email?: string;
   password?: string;

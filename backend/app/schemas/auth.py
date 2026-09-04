@@ -7,6 +7,16 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class CoachRegisterRequest(BaseModel):
+    """Public self-service coach account creation."""
+
+    first_name: str
+    last_name: str
+    email: EmailStr
+    password: str
+    club: str | None = None
+
+
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"

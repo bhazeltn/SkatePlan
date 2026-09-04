@@ -5,11 +5,34 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import enforce_safesport_access, get_current_user
 from app.core.database import get_db
-from app.core.security import create_access_token, verify_password
+from app.core.security import create_access_token, hash_password, verify_password
+from app.models.enums import SystemRole
 from app.models.user import User
-from app.schemas.auth import CurrentUser, LoginRequest, Token
+from app.schemas.auth import CoachRegisterRequest, CurrentUser, LoginRequest, Token
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+@router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED)
+def register(payload: CoachRegisterRequest, db: Session = Depends(get_db)) -> Token:
+    existing = db.execute(select(User).where(User.email == payload.email)).scalar_one_or_none()
+    if existing is not None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already registered",
+        )
+    user = User(
+        email=payload.email,
+        password_hash=hash_password(payload.password),
+        system_role=SystemRole.coach,
+        first_name=payload.first_name,
+        last_name=payload.last_name,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    token = create_access_token(subject=user.id, role=user.system_role.value)
+    return Token(access_token=token, user_id=user.id, role=user.system_role.value)
 
 
 @router.post("/login", response_model=Token)

@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { screen, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { http, HttpResponse } from "msw";
 import { DashboardPage } from "@/pages/DashboardPage";
+import { server } from "@/mocks/server";
 import { renderWithProviders } from "@/test/utils";
 import { TOKEN_KEY } from "@/context/AuthContext";
 
@@ -44,5 +47,54 @@ describe("Coach dashboard", () => {
     const cards = await screen.findAllByTestId("skater-card");
     expect(cards.length).toBeGreaterThanOrEqual(1);
     expect(within(cards[0]).getByText(/Ava/)).toBeInTheDocument();
+  });
+});
+
+describe("Skater onboarding from the dashboard", () => {
+  it("opens the Add Skater dialog and auto-injects the coach_id", async () => {
+    seedSession();
+    const user = userEvent.setup();
+    let captured: Record<string, unknown> | null = null;
+    server.use(
+      http.post("*/api/skaters/orchestrate", async ({ request }) => {
+        captured = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json(
+          { skater_id: 99, training_unit_id: 5, roster_entry_id: 7, assignment_id: 3 },
+          { status: 201 }
+        );
+      })
+    );
+
+    renderWithProviders(<DashboardPage />);
+    await user.click(await screen.findByRole("button", { name: /add skater/i }));
+
+    const dialog = await screen.findByRole("dialog");
+    await user.type(within(dialog).getByLabelText(/first name/i), "Mia");
+    await user.type(within(dialog).getByLabelText(/last name/i), "Park");
+    await user.type(within(dialog).getByLabelText(/date of birth/i), "2010-05-01");
+    await user.type(within(dialog).getByLabelText(/training unit/i), "Senior Group");
+
+    // The coach_id is derived from the session — never a manual input.
+    expect(within(dialog).queryByLabelText(/coach id/i)).not.toBeInTheDocument();
+
+    await user.click(
+      within(dialog).getByRole("button", { name: /create skater|onboard/i })
+    );
+
+    await waitFor(() => expect(captured).not.toBeNull());
+    const body = captured as unknown as Record<string, unknown>;
+    expect(body.coach_user_id).toBe(10);
+    expect(body.date_of_birth).toBe("2010-05-01");
+    expect(body.unit_name).toBe("Senior Group");
+    expect(body.first_name).toBe("Mia");
+  });
+
+  it("exposes a parent/guardian field in the onboarding dialog", async () => {
+    seedSession();
+    const user = userEvent.setup();
+    renderWithProviders(<DashboardPage />);
+    await user.click(await screen.findByRole("button", { name: /add skater/i }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByLabelText(/parent|guardian/i)).toBeInTheDocument();
   });
 });

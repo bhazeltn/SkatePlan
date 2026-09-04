@@ -20,7 +20,7 @@ function useLogin() {
     setBusy(true);
     try {
       await signIn(email, password);
-      navigate("/", { replace: true });
+      navigate("/dashboard", { replace: true });
     } catch {
       setError("Invalid email or password.");
     } finally {
@@ -57,8 +57,9 @@ export function LoginPage() {
           )}
           <LoginForm {...login} />
           <p className="mt-4 text-center text-sm text-slate-500">
-            Need to onboard a skater?{" "}
-            <Link to="/register" className="font-medium text-blue-600">Register</Link>
+            <Link to="/register" className="font-medium text-blue-600">
+              New coach? Create an account
+            </Link>
           </p>
         </CardContent>
       </Card>

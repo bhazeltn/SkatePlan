@@ -3,6 +3,42 @@ from app.core.security import decode_access_token
 from app.models.enums import SystemRole
 
 
+def test_register_coach_success(client, db):
+    resp = client.post(
+        "/api/auth/register",
+        json={
+            "first_name": "Nina",
+            "last_name": "Coachova",
+            "email": "newcoach@example.com",
+            "password": "Coach123!",
+        },
+    )
+    assert resp.status_code == 201, resp.text
+    body = resp.json()
+    assert body["role"] == "coach"
+    assert body["access_token"]
+    claims = decode_access_token(body["access_token"])
+    assert claims["system_role"] == "coach"
+    from app.models.user import User
+
+    user = db.query(User).filter(User.email == "newcoach@example.com").one()
+    assert user.system_role == SystemRole.coach
+
+
+def test_register_duplicate_email_rejected(client, make_user):
+    make_user("dupe@example.com", password="Coach123!", role=SystemRole.coach)
+    resp = client.post(
+        "/api/auth/register",
+        json={
+            "first_name": "Dup",
+            "last_name": "Licate",
+            "email": "dupe@example.com",
+            "password": "Coach123!",
+        },
+    )
+    assert resp.status_code == 400, resp.text
+
+
 def test_login_success_returns_token(client, make_user):
     make_user("coach@example.com", password="Coach123!", role=SystemRole.coach)
     resp = client.post(

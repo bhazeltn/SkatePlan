@@ -2,6 +2,7 @@ import type {
   LoginResponse,
   OrchestrateSkaterPayload,
   OrchestrateSkaterResponse,
+  RegisterCoachPayload,
   Skater,
 } from "@/lib/types";
 
@@ -39,6 +40,16 @@ export function login(email: string, password: string): Promise<LoginResponse> {
   return request<LoginResponse>("/api/auth/login", {
     method: "POST",
     body: JSON.stringify({ email, password }),
+  });
+}
+
+// Public self-service coach account creation: POST /api/auth/register.
+export function registerCoach(
+  payload: RegisterCoachPayload
+): Promise<LoginResponse> {
+  return request<LoginResponse>("/api/auth/register", {
+    method: "POST",
+    body: JSON.stringify(payload),
   });
 }
 

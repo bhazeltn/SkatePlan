@@ -48,6 +48,21 @@ const loginResolver = async ({ request }: { request: Request }) => {
 export const handlers = [
   http.post("*/api/auth/login", loginResolver),
   http.post("*/api/auth/token", loginResolver),
+  http.post("*/api/auth/register", async ({ request }) => {
+    const body = (await request.json()) as { email?: string };
+    if (!body.email) {
+      return HttpResponse.json({ detail: "Invalid registration" }, { status: 400 });
+    }
+    return HttpResponse.json(
+      {
+        access_token: fakeJwt(10, "coach"),
+        token_type: "bearer",
+        user_id: 10,
+        role: "coach",
+      },
+      { status: 201 }
+    );
+  }),
   http.post("*/api/skaters/orchestrate", async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>;
     if (!body.date_of_birth || !body.unit_name || !body.coach_user_id) {

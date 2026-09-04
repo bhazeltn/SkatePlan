@@ -1,71 +1,98 @@
 import { useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
-import { orchestrateSkater } from "@/lib/api";
+import { Link, useNavigate } from "react-router-dom";
+import { registerCoach } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field } from "@/components/ui/field";
 import { Alert } from "@/components/ui/alert";
-import {
-  EMPTY_FIELDS,
-  buildPayload,
-  isMinor,
-  validate,
-  type RegisterFields,
-} from "./registerForm";
 
-const FIELD_DEFS: { key: keyof RegisterFields; label: string; type?: string }[] = [
-  { key: "first_name", label: "First name" },
-  { key: "last_name", label: "Last name" },
-  { key: "email", label: "Email", type: "email" },
-  { key: "password", label: "Password", type: "password" },
-  { key: "date_of_birth", label: "Date of birth", type: "date" },
-  { key: "unit_name", label: "Training unit" },
-  { key: "coach_user_id", label: "Coach ID", type: "number" },
+interface CoachFields {
+  first_name: string;
+  last_name: string;
+  email: string;
+  password: string;
+  club: string;
+}
+
+const EMPTY: CoachFields = {
+  first_name: "",
+  last_name: "",
+  email: "",
+  password: "",
+  club: "",
+};
+
+const FIELDS: {
+  key: keyof CoachFields;
+  label: string;
+  type?: string;
+  auto?: string;
+}[] = [
+  { key: "first_name", label: "First name", auto: "given-name" },
+  { key: "last_name", label: "Last name", auto: "family-name" },
+  { key: "email", label: "Email", type: "email", auto: "email" },
+  { key: "password", label: "Password", type: "password", auto: "new-password" },
+  { key: "club", label: "Club (optional)", auto: "organization" },
 ];
 
 function useRegister() {
-  const { token } = useAuth();
-  const [fields, setFields] = useState<RegisterFields>(EMPTY_FIELDS);
-  const [errors, setErrors] = useState<Partial<Record<string, string>>>({});
-  const [status, setStatus] = useState<"idle" | "ok" | "error">("idle");
+  const { signIn } = useAuth();
+  const navigate = useNavigate();
+  const [fields, setFields] = useState<CoachFields>(EMPTY);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  const update = (key: keyof RegisterFields, value: string) =>
+  const update = (key: keyof CoachFields, value: string) =>
     setFields((prev) => ({ ...prev, [key]: value }));
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    const found = validate(fields);
-    setErrors(found);
-    if (Object.keys(found).length > 0) return;
+    setError(null);
+    setBusy(true);
     try {
-      await orchestrateSkater(buildPayload(fields), token);
-      setStatus("ok");
+      await registerCoach({
+        first_name: fields.first_name,
+        last_name: fields.last_name,
+        email: fields.email,
+        password: fields.password,
+        club: fields.club || undefined,
+      });
+      await signIn(fields.email, fields.password);
+      navigate("/dashboard", { replace: true });
     } catch {
-      setStatus("error");
+      setError("Could not create your account. Please review your details and retry.");
+    } finally {
+      setBusy(false);
     }
   }
-  return { fields, errors, status, update, onSubmit };
+  return { fields, error, busy, update, onSubmit };
 }
 
-type RegisterState = ReturnType<typeof useRegister>;
-
-function RegisterForm({ fields, errors, update, onSubmit }: RegisterState) {
+function RegisterForm({
+  fields,
+  busy,
+  update,
+  onSubmit,
+}: ReturnType<typeof useRegister>) {
   return (
     <form onSubmit={onSubmit} className="space-y-4" noValidate>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {FIELD_DEFS.map(({ key, label, type }) => (
-          <Field key={key} id={key} label={label} type={type}
-            value={fields[key]} error={errors[key]}
-            onChange={(e) => update(key, e.target.value)} />
+        {FIELDS.map(({ key, label, type, auto }) => (
+          <Field
+            key={key}
+            id={key}
+            label={label}
+            type={type}
+            autoComplete={auto}
+            value={fields[key]}
+            onChange={(e) => update(key, e.target.value)}
+          />
         ))}
       </div>
-      {isMinor(fields.date_of_birth) && (
-        <Field id="guardian_email" label="Guardian email (minor — parent proxy)"
-          type="email" value={fields.guardian_email}
-          onChange={(e) => update("guardian_email", e.target.value)} />
-      )}
-      <Button type="submit" className="w-full">Create skater</Button>
+      <Button type="submit" className="w-full" disabled={busy}>
+        {busy ? "Creating account…" : "Create account"}
+      </Button>
     </form>
   );
 }
@@ -73,20 +100,26 @@ function RegisterForm({ fields, errors, update, onSubmit }: RegisterState) {
 export function RegisterPage() {
   const state = useRegister();
   return (
-    <div className="mx-auto max-w-lg p-4">
-      <Card>
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
+      <Card className="w-full max-w-lg">
         <CardContent className="pt-6">
-          <h1 className="mb-1 text-xl font-bold text-slate-900">Register skater</h1>
-          <p className="mb-4 text-sm text-slate-500">SafeSport-compliant onboarding</p>
-          {state.status === "ok" && (
-            <Alert variant="success" className="mb-4">Skater onboarded successfully.</Alert>
-          )}
-          {state.status === "error" && (
-            <Alert variant="danger" className="mb-4">Onboarding failed. Please review and retry.</Alert>
+          <h1 className="mb-1 text-xl font-bold text-slate-900">
+            Create Coach Account
+          </h1>
+          <p className="mb-4 text-sm text-slate-500">
+            Set up your coaching workspace
+          </p>
+          {state.error && (
+            <Alert variant="danger" className="mb-4">
+              {state.error}
+            </Alert>
           )}
           <RegisterForm {...state} />
           <p className="mt-4 text-center text-sm text-slate-500">
-            <Link to="/login" className="font-medium text-blue-600">Back to sign in</Link>
+            Already have an account?{" "}
+            <Link to="/login" className="font-medium text-blue-600">
+              Sign in
+            </Link>
           </p>
         </CardContent>
       </Card>

@@ -26,6 +26,14 @@ export default function App() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <DashboardPage />
+          </ProtectedRoute>
+        }
+      />
       {PROTECTED.map(({ path, title }) => (
         <Route
           key={path}

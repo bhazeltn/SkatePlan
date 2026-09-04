@@ -29,6 +29,7 @@ class SkaterProgramOut(BaseModel):
 class SkaterRestrictionOut(BaseModel):
     """An active load restriction shown on the Health & Load tab."""
 
+    id: str
     title: str
     restrictions: str | None = None
     status: str

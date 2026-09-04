@@ -94,7 +94,10 @@ def get_skater_detail(skater_id: int, db: Session) -> SkaterDetailOut | None:
     profile = db.get(SkaterProfile, skater_id)
     restrictions = [
         SkaterRestrictionOut(
-            title=inj.title, restrictions=inj.restrictions, status=inj.status
+            id=str(inj.id),
+            title=inj.title,
+            restrictions=inj.restrictions,
+            status=inj.status,
         )
         for inj in _active_restrictions(skater_id, db)
     ]

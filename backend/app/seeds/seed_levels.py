@@ -45,9 +45,17 @@ def _insert_stream(session, code: str, stream: dict) -> None:
 def _ensure_federation(session, code: str, name: str) -> None:
     """Guarantee the parent federation exists for the FK.
 
-    Uses on-conflict-do-nothing so the 78 member federations keep their official
-    names; only adds baseline bodies (e.g. ISU) that are not member federations.
+    Both ``code`` and ``name`` are unique, so a federation matching either is
+    reused instead of inserted. This prevents re-runs (or overlapping seed
+    sources) from creating name-duplicate rows with a different code.
     """
+    existing = (
+        session.query(Federation)
+        .filter((Federation.code == code) | (Federation.name == name))
+        .first()
+    )
+    if existing is not None:
+        return
     stmt = pg_insert(Federation).values(name=name, code=code, iso_code=None)
     stmt = stmt.on_conflict_do_nothing(index_elements=["code"])
     session.execute(stmt)

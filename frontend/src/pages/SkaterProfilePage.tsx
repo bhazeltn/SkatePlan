@@ -12,10 +12,7 @@ function EmptyTab({ label }: { label: string }) {
   return <p className="text-sm text-slate-400">{label}</p>;
 }
 
-function buildTabs(
-  skater: SkaterDetail,
-  onProgramSaved: () => void
-): ProfileTab[] {
+function buildTabs(skater: SkaterDetail, onChanged: () => void): ProfileTab[] {
   return [
     {
       label: "Programs",
@@ -23,13 +20,19 @@ function buildTabs(
         <ProgramsTab
           skaterId={skater.skater_id}
           programs={skater.programs}
-          onProgramSaved={onProgramSaved}
+          onProgramSaved={onChanged}
         />
       ),
     },
     {
       label: "Health & Load",
-      content: <RestrictionsTab restrictions={skater.restrictions} />,
+      content: (
+        <RestrictionsTab
+          skaterId={skater.skater_id}
+          restrictions={skater.restrictions}
+          onChanged={onChanged}
+        />
+      ),
     },
     {
       label: "Goals & Standards",

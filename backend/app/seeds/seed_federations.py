@@ -33,16 +33,32 @@ def seed_federations() -> int:
     session = SessionLocal()
     try:
         for rec in records:
-            stmt = pg_insert(Federation).values(**rec)
-            stmt = stmt.on_conflict_do_update(
-                index_elements=["code"],
-                set_={"name": rec["name"], "iso_code": rec["iso_code"]},
-            )
-            session.execute(stmt)
+            _upsert_one(session, rec)
         session.commit()
     finally:
         session.close()
     return len(records)
+
+
+def _upsert_one(session, rec: dict) -> None:
+    """Insert/update a federation without violating unique code or name.
+
+    If the name already belongs to a different code (a merged survivor), the
+    record is skipped so re-running the seed never recreates a duplicate.
+    """
+    clash = (
+        session.query(Federation)
+        .filter(Federation.name == rec["name"], Federation.code != rec["code"])
+        .first()
+    )
+    if clash is not None:
+        return
+    stmt = pg_insert(Federation).values(**rec)
+    stmt = stmt.on_conflict_do_update(
+        index_elements=["code"],
+        set_={"name": rec["name"], "iso_code": rec["iso_code"]},
+    )
+    session.execute(stmt)
 
 
 if __name__ == "__main__":

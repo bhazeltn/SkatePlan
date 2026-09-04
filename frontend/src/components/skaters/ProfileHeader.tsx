@@ -26,7 +26,7 @@ export function ProfileHeader({ skater }: { skater: SkaterDetail }) {
         )}
       </div>
       <Badge variant={skater.has_active_restriction ? "danger" : "success"}>
-        {skater.has_active_restriction ? "Restricted" : "Cleared"}
+        {skater.has_active_restriction ? "Restricted Load" : "Standard Load"}
       </Badge>
     </header>
   );

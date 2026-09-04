@@ -5,6 +5,7 @@ Mutations require coach/admin privileges. Changes to the ``restrictions`` free
 text are audited via the SafeSport ledger (see app.core.audit).
 """
 import uuid
+from datetime import date
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -17,7 +18,12 @@ from app.core.database import get_db
 from app.models.enums import SystemRole
 from app.models.injury import InjuryRecord
 from app.models.user import User
-from app.schemas.injury import InjuryCreate, InjuryOut, InjuryUpdate
+from app.schemas.injury import (
+    InjuryCreate,
+    InjuryOut,
+    InjuryUpdate,
+    RestrictionCreate,
+)
 
 router = APIRouter(prefix="/injuries", tags=["injuries"])
 skater_router = APIRouter(prefix="/skaters", tags=["injuries"])
@@ -83,3 +89,61 @@ def list_skater_injuries(
         stmt = stmt.where(InjuryRecord.status == status)
     stmt = stmt.order_by(InjuryRecord.created_at)
     return [InjuryOut.model_validate(r) for r in db.execute(stmt).scalars().all()]
+
+
+def _restriction_text(payload: RestrictionCreate) -> str | None:
+    """Combine excluded elements and coach notes into the audited free text."""
+    parts: list[str] = []
+    if payload.excluded_elements:
+        parts.append(f"Excluded: {payload.excluded_elements.strip()}")
+    if payload.notes:
+        parts.append(payload.notes.strip())
+    return " — ".join(parts) if parts else None
+
+
+@skater_router.post(
+    "/{skater_id}/restrictions",
+    response_model=InjuryOut,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_restriction(
+    skater_id: int,
+    payload: RestrictionCreate,
+    current_user: User = Depends(require_coach),
+    db: Session = Depends(get_db),
+) -> InjuryOut:
+    """Log an active load restriction; flips the skater to Restricted Load."""
+    authorize_skater_access(current_user, skater_id, db)
+    injury = InjuryRecord(
+        skater_id=skater_id,
+        title=payload.restriction_type,
+        onset_date=date.today(),
+        status="active",
+        restrictions=_restriction_text(payload),
+        clearance_date=payload.review_date,
+    )
+    with audit_actor(current_user.id):
+        db.add(injury)
+        db.commit()
+    db.refresh(injury)
+    return InjuryOut.model_validate(injury)
+
+
+@skater_router.delete(
+    "/{skater_id}/restrictions/{restriction_id}", response_model=InjuryOut
+)
+def resolve_restriction(
+    skater_id: int,
+    restriction_id: uuid.UUID,
+    current_user: User = Depends(require_coach),
+    db: Session = Depends(get_db),
+) -> InjuryOut:
+    """Resolve an active restriction; returns the skater to Standard Load."""
+    authorize_skater_access(current_user, skater_id, db)
+    injury = _get_injury(restriction_id, db)
+    injury.status = "resolved"
+    injury.clearance_date = injury.clearance_date or date.today()
+    with audit_actor(current_user.id):
+        db.commit()
+    db.refresh(injury)
+    return InjuryOut.model_validate(injury)

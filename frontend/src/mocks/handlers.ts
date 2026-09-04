@@ -66,6 +66,7 @@ export const mockSkaterDetail = {
   has_active_restriction: true,
   restrictions: [
     {
+      id: "r-ankle",
       title: "Ankle sprain",
       restrictions: "Triple jump restriction / No impact landing",
       status: "active",

@@ -6,6 +6,7 @@ import type {
   OrchestrateSkaterResponse,
   ProgramCreatePayload,
   RegisterCoachPayload,
+  RestrictionCreatePayload,
   Skater,
   SkaterDetail,
   SovElement,
@@ -106,4 +107,30 @@ export function listFederations(token?: string | null): Promise<Federation[]> {
 // Aggregated coach Action & Risk Hub: GET /api/dashboard.
 export function getDashboard(token?: string | null): Promise<DashboardSummary> {
   return request<DashboardSummary>("/api/dashboard", {}, token);
+}
+
+// Log an active load restriction: POST /api/skaters/{id}/restrictions.
+export function createRestriction(
+  skaterId: number | string,
+  payload: RestrictionCreatePayload,
+  token?: string | null
+): Promise<{ id: string }> {
+  return request<{ id: string }>(
+    `/api/skaters/${skaterId}/restrictions`,
+    { method: "POST", body: JSON.stringify(payload) },
+    token
+  );
+}
+
+// Resolve an active restriction: DELETE /api/skaters/{id}/restrictions/{rid}.
+export function resolveRestriction(
+  skaterId: number | string,
+  restrictionId: string,
+  token?: string | null
+): Promise<{ id: string }> {
+  return request<{ id: string }>(
+    `/api/skaters/${skaterId}/restrictions/${restrictionId}`,
+    { method: "DELETE" },
+    token
+  );
 }

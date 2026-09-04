@@ -73,9 +73,24 @@ export interface SkaterProgram {
 }
 
 export interface SkaterRestriction {
+  id?: string;
   title: string;
   restrictions?: string | null;
   status: string;
+}
+
+export const RESTRICTION_TYPES = [
+  "Jump Impact Limit",
+  "Edge/Spin Work Only",
+  "Total Rest",
+  "Custom Note",
+] as const;
+
+export interface RestrictionCreatePayload {
+  restriction_type: string;
+  excluded_elements?: string;
+  review_date?: string; // ISO yyyy-mm-dd expected return / review date
+  notes?: string;
 }
 
 export interface SkaterDetail {

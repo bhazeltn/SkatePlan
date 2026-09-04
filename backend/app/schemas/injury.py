@@ -23,6 +23,15 @@ class InjuryUpdate(BaseModel):
     clearance_date: Optional[date] = None
 
 
+class RestrictionCreate(BaseModel):
+    """Coach-logged load restriction from the Health & Load tab."""
+
+    restriction_type: str
+    excluded_elements: Optional[str] = None
+    review_date: Optional[date] = None
+    notes: Optional[str] = None
+
+
 class InjuryOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

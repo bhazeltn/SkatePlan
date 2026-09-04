@@ -20,12 +20,15 @@ def _hdr(token):
 
 
 def _federation(db) -> Federation:
+    # `name` is unique (see the dedup migration); reuse by name to avoid
+    # colliding with the seeded federation of the same name.
+    name = "Philippine Skating Union"
     existing = db.execute(
-        select(Federation).where(Federation.code == "PHI-T")
+        select(Federation).where(Federation.name == name)
     ).scalar_one_or_none()
     if existing is not None:
         return existing
-    fed = Federation(name="Philippine Skating Union", code="PHI-T", iso_code="ph")
+    fed = Federation(name=name, code="PHI-T", iso_code="ph")
     db.add(fed)
     db.flush()
     return fed
@@ -111,3 +114,54 @@ def test_skater_detail_404_for_unknown(client, make_user, db):
     make_user("unkc@ex.com", password="Coach123!", role=SystemRole.coach)
     token = _login(client, "unkc@ex.com", "Coach123!")
     assert client.get("/api/skaters/999999", headers=_hdr(token)).status_code == 404
+
+
+def test_create_restriction_flips_load_flag(client, make_user, db):
+    skater, _ = _roster(client, make_user, db, "crs@ex.com", "crc@ex.com")
+    token = _login(client, "crc@ex.com", "Coach123!")
+    assert (
+        client.get(f"/api/skaters/{skater.id}", headers=_hdr(token)).json()[
+            "has_active_restriction"
+        ]
+        is False
+    )
+    resp = client.post(
+        f"/api/skaters/{skater.id}/restrictions",
+        headers=_hdr(token),
+        json={
+            "restriction_type": "Jump Impact Limit",
+            "excluded_elements": "No 2A/Triples",
+            "review_date": "2026-02-01",
+            "notes": "Ease back over two weeks",
+        },
+    )
+    assert resp.status_code == 201, resp.text
+    detail = client.get(f"/api/skaters/{skater.id}", headers=_hdr(token)).json()
+    assert detail["has_active_restriction"] is True
+    assert len(detail["restrictions"]) == 1
+    r = detail["restrictions"][0]
+    assert r["title"] == "Jump Impact Limit"
+    assert "No 2A/Triples" in (r["restrictions"] or "")
+
+
+def test_resolve_restriction_clears_load_flag(client, make_user, db):
+    skater, _ = _roster(client, make_user, db, "rrs@ex.com", "rrc@ex.com")
+    token = _login(client, "rrc@ex.com", "Coach123!")
+    rid = client.post(
+        f"/api/skaters/{skater.id}/restrictions",
+        headers=_hdr(token),
+        json={"restriction_type": "Total Rest"},
+    ).json()["id"]
+    assert (
+        client.get(f"/api/skaters/{skater.id}", headers=_hdr(token)).json()[
+            "has_active_restriction"
+        ]
+        is True
+    )
+    resp = client.delete(
+        f"/api/skaters/{skater.id}/restrictions/{rid}", headers=_hdr(token)
+    )
+    assert resp.status_code == 200, resp.text
+    detail = client.get(f"/api/skaters/{skater.id}", headers=_hdr(token)).json()
+    assert detail["has_active_restriction"] is False
+    assert detail["restrictions"] == []

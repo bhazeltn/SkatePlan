@@ -35,12 +35,14 @@ export function SkaterCard({ skater }: { skater: Skater }) {
             {skater.home_club}
           </p>
         )}
-        <div className="flex items-baseline justify-between border-t border-slate-100 pt-2">
-          <span className="text-xs text-slate-500">Weekly ice</span>
-          <span className="tabular-nums font-mono text-sm font-semibold text-slate-900">
-            {skater.weekly_ice_minutes ?? 0} min
-          </span>
-        </div>
+        {skater.weekly_ice_minutes != null && (
+          <div className="flex items-baseline justify-between border-t border-slate-100 pt-2">
+            <span className="text-xs text-slate-500">Weekly ice</span>
+            <span className="tabular-nums font-mono text-sm font-semibold text-slate-900">
+              {skater.weekly_ice_minutes} min
+            </span>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

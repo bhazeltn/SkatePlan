@@ -46,3 +46,43 @@ export interface Skater {
   weekly_ice_minutes?: number;
   has_active_restriction?: boolean;
 }
+
+export interface DashboardAlert {
+  kind: "missing_plan" | "at_risk_goal" | string;
+  skater_id: number;
+  skater_name: string;
+  message: string;
+  severity: "warning" | "danger" | string;
+}
+
+export interface DashboardRestriction {
+  skater_id: number;
+  skater_name: string;
+  title: string;
+  restrictions?: string | null;
+  status: string;
+}
+
+export interface DashboardCompetition {
+  competition_id: string;
+  name: string;
+  start_date?: string | null;
+  entry_status: string;
+  skater_names: string[];
+}
+
+export interface DashboardRosterSkater {
+  skater_id: number;
+  first_name: string;
+  last_name: string;
+  home_club?: string | null;
+  level_name?: string | null;
+  has_active_restriction: boolean;
+}
+
+export interface DashboardSummary {
+  roster: DashboardRosterSkater[];
+  alerts: DashboardAlert[];
+  restrictions: DashboardRestriction[];
+  upcoming_competitions: DashboardCompetition[];
+}

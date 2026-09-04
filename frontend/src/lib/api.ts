@@ -1,4 +1,5 @@
 import type {
+  DashboardSummary,
   LoginResponse,
   OrchestrateSkaterPayload,
   OrchestrateSkaterResponse,
@@ -66,4 +67,9 @@ export function orchestrateSkater(
 
 export function listSkaters(token?: string | null): Promise<Skater[]> {
   return request<Skater[]>("/api/skaters", {}, token);
+}
+
+// Aggregated coach Action & Risk Hub: GET /api/dashboard.
+export function getDashboard(token?: string | null): Promise<DashboardSummary> {
+  return request<DashboardSummary>("/api/dashboard", {}, token);
 }

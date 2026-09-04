@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { DashboardPage } from "@/pages/DashboardPage";
 import { server } from "@/mocks/server";
+import { mockDashboard } from "@/mocks/handlers";
 import { renderWithProviders } from "@/test/utils";
 import { TOKEN_KEY } from "@/context/AuthContext";
 
@@ -12,33 +13,77 @@ function seedSession() {
   localStorage.setItem(TOKEN_KEY, `h.${payload}.s`);
 }
 
-const STAT_LABELS = [
-  "Active Skaters",
-  "Weekly Ice Volume",
-  "Upcoming Competitions",
-  "Active Load Restrictions",
-];
-
-describe("Coach dashboard", () => {
-  it("renders macro stat cards with tabular-nums numbers", async () => {
+describe("Coach dashboard — Action & Risk Hub", () => {
+  it("surfaces attention items for missing plans and at-risk goals", async () => {
     seedSession();
     renderWithProviders(<DashboardPage />);
-    for (const label of STAT_LABELS) {
-      expect(await screen.findByText(label)).toBeInTheDocument();
-    }
-    const numbers = screen.getAllByTestId("stat-value");
-    expect(numbers.length).toBeGreaterThanOrEqual(4);
-    for (const n of numbers) {
-      expect(n.className).toMatch(/tabular-nums|font-mono/);
-    }
+    const region = await screen.findByRole("region", {
+      name: /attention (required|needed)|action required/i,
+    });
+    expect(within(region).getByText(/missing.*layout/i)).toBeInTheDocument();
+    expect(
+      within(region).getByText(/behind schedule|at risk/i)
+    ).toBeInTheDocument();
   });
 
-  it("shows an active injury alert banner when restrictions exist", async () => {
+  it("lists active load restrictions as itemized cards, not a count", async () => {
     seedSession();
     renderWithProviders(<DashboardPage />);
-    const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent(/restriction/i);
-    expect(alert.className).toMatch(/rose/);
+    const region = await screen.findByRole("region", {
+      name: /active load restrictions/i,
+    });
+    expect(within(region).getByText(/Ava/)).toBeInTheDocument();
+    expect(
+      within(region).getByText(/triple jump restriction/i)
+    ).toBeInTheDocument();
+    // Status badge renders the raw status text "active" (exact, case-sensitive)
+    // — distinct from the "Active Load Restrictions" heading.
+    expect(within(region).getByText("active")).toBeInTheDocument();
+  });
+
+  it("shows a neutral empty state when no restrictions exist", async () => {
+    seedSession();
+    server.use(
+      http.get("*/api/dashboard", () =>
+        HttpResponse.json({ ...mockDashboard, restrictions: [] })
+      )
+    );
+    renderWithProviders(<DashboardPage />);
+    const region = await screen.findByRole("region", {
+      name: /active load restrictions/i,
+    });
+    expect(
+      within(region).getByText(/all skaters cleared for standard load/i)
+    ).toBeInTheDocument();
+  });
+
+  it("lists upcoming competitions sorted by date ascending", async () => {
+    seedSession();
+    renderWithProviders(<DashboardPage />);
+    const region = await screen.findByRole("region", {
+      name: /upcoming competitions/i,
+    });
+    const items = within(region).getAllByTestId("competition-item");
+    expect(items).toHaveLength(2);
+    // MSW returns Winter Open (Dec) before Autumn Classic (Oct); UI must sort.
+    expect(items[0]).toHaveTextContent(/autumn classic/i);
+    expect(items[1]).toHaveTextContent(/winter open/i);
+  });
+
+  it("shows a clean empty state when there are no upcoming competitions", async () => {
+    seedSession();
+    server.use(
+      http.get("*/api/dashboard", () =>
+        HttpResponse.json({ ...mockDashboard, upcoming_competitions: [] })
+      )
+    );
+    renderWithProviders(<DashboardPage />);
+    const region = await screen.findByRole("region", {
+      name: /upcoming competitions/i,
+    });
+    expect(
+      within(region).getByText(/no upcoming competitions/i)
+    ).toBeInTheDocument();
   });
 
   it("renders skater cards for the roster", async () => {
@@ -47,6 +92,16 @@ describe("Coach dashboard", () => {
     const cards = await screen.findAllByTestId("skater-card");
     expect(cards.length).toBeGreaterThanOrEqual(1);
     expect(within(cards[0]).getByText(/Ava/)).toBeInTheDocument();
+  });
+
+  it("does not render generic vanity counter cards", async () => {
+    seedSession();
+    renderWithProviders(<DashboardPage />);
+    // Wait for the hub to render before asserting absence.
+    await screen.findByRole("region", { name: /active load restrictions/i });
+    expect(screen.queryByText(/weekly ice volume/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^active skaters$/i)).not.toBeInTheDocument();
+    expect(screen.queryByTestId("stat-value")).not.toBeInTheDocument();
   });
 });
 

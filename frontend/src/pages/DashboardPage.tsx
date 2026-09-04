@@ -1,65 +1,68 @@
-import { useEffect, useMemo, useState } from "react";
-import type { Skater } from "@/lib/types";
-import { listSkaters } from "@/lib/api";
+import { useCallback, useEffect, useState } from "react";
+import type { DashboardSummary } from "@/lib/types";
+import { getDashboard } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { AddSkaterModal } from "@/components/skaters/AddSkaterModal";
-import {
-  StatsGrid,
-  RestrictionAlert,
-  RosterSection,
-} from "@/components/dashboard/DashboardSections";
+import { AttentionPanel } from "@/components/dashboard/AttentionPanel";
+import { RestrictionsPanel } from "@/components/dashboard/RestrictionsPanel";
+import { UpcomingCompetitions } from "@/components/dashboard/UpcomingCompetitions";
+import { RosterSection } from "@/components/dashboard/DashboardSections";
 
-function useRoster(token: string | null, reloadKey: number) {
-  const [skaters, setSkaters] = useState<Skater[]>([]);
+const EMPTY: DashboardSummary = {
+  roster: [],
+  alerts: [],
+  restrictions: [],
+  upcoming_competitions: [],
+};
+
+function useDashboard(token: string | null, reloadKey: number) {
+  const [data, setData] = useState<DashboardSummary>(EMPTY);
   useEffect(() => {
     let active = true;
-    listSkaters(token)
-      .then((data) => active && setSkaters(data))
-      .catch(() => active && setSkaters([]));
+    getDashboard(token)
+      .then((d) => active && setData(d))
+      .catch(() => active && setData(EMPTY));
     return () => {
       active = false;
     };
   }, [token, reloadKey]);
-  return skaters;
-}
-
-function useDashboardStats(skaters: Skater[]) {
-  return useMemo(() => {
-    const restricted = skaters.filter((s) => s.has_active_restriction);
-    const iceMinutes = skaters.reduce((sum, s) => sum + (s.weekly_ice_minutes ?? 0), 0);
-    return {
-      active: skaters.length,
-      iceHours: (iceMinutes / 60).toFixed(1),
-      restricted: restricted.length,
-    };
-  }, [skaters]);
+  return data;
 }
 
 export function DashboardPage() {
   const { token, role } = useAuth();
   const [reloadKey, setReloadKey] = useState(0);
   const [addOpen, setAddOpen] = useState(false);
-  const skaters = useRoster(token, reloadKey);
-  const stats = useDashboardStats(skaters);
+  const data = useDashboard(token, reloadKey);
   const canManage = role === "coach" || role === "admin";
+  const onCreated = useCallback(() => setReloadKey((k) => k + 1), []);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
-        {canManage && (
-          <Button onClick={() => setAddOpen(true)}>+ Add Skater</Button>
-        )}
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
+          <p className="text-sm text-slate-500">
+            Action &amp; Risk Hub — where your skaters need you today.
+          </p>
+        </div>
+        {canManage && <Button onClick={() => setAddOpen(true)}>+ Add Skater</Button>}
       </div>
-      <StatsGrid active={stats.active} iceHours={stats.iceHours} restricted={stats.restricted} />
-      {stats.restricted > 0 && <RestrictionAlert count={stats.restricted} />}
-      <RosterSection skaters={skaters} />
+
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+        <AttentionPanel alerts={data.alerts} />
+        <RestrictionsPanel restrictions={data.restrictions} />
+      </div>
+
+      <UpcomingCompetitions competitions={data.upcoming_competitions} />
+      <RosterSection skaters={data.roster} />
+
       {canManage && (
         <AddSkaterModal
           open={addOpen}
           onClose={() => setAddOpen(false)}
-          onCreated={() => setReloadKey((k) => k + 1)}
+          onCreated={onCreated}
         />
       )}
     </div>

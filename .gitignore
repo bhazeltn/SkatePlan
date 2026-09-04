@@ -1,21 +1,80 @@
-# Python
-.venv/
-venv/
-__pycache__/
-*.pyc
-*.pyo
-*.egg-info/
-.pytest_cache/
-
-# Env
+# ==========================================
+# Environment & Secrets
+# ==========================================
 .env
+.env.*
+!.env.example
 *.env
 
-# Node
+# ==========================================
+# AI Assistant & Context Files
+# ==========================================
+.cursor/
+.cursorrules
+.copilot/
+.continue/
+.windsurf/
+.aider*
+*.prompt
+*.prompts
+prompt_history/
+ai_notes/
+*.ai.md
+*llm*context*
+
+# ==========================================
+# Python & FastAPI Backend
+# ==========================================
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# ==========================================
+# Vite + React + Node Frontend
+# ==========================================
 node_modules/
 dist/
 build/
+.cache/
+*.tsbuildinfo
 
-# Misc
+# Package manager logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ==========================================
+# Databases & Local State
+# ==========================================
+*.sqlite3
+*.db
+*.sql.gz
+
+# VM & Platform specifics
+.abacus.donotdelete
+
+# ==========================================
+# OS & Editor Files
+# ==========================================
 .DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+!.vscode/settings.json
+!.vscode/extensions.json
 *.log

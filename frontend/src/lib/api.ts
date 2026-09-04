@@ -1,8 +1,11 @@
 import type {
+  BenchmarkTemplate,
   DashboardSummary,
   Federation,
+  GapAssessmentPayload,
   GapReport,
   LoginResponse,
+  SavedGapAssessment,
   OrchestrateSkaterPayload,
   OrchestrateSkaterResponse,
   ProgramCreatePayload,
@@ -99,6 +102,26 @@ export function getGapAnalysis(
   token?: string | null
 ): Promise<GapReport> {
   return request<GapReport>(`/api/skaters/${skaterId}/gap-analysis`, {}, token);
+}
+
+// Federation-neutral benchmark templates: GET /api/standards/templates.
+export function listBenchmarkTemplates(
+  token?: string | null
+): Promise<BenchmarkTemplate[]> {
+  return request<BenchmarkTemplate[]>("/api/standards/templates", {}, token);
+}
+
+// Persist an interactive benchmark assessment: POST /api/skaters/{id}/gap-analysis.
+export function saveGapAssessment(
+  skaterId: number | string,
+  payload: GapAssessmentPayload,
+  token?: string | null
+): Promise<{ latest_assessment: SavedGapAssessment }> {
+  return request<{ latest_assessment: SavedGapAssessment }>(
+    `/api/skaters/${skaterId}/gap-analysis`,
+    { method: "POST", body: JSON.stringify(payload) },
+    token
+  );
 }
 
 // Persist a new program layout: POST /api/programs.

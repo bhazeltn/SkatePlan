@@ -118,10 +118,44 @@ export interface GapEntry {
   delta?: number | null;
 }
 
+export interface BenchmarkTemplate {
+  key: string;
+  level: string;
+  label: string;
+  pillar_targets: Record<string, string>;
+}
+
+export interface GapDeltaFlag {
+  pillar: string;
+  score: string;
+  target: string;
+  met: boolean;
+}
+
+export interface SavedGapAssessment {
+  id: string;
+  skater_id: number;
+  benchmark_framework: string;
+  evaluation_date?: string | null;
+  pillar_scores: Record<string, string>;
+  coach_notes?: string | null;
+  delta_flags: GapDeltaFlag[];
+  gaps_identified: number;
+  benchmarks_met: number;
+}
+
+export interface GapAssessmentPayload {
+  benchmark_framework: string;
+  evaluation_date?: string | null;
+  pillar_scores: Record<string, string>;
+  coach_notes?: string | null;
+}
+
 export interface GapReport {
   skater_id: number;
   target_standard_id: number;
   pillars: Record<string, GapEntry[]>;
+  latest_assessment?: SavedGapAssessment | null;
 }
 
 export interface ProgramElementPayload {

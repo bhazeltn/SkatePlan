@@ -84,3 +84,44 @@ class GapReportOut(BaseModel):
     skater_id: int
     target_standard_id: str
     pillars: dict[str, list[GapEntryOut]]
+
+
+# --- Sprint 4: interactive benchmark assessment ---------------------------
+class BenchmarkTemplateOut(BaseModel):
+    key: str
+    level: str
+    label: str
+    pillar_targets: dict[str, str]
+
+
+class GapAssessmentIn(BaseModel):
+    benchmark_framework: str
+    evaluation_date: Optional[str] = None
+    pillar_scores: dict[str, str]
+    coach_notes: Optional[str] = None
+
+
+class GapDeltaFlag(BaseModel):
+    pillar: str
+    score: str
+    target: str
+    met: bool
+
+
+class SavedGapAssessmentOut(BaseModel):
+    id: str
+    skater_id: int
+    benchmark_framework: str
+    evaluation_date: Optional[str] = None
+    pillar_scores: dict[str, str]
+    coach_notes: Optional[str] = None
+    delta_flags: list[GapDeltaFlag]
+    gaps_identified: int
+    benchmarks_met: int
+
+
+class GapAnalysisOut(BaseModel):
+    skater_id: int
+    target_standard_id: Optional[str] = None
+    pillars: dict[str, list[GapEntryOut]] = {}
+    latest_assessment: Optional[SavedGapAssessmentOut] = None

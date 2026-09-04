@@ -4,6 +4,7 @@ SafeSport gating: every skater-scoped route calls ``authorize_skater_access``.
 The gap analysis is fully deterministic (see app.services.gap_service).
 """
 import uuid
+from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
@@ -14,6 +15,7 @@ from app.core.database import get_db
 from app.models.enums import SystemRole
 from app.models.standard import (
     DevelopmentStandard,
+    GapAssessment,
     SkaterBenchmarkAssessment,
     StandardBenchmark,
 )
@@ -21,11 +23,14 @@ from app.models.user import SkaterProfile, User
 from app.schemas.standard import (
     AssessmentIn,
     AssessmentOut,
-    GapReportOut,
+    BenchmarkTemplateOut,
+    GapAnalysisOut,
+    GapAssessmentIn,
     StandardCreate,
     StandardOut,
     TargetStandardIn,
 )
+from app.services.benchmark_templates import list_templates, serialize_assessment
 from app.services.gap_service import build_gap_report, measured_metrics
 
 router = APIRouter(prefix="/standards", tags=["standards"])
@@ -66,6 +71,14 @@ def create_standard(
     db.commit()
     db.refresh(standard)
     return StandardOut.model_validate(standard)
+
+
+@router.get("/templates", response_model=list[BenchmarkTemplateOut])
+def benchmark_templates(
+    current_user: User = Depends(get_current_user),
+) -> list[BenchmarkTemplateOut]:
+    """Federation-neutral competitive exit-standard templates."""
+    return [BenchmarkTemplateOut.model_validate(t) for t in list_templates()]
 
 
 @skater_router.put("/{skater_id}/target-standard", response_model=dict)
@@ -129,23 +142,76 @@ def _latest_assessments(skater_id: int, benchmark_ids, db: Session) -> dict:
     return latest
 
 
-@skater_router.get("/{skater_id}/gap-analysis", response_model=GapReportOut)
+def _latest_gap_assessment(skater_id: int, db: Session) -> GapAssessment | None:
+    """Return the newest saved interactive assessment for a skater, if any."""
+    stmt = (
+        select(GapAssessment)
+        .where(GapAssessment.skater_id == skater_id)
+        .order_by(GapAssessment.created_at.desc())
+        .limit(1)
+    )
+    return db.execute(stmt).scalars().first()
+
+
+def _pillar_report(skater_id: int, db: Session) -> dict:
+    """Build the target-standard pillar report (empty when no target set)."""
+    profile = db.get(SkaterProfile, skater_id)
+    if profile is None or profile.target_standard_id is None:
+        return {}
+    standard = db.get(DevelopmentStandard, profile.target_standard_id)
+    if standard is None:
+        return {}
+    benchmark_ids = [b.id for b in standard.benchmarks]
+    assessments = _latest_assessments(skater_id, benchmark_ids, db)
+    metrics = measured_metrics(skater_id, db)
+    return build_gap_report(skater_id, standard, assessments, metrics)
+
+
+@skater_router.post(
+    "/{skater_id}/gap-analysis",
+    response_model=GapAnalysisOut,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_gap_analysis(
+    skater_id: int,
+    payload: GapAssessmentIn,
+    current_user: User = Depends(require_coach),
+    db: Session = Depends(get_db),
+) -> GapAnalysisOut:
+    authorize_skater_access(current_user, skater_id, db)
+    row = GapAssessment(
+        skater_id=skater_id,
+        benchmark_framework=payload.benchmark_framework,
+        pillar_scores=payload.pillar_scores,
+        coach_notes=payload.coach_notes,
+        evaluation_date=date.fromisoformat(payload.evaluation_date)
+        if payload.evaluation_date
+        else None,
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return GapAnalysisOut(
+        skater_id=skater_id, latest_assessment=serialize_assessment(row)
+    )
+
+
+@skater_router.get("/{skater_id}/gap-analysis", response_model=GapAnalysisOut)
 def gap_analysis(
     skater_id: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> GapReportOut:
+) -> GapAnalysisOut:
     authorize_skater_access(current_user, skater_id, db)
-    profile = db.get(SkaterProfile, skater_id)
-    if profile is None or profile.target_standard_id is None:
+    report = _pillar_report(skater_id, db)
+    latest = _latest_gap_assessment(skater_id, db)
+    if not report and latest is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="No target standard set"
         )
-    standard = db.get(DevelopmentStandard, profile.target_standard_id)
-    if standard is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Standard not found")
-    benchmark_ids = [b.id for b in standard.benchmarks]
-    assessments = _latest_assessments(skater_id, benchmark_ids, db)
-    metrics = measured_metrics(skater_id, db)
-    report = build_gap_report(skater_id, standard, assessments, metrics)
-    return GapReportOut.model_validate(report)
+    return GapAnalysisOut(
+        skater_id=skater_id,
+        target_standard_id=report.get("target_standard_id"),
+        pillars=report.get("pillars", {}),
+        latest_assessment=serialize_assessment(latest) if latest else None,
+    )

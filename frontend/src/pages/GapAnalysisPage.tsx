@@ -1,55 +1,72 @@
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import type { Skater } from "@/lib/types";
-import { listSkaters } from "@/lib/api";
-import { useAuth } from "@/context/AuthContext";
+import { useSearchParams } from "react-router-dom";
+import { GapAssessmentForm } from "@/components/gap/GapAssessmentForm";
+import { GapSummaryCard } from "@/components/gap/GapSummaryCard";
+import { useGapAssessment } from "@/components/gap/useGapAssessment";
 
-/** Entry point for LTD Exit Standard gap analysis: pick a skater to open their
- *  Gap Analysis tab on the profile hub. */
+/** Interactive coaching assessment: score a skater's four development pillars
+ *  against a federation-neutral competitive exit standard and surface the
+ *  biggest gaps as prioritized focus areas. Supports a ?skater= deep link from
+ *  the profile Gap Analysis tab. */
 export function GapAnalysisPage() {
-  const { token } = useAuth();
-  const [skaters, setSkaters] = useState<Skater[]>([]);
-
-  useEffect(() => {
-    let active = true;
-    listSkaters(token)
-      .then((rows) => active && setSkaters(rows))
-      .catch(() => active && setSkaters([]));
-    return () => {
-      active = false;
-    };
-  }, [token]);
+  const [params] = useSearchParams();
+  const gap = useGapAssessment(params.get("skater") ?? undefined);
 
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Gap Analysis</h1>
+        <h1 className="text-2xl font-bold text-slate-900">
+          Competitive Development &amp; Benchmark Assessment
+        </h1>
         <p className="text-sm text-slate-500">
-          Select a skater to review their LTD Exit Standard assessment.
+          Score each development pillar against a competitive exit standard to
+          reveal the highest-priority focus areas.
         </p>
       </div>
-      {skaters.length === 0 ? (
-        <p className="text-sm text-slate-400">No skaters on your roster yet.</p>
-      ) : (
-        <ul className="divide-y divide-slate-200 rounded-md border border-slate-200 bg-white">
-          {skaters.map((skater) => (
-            <li key={skater.skater_id}>
-              <Link
-                to={`/skaters/${skater.skater_id}`}
-                className="flex items-center justify-between gap-3 px-4 py-3
-                  text-sm hover:bg-slate-50"
-              >
-                <span className="font-medium text-slate-900">
-                  {skater.first_name} {skater.last_name}
-                </span>
-                <span className="text-xs text-slate-500">
-                  {skater.competitive_level ?? skater.level_name ?? "—"}
-                </span>
-              </Link>
-            </li>
+
+      <div>
+        <label
+          htmlFor="skater-select"
+          className="block text-sm font-medium text-slate-700"
+        >
+          Skater
+        </label>
+        <select
+          id="skater-select"
+          value={gap.skaterId}
+          onChange={(e) => gap.setSkaterId(e.target.value)}
+          className="mt-1 w-full max-w-sm rounded-md border border-slate-300
+            bg-white px-3 py-2 text-sm text-slate-900 focus:border-slate-500
+            focus:outline-none"
+        >
+          <option value="">Select a skater…</option>
+          {gap.skaters.map((s) => (
+            <option key={s.skater_id} value={String(s.skater_id)}>
+              {s.first_name} {s.last_name}
+            </option>
           ))}
-        </ul>
-      )}
+        </select>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <GapAssessmentForm
+          templates={gap.templates}
+          framework={gap.framework}
+          scores={gap.scores}
+          notes={gap.notes}
+          onFramework={gap.setFramework}
+          onScore={gap.setScore}
+          onNotes={gap.setNotes}
+          onSubmit={gap.submit}
+          disabled={gap.saving || !gap.skaterId || !gap.framework}
+        />
+        {gap.result ? (
+          <GapSummaryCard assessment={gap.result} />
+        ) : (
+          <p className="text-sm text-slate-400">
+            Save an assessment to see gap status and priority focus areas.
+          </p>
+        )}
+      </div>
     </div>
   );
 }

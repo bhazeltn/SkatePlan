@@ -92,3 +92,72 @@ def test_gap_analysis_grouped_by_pillar(client, make_user, db):
 
     assert pillars["physical"][0]["status"] == "not_started"
     assert pillars["mental"][0]["status"] == "not_started"
+
+
+# --- Sprint 4: interactive benchmark assessment (GapAssessment) -------------
+# New feature pillars: technical, skating_skills, physical, performance.
+# Score levels ordinal: Not Introduced < Acquiring < Meeting Standard < Exceeding.
+# Competitive exit target = "Meeting Standard"; scores below it are unmet gaps.
+
+def _assessment_payload():
+    return {
+        "benchmark_framework": "Junior Level Exit Standard - International Track",
+        "evaluation_date": "2026-02-01",
+        "pillar_scores": {
+            "technical": "Acquiring",
+            "skating_skills": "Meeting Standard",
+            "physical": "Not Introduced",
+            "performance": "Exceeding",
+        },
+        "coach_notes": "Focus on jump consistency and off-ice strength.",
+    }
+
+
+def test_standards_templates_returns_competitive_levels(client, make_user):
+    make_user("tmpladmin@ex.com", role=SystemRole.admin)
+    token = _login(client, "tmpladmin@ex.com")
+    resp = client.get("/api/standards/templates", headers=_hdr(token))
+    assert resp.status_code == 200, resp.text
+    templates = resp.json()
+    levels = {t["level"] for t in templates}
+    assert {"Novice", "Junior", "Senior"} <= levels
+    junior = next(t for t in templates if t["level"] == "Junior")
+    # Federation-neutral labelling: no specific federation acronym leaks through.
+    assert "ISU" not in junior["label"] and "U.S." not in junior["label"]
+    assert set(junior["pillar_targets"].keys()) == {
+        "technical", "skating_skills", "physical", "performance"}
+
+
+def test_post_gap_analysis_persists_assessment(client, make_user):
+    skater = make_user("gapsk4@ex.com", role=SystemRole.athlete)
+    make_user("gapco4@ex.com", role=SystemRole.admin)
+    token = _login(client, "gapco4@ex.com")
+    resp = client.post(f"/api/skaters/{skater.id}/gap-analysis",
+                       headers=_hdr(token), json=_assessment_payload())
+    assert resp.status_code in (200, 201), resp.text
+    body = resp.json()
+    saved = body.get("latest_assessment") or body
+    assert saved["benchmark_framework"] == (
+        "Junior Level Exit Standard - International Track")
+    assert saved["pillar_scores"]["technical"] == "Acquiring"
+    assert saved["coach_notes"].startswith("Focus on jump")
+
+
+def test_get_gap_analysis_returns_latest_with_delta_flags(client, make_user):
+    skater = make_user("gapsk5@ex.com", role=SystemRole.athlete)
+    make_user("gapco5@ex.com", role=SystemRole.admin)
+    token = _login(client, "gapco5@ex.com")
+    client.post(f"/api/skaters/{skater.id}/gap-analysis",
+                headers=_hdr(token), json=_assessment_payload())
+
+    resp = client.get(f"/api/skaters/{skater.id}/gap-analysis", headers=_hdr(token))
+    assert resp.status_code == 200, resp.text
+    latest = resp.json()["latest_assessment"]
+    assert latest is not None
+    flags = {f["pillar"]: f for f in latest["delta_flags"]}
+    assert flags["technical"]["met"] is False
+    assert flags["physical"]["met"] is False
+    assert flags["skating_skills"]["met"] is True
+    assert flags["performance"]["met"] is True
+    assert latest["gaps_identified"] == 2
+    assert latest["benchmarks_met"] == 2

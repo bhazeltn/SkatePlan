@@ -6,9 +6,19 @@ Assessment status stored values: 'not_started','developing','acquired','mastered
 The deterministic gap service maps these to report statuses (see gap_service).
 """
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import DateTime, ForeignKey, Numeric, String, Text, Uuid, func
+from sqlalchemy import (
+    JSON,
+    Date,
+    DateTime,
+    ForeignKey,
+    Numeric,
+    String,
+    Text,
+    Uuid,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -77,5 +87,30 @@ class SkaterBenchmarkAssessment(Base):
     score: Mapped[float | None] = mapped_column(Numeric(6, 2))
     assessment_notes: Mapped[str | None] = mapped_column(Text)
     assessed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class GapAssessment(Base):
+    """A coach's interactive benchmark assessment snapshot for a skater.
+
+    Sprint 4 pillars: 'technical','skating_skills','physical','performance'.
+    ``pillar_scores`` maps each pillar to an ordinal level label
+    ('Not Introduced'/'Acquiring'/'Meeting Standard'/'Exceeding').
+    """
+
+    __tablename__ = "gap_assessments"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    skater_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    benchmark_framework: Mapped[str] = mapped_column(String(150), nullable=False)
+    pillar_scores: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    coach_notes: Mapped[str | None] = mapped_column(Text)
+    evaluation_date: Mapped[date | None] = mapped_column(Date)
+    created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

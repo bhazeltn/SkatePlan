@@ -103,7 +103,74 @@ export const mockGapReport = {
     physical: [],
     mental: [],
   },
+  latest_assessment: null,
 };
+
+// Federation-neutral benchmark templates served by GET /api/standards/templates.
+export const mockTemplates = [
+  {
+    key: "novice",
+    level: "Novice",
+    label: "Novice Level Exit Standard - Development Track",
+    pillar_targets: {
+      technical: "Meeting Standard",
+      skating_skills: "Meeting Standard",
+      physical: "Meeting Standard",
+      performance: "Meeting Standard",
+    },
+  },
+  {
+    key: "junior",
+    level: "Junior",
+    label: "Junior Level Exit Standard - International Track",
+    pillar_targets: {
+      technical: "Meeting Standard",
+      skating_skills: "Meeting Standard",
+      physical: "Meeting Standard",
+      performance: "Meeting Standard",
+    },
+  },
+  {
+    key: "senior",
+    level: "Senior",
+    label: "Senior Level Exit Standard - Elite Track",
+    pillar_targets: {
+      technical: "Meeting Standard",
+      skating_skills: "Meeting Standard",
+      physical: "Meeting Standard",
+      performance: "Meeting Standard",
+    },
+  },
+];
+
+const SCORE_RANK: Record<string, number> = {
+  "Not Introduced": 0,
+  Acquiring: 1,
+  "Meeting Standard": 2,
+  Exceeding: 3,
+};
+
+// Deterministic delta-flag computation mirroring the backend contract.
+function buildAssessment(id: number, body: Record<string, unknown>) {
+  const scores = (body.pillar_scores ?? {}) as Record<string, string>;
+  const flags = Object.keys(scores).map((pillar) => ({
+    pillar,
+    score: scores[pillar],
+    target: "Meeting Standard",
+    met: (SCORE_RANK[scores[pillar]] ?? 0) >= 2,
+  }));
+  return {
+    id: "saved-1",
+    skater_id: id,
+    benchmark_framework: body.benchmark_framework,
+    evaluation_date: body.evaluation_date,
+    pillar_scores: scores,
+    coach_notes: body.coach_notes ?? "",
+    delta_flags: flags,
+    gaps_identified: flags.filter((f) => !f.met).length,
+    benchmarks_met: flags.filter((f) => f.met).length,
+  };
+}
 
 // Full skater profile served by GET /api/skaters/:id.
 export const mockSkaterDetail = {
@@ -255,6 +322,17 @@ export const handlers = [
       ? mockSovElements.filter((e) => !isFlaggedCode(e.element_code))
       : mockSovElements;
     return HttpResponse.json(rows);
+  }),
+  http.get("*/api/standards/templates", () =>
+    HttpResponse.json(mockTemplates)
+  ),
+  http.post("*/api/skaters/:id/gap-analysis", async ({ request, params }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    const id = Number(params.id);
+    return HttpResponse.json(
+      { latest_assessment: buildAssessment(id, body) },
+      { status: 201 }
+    );
   }),
   http.get("*/api/skaters/:id/gap-analysis", () =>
     HttpResponse.json(mockGapReport)

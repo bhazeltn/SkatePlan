@@ -11,6 +11,7 @@ from app.models.user import User
 
 # Tables cleaned between tests (children first for FK order).
 _CLEAN_TABLES = [
+    "gap_assessments",
     "skater_benchmark_assessments",
     "standard_benchmarks",
     "development_standards",

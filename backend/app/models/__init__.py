@@ -14,6 +14,7 @@ from app.models.meeting import CoachMeeting
 from app.models.program import Program, ProgramElement
 from app.models.standard import (
     DevelopmentStandard,
+    GapAssessment,
     SkaterBenchmarkAssessment,
     StandardBenchmark,
 )
@@ -51,4 +52,5 @@ __all__ = [
     "DevelopmentStandard",
     "StandardBenchmark",
     "SkaterBenchmarkAssessment",
+    "GapAssessment",
 ]

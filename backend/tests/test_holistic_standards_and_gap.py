@@ -161,3 +161,102 @@ def test_get_gap_analysis_returns_latest_with_delta_flags(client, make_user):
     assert flags["performance"]["met"] is True
     assert latest["gaps_identified"] == 2
     assert latest["benchmarks_met"] == 2
+
+
+
+# --- Sprint 6: fully coach-driven custom benchmarks (SkaterBenchmark) -------
+# Canonical status enum values: NOT_STARTED, DEVELOPING, SOLIDIFYING, MET.
+
+def _benchmark_payload(**overrides):
+    payload = {
+        "category": "Jumps",
+        "name": "3+3 Combination",
+        "status": "DEVELOPING",
+        "notes": "Building consistency",
+        "target_date": "2026-06-01",
+    }
+    payload.update(overrides)
+    return payload
+
+
+def _coach_and_skater(client, make_user, suffix):
+    skater = make_user(f"cbsk{suffix}@ex.com", role=SystemRole.athlete)
+    make_user(f"cbco{suffix}@ex.com", role=SystemRole.admin)
+    token = _login(client, f"cbco{suffix}@ex.com")
+    return skater, token
+
+
+def _flatten(listed):
+    if isinstance(listed, dict):
+        return [item for group in listed.values() for item in group]
+    return listed
+
+
+def test_create_custom_benchmark_returns_record_with_id(client, make_user):
+    skater, token = _coach_and_skater(client, make_user, "1")
+    resp = client.post(
+        f"/api/skaters/{skater.id}/benchmarks",
+        headers=_hdr(token), json=_benchmark_payload())
+    assert resp.status_code in (200, 201), resp.text
+    body = resp.json()
+    assert body["id"]
+    assert body["category"] == "Jumps"
+    assert body["name"] == "3+3 Combination"
+    assert body["status"] == "DEVELOPING"
+    assert body["notes"] == "Building consistency"
+    assert body["target_date"] == "2026-06-01"
+
+
+def test_list_custom_benchmarks_supports_grouping_by_category(client, make_user):
+    skater, token = _coach_and_skater(client, make_user, "2")
+    client.post(f"/api/skaters/{skater.id}/benchmarks", headers=_hdr(token),
+                json=_benchmark_payload(category="Jumps", name="2A"))
+    client.post(f"/api/skaters/{skater.id}/benchmarks", headers=_hdr(token),
+                json=_benchmark_payload(category="Spins", name="CCoSp4", status="MET"))
+    resp = client.get(f"/api/skaters/{skater.id}/benchmarks", headers=_hdr(token))
+    assert resp.status_code == 200, resp.text
+    flat = _flatten(resp.json())
+    cats = {i["category"] for i in flat}
+    assert {"Jumps", "Spins"} <= cats
+    assert len(flat) == 2
+    assert all("category" in i for i in flat)
+
+
+def test_update_custom_benchmark_persists_status_change(client, make_user):
+    skater, token = _coach_and_skater(client, make_user, "3")
+    created = client.post(
+        f"/api/skaters/{skater.id}/benchmarks", headers=_hdr(token),
+        json=_benchmark_payload(status="NOT_STARTED")).json()
+    bid = created["id"]
+    upd = client.patch(
+        f"/api/skaters/{skater.id}/benchmarks/{bid}",
+        headers=_hdr(token), json={"status": "MET", "notes": "Landed clean"})
+    assert upd.status_code in (200, 201), upd.text
+    assert upd.json()["status"] == "MET"
+    listed = _flatten(
+        client.get(f"/api/skaters/{skater.id}/benchmarks", headers=_hdr(token)).json())
+    match = next(i for i in listed if i["id"] == bid)
+    assert match["status"] == "MET"
+    assert match["notes"] == "Landed clean"
+
+
+def test_delete_custom_benchmark_removes_item(client, make_user):
+    skater, token = _coach_and_skater(client, make_user, "4")
+    created = client.post(
+        f"/api/skaters/{skater.id}/benchmarks", headers=_hdr(token),
+        json=_benchmark_payload()).json()
+    bid = created["id"]
+    d = client.delete(
+        f"/api/skaters/{skater.id}/benchmarks/{bid}", headers=_hdr(token))
+    assert d.status_code in (200, 204), d.text
+    listed = _flatten(
+        client.get(f"/api/skaters/{skater.id}/benchmarks", headers=_hdr(token)).json())
+    assert all(i["id"] != bid for i in listed)
+
+
+def test_custom_benchmark_rejects_invalid_status(client, make_user):
+    skater, token = _coach_and_skater(client, make_user, "5")
+    resp = client.post(
+        f"/api/skaters/{skater.id}/benchmarks", headers=_hdr(token),
+        json=_benchmark_payload(status="BOGUS"))
+    assert resp.status_code == 422, resp.text

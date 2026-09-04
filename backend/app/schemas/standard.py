@@ -5,9 +5,13 @@ Numeric fields are declared as ``float`` so JSON responses emit numbers (not
 strings), matching the deterministic gap-analysis test contract.
 """
 import uuid
-from typing import Optional
+from datetime import date
+from typing import Literal, Optional
 
 from pydantic import BaseModel, ConfigDict
+
+# Canonical custom-benchmark status enum (Sprint 6).
+BenchmarkStatus = Literal["NOT_STARTED", "DEVELOPING", "SOLIDIFYING", "MET"]
 
 
 class BenchmarkIn(BaseModel):
@@ -125,3 +129,32 @@ class GapAnalysisOut(BaseModel):
     target_standard_id: Optional[str] = None
     pillars: dict[str, list[GapEntryOut]] = {}
     latest_assessment: Optional[SavedGapAssessmentOut] = None
+
+
+# --- Sprint 6: fully coach-driven custom benchmarks -----------------------
+class SkaterBenchmarkIn(BaseModel):
+    category: str
+    name: str
+    status: BenchmarkStatus = "NOT_STARTED"
+    notes: Optional[str] = None
+    target_date: Optional[date] = None
+
+
+class SkaterBenchmarkUpdate(BaseModel):
+    category: Optional[str] = None
+    name: Optional[str] = None
+    status: Optional[BenchmarkStatus] = None
+    notes: Optional[str] = None
+    target_date: Optional[date] = None
+
+
+class SkaterBenchmarkOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    skater_id: int
+    category: str
+    name: str
+    status: BenchmarkStatus
+    notes: Optional[str] = None
+    target_date: Optional[date] = None

@@ -158,6 +158,31 @@ export interface GapReport {
   latest_assessment?: SavedGapAssessment | null;
 }
 
+// --- Sprint 6: fully coach-driven custom benchmarks ----------------------
+export type BenchmarkStatus =
+  | "NOT_STARTED"
+  | "DEVELOPING"
+  | "SOLIDIFYING"
+  | "MET";
+
+export interface SkaterBenchmark {
+  id: string;
+  skater_id?: number;
+  category: string;
+  name: string;
+  status: BenchmarkStatus;
+  notes?: string | null;
+  target_date?: string | null;
+}
+
+export interface SkaterBenchmarkPayload {
+  category: string;
+  name: string;
+  status: BenchmarkStatus;
+  notes?: string | null;
+  target_date?: string | null;
+}
+
 export interface ProgramElementPayload {
   segment_order: number;
   element_code: string;

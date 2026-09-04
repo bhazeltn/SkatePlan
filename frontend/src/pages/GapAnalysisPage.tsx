@@ -1,4 +1,5 @@
 import { useSearchParams } from "react-router-dom";
+import { CustomBenchmarksPanel } from "@/components/gap/CustomBenchmarksPanel";
 import { GapAssessmentForm } from "@/components/gap/GapAssessmentForm";
 import { GapSummaryCard } from "@/components/gap/GapSummaryCard";
 import { useGapAssessment } from "@/components/gap/useGapAssessment";
@@ -67,6 +68,10 @@ export function GapAnalysisPage() {
           onSelect={gap.setSkaterId}
         />
       </div>
+
+      {gap.skaterId ? (
+        <CustomBenchmarksPanel skaterId={gap.skaterId} />
+      ) : null}
 
       {gap.skaterId ? (
         <div className="grid gap-4 md:grid-cols-2">

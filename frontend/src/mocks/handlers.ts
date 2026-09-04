@@ -172,6 +172,11 @@ function buildAssessment(id: number, body: Record<string, unknown>) {
   };
 }
 
+// Sprint 6 coach-driven custom benchmarks served by
+// GET /api/skaters/:id/benchmarks. Empty by default so views render the
+// empty state; CRUD-flow tests override with server.use().
+export const mockBenchmarks: unknown[] = [];
+
 // Full skater profile served by GET /api/skaters/:id.
 export const mockSkaterDetail = {
   skater_id: 1,
@@ -336,6 +341,23 @@ export const handlers = [
   }),
   http.get("*/api/skaters/:id/gap-analysis", () =>
     HttpResponse.json(mockGapReport)
+  ),
+  // Sprint 6: fully coach-driven custom benchmarks. Stateful in-memory store so
+  // existing views that fetch benchmarks don't hit unhandled requests. Tests
+  // that exercise the CRUD flow override these via server.use().
+  http.get("*/api/skaters/:id/benchmarks", () =>
+    HttpResponse.json(mockBenchmarks)
+  ),
+  http.post("*/api/skaters/:id/benchmarks", async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json({ id: "bench-new", ...body }, { status: 201 });
+  }),
+  http.patch("*/api/skaters/:id/benchmarks/:bid", async ({ request, params }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json({ id: params.bid, ...body });
+  }),
+  http.delete("*/api/skaters/:id/benchmarks/:bid", () =>
+    new HttpResponse(null, { status: 204 })
   ),
   http.get("*/api/skaters/:id", () => HttpResponse.json(mockSkaterDetail)),
   http.get("*/api/skaters", () => HttpResponse.json(mockSkaters)),

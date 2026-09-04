@@ -12,6 +12,8 @@ import type {
   RegisterCoachPayload,
   RestrictionCreatePayload,
   Skater,
+  SkaterBenchmark,
+  SkaterBenchmarkPayload,
   SkaterDetail,
   SovElement,
 } from "@/lib/types";
@@ -122,6 +124,61 @@ export function saveGapAssessment(
     { method: "POST", body: JSON.stringify(payload) },
     token
   );
+}
+
+// --- Sprint 6: fully coach-driven custom benchmarks ----------------------
+// List all coach-defined benchmarks: GET /api/skaters/{id}/benchmarks.
+export function listSkaterBenchmarks(
+  skaterId: number | string,
+  token?: string | null
+): Promise<SkaterBenchmark[]> {
+  return request<SkaterBenchmark[]>(
+    `/api/skaters/${skaterId}/benchmarks`,
+    {},
+    token
+  );
+}
+
+// Create a custom benchmark: POST /api/skaters/{id}/benchmarks.
+export function createSkaterBenchmark(
+  skaterId: number | string,
+  payload: SkaterBenchmarkPayload,
+  token?: string | null
+): Promise<SkaterBenchmark> {
+  return request<SkaterBenchmark>(
+    `/api/skaters/${skaterId}/benchmarks`,
+    { method: "POST", body: JSON.stringify(payload) },
+    token
+  );
+}
+
+// Update a custom benchmark: PATCH /api/skaters/{id}/benchmarks/{bid}.
+export function updateSkaterBenchmark(
+  skaterId: number | string,
+  benchmarkId: string,
+  payload: Partial<SkaterBenchmarkPayload>,
+  token?: string | null
+): Promise<SkaterBenchmark> {
+  return request<SkaterBenchmark>(
+    `/api/skaters/${skaterId}/benchmarks/${benchmarkId}`,
+    { method: "PATCH", body: JSON.stringify(payload) },
+    token
+  );
+}
+
+// Delete a custom benchmark: DELETE /api/skaters/{id}/benchmarks/{bid}.
+export async function deleteSkaterBenchmark(
+  skaterId: number | string,
+  benchmarkId: string,
+  token?: string | null
+): Promise<void> {
+  const headers: Record<string, string> = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const res = await fetch(
+    `${BASE_URL}/api/skaters/${skaterId}/benchmarks/${benchmarkId}`,
+    { method: "DELETE", headers }
+  );
+  if (!res.ok) throw new ApiError(res.status, "Delete failed");
 }
 
 // Persist a new program layout: POST /api/programs.

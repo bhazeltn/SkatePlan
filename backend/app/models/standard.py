@@ -91,6 +91,38 @@ class SkaterBenchmarkAssessment(Base):
     )
 
 
+class SkaterBenchmark(Base):
+    """A single coach-defined custom benchmark target for a skater (Sprint 6).
+
+    Fully coach-driven: coaches define discrete benchmark items across flexible
+    categories. ``status`` uses the canonical enum values
+    'NOT_STARTED','DEVELOPING','SOLIDIFYING','MET' (validated in the schema).
+    ``skater_id`` FKs ``users.id`` to mirror ``GapAssessment``.
+    """
+
+    __tablename__ = "skater_benchmarks"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    skater_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    category: Mapped[str] = mapped_column(String(80), nullable=False)
+    name: Mapped[str] = mapped_column(String(150), nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(20), default="NOT_STARTED", nullable=False
+    )
+    notes: Mapped[str | None] = mapped_column(Text)
+    target_date: Mapped[date | None] = mapped_column(Date)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
 class GapAssessment(Base):
     """A coach's interactive benchmark assessment snapshot for a skater.
 

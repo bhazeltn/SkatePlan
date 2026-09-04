@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { CustomBenchmarksPanel } from "@/components/gap/CustomBenchmarksPanel";
 import { GapAssessmentForm } from "@/components/gap/GapAssessmentForm";
 import { GapSummaryCard } from "@/components/gap/GapSummaryCard";
 import { useGapAssessment } from "@/components/gap/useGapAssessment";
@@ -62,37 +63,47 @@ export function GapAnalysisTab({ skaterId }: { skaterId: number | string }) {
     setEditing(false);
   };
 
-  if (editing) {
+  const renderTemplateFlow = () => {
+    if (editing) {
+      return (
+        <GapAssessmentForm
+          templates={gap.templates}
+          framework={gap.framework}
+          scores={gap.scores}
+          notes={gap.notes}
+          onFramework={gap.setFramework}
+          onScore={gap.setScore}
+          onNotes={gap.setNotes}
+          onSubmit={handleSubmit}
+          disabled={gap.saving || !gap.framework}
+        />
+      );
+    }
+    if (!gap.result) return <EmptyState onStart={startNew} />;
     return (
-      <GapAssessmentForm
-        templates={gap.templates}
-        framework={gap.framework}
-        scores={gap.scores}
-        notes={gap.notes}
-        onFramework={gap.setFramework}
-        onScore={gap.setScore}
-        onNotes={gap.setNotes}
-        onSubmit={handleSubmit}
-        disabled={gap.saving || !gap.framework}
-      />
+      <section className="space-y-4">
+        <GapSummaryCard assessment={gap.result} />
+        <button
+          type="button"
+          onClick={startUpdate}
+          className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm
+            font-medium text-slate-700 hover:bg-slate-50"
+        >
+          Update Assessment
+        </button>
+      </section>
     );
-  }
-
-  if (!gap.result) {
-    return <EmptyState onStart={startNew} />;
-  }
+  };
 
   return (
-    <section className="space-y-4">
-      <GapSummaryCard assessment={gap.result} />
-      <button
-        type="button"
-        onClick={startUpdate}
-        className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm
-          font-medium text-slate-700 hover:bg-slate-50"
-      >
-        Update Assessment
-      </button>
-    </section>
+    <div className="space-y-6">
+      <CustomBenchmarksPanel skaterId={skaterId} />
+      <div className="border-t border-slate-200 pt-6">
+        <h2 className="mb-3 text-sm font-semibold text-slate-900">
+          Competitive Standard Assessment
+        </h2>
+        {renderTemplateFlow()}
+      </div>
+    </div>
   );
 }

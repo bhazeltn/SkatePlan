@@ -4,6 +4,7 @@ from fastapi import APIRouter
 from app.api import (
     admin,
     auth,
+    benchmarks,
     competitions,
     dashboard,
     external,
@@ -42,6 +43,7 @@ api_router.include_router(meetings.router)
 api_router.include_router(meetings.skater_router)
 api_router.include_router(standards.router)
 api_router.include_router(standards.skater_router)
+api_router.include_router(benchmarks.router)
 
 
 @api_router.get("/health", tags=["health"])

@@ -215,3 +215,4 @@ def gap_analysis(
         pillars=report.get("pillars", {}),
         latest_assessment=serialize_assessment(latest) if latest else None,
     )
+

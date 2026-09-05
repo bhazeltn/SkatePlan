@@ -16,6 +16,15 @@ export function round2(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
+const JUMP_REGEX = /^[1-4]?(?:A|T|S|Lo|Eu|F|Lz)(?:<<|<|q|e|\!)?$/i;
+
+/** Returns true if the element (or all parts of a combo) is a jump element. */
+export function isJumpElement(code: string): boolean {
+  if (!code) return false;
+  const parts = code.split("+").map((p) => p.trim());
+  return parts.length > 0 && parts.every((part) => JUMP_REGEX.test(part));
+}
+
 /** Base value for a single element code (combos summed across "+" tokens). */
 export function baseValueOf(
   code: string,
@@ -23,16 +32,19 @@ export function baseValueOf(
 ): number {
   return code
     .split("+")
-    .reduce((sum, token) => sum + (catalog.get(token.trim()) ?? 0), 0);
+    .map((t) => t.trim())
+    .filter((t) => t.length > 0 && t.toUpperCase() !== "SEQ")
+    .reduce((sum, token) => sum + (catalog.get(token) ?? 0), 0);
 }
 
-/** Base value for one planned element, applying the second-half bonus. */
+/** Base value for one planned element, applying the second-half bonus to eligible jumps. */
 export function elementTotal(
   element: PlannedElement,
   catalog: Map<string, number>
 ): number {
   const base = baseValueOf(element.element_code, catalog);
-  return element.is_second_half_bonus ? base * SECOND_HALF_MULTIPLIER : base;
+  const eligible = isJumpElement(element.element_code);
+  return element.is_second_half_bonus && eligible ? base * SECOND_HALF_MULTIPLIER : base;
 }
 
 /** Rounded total planned base value across all elements. */

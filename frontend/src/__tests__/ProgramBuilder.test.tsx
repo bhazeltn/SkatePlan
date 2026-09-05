@@ -82,6 +82,41 @@ describe("Program sandbox builder", () => {
     expect(screen.queryByText("3T<")).not.toBeInTheDocument();
   });
 
+  it("allows entering combination elements via Enter key and calculates combined base value", async () => {
+    seedSession();
+    const user = userEvent.setup();
+    renderBuilder();
+    const input = await screen.findByRole("combobox", { name: /element/i });
+
+    // Type a combination and press Enter
+    await user.type(input, "3Lz+3T{Enter}");
+
+    const slot = await screen.findByTestId("element-slot");
+    expect(slot).toHaveTextContent("3Lz+3T");
+
+    // 3Lz (5.90) + 3T (4.20) = 10.10
+    const total = screen.getByTestId("total-base-value");
+    expect(total).toHaveTextContent("10.10");
+  });
+
+  it("only offers the second-half bonus for jump elements", async () => {
+    seedSession();
+    const user = userEvent.setup();
+    renderBuilder();
+
+    // Add a spin
+    await addElement(user, "CCoSp4");
+    // Add a step sequence
+    await addElement(user, "StSq3");
+    // Add a jump
+    await addElement(user, "3Lz");
+
+    // There should only be 1 second-half bonus checkbox (for the jump)
+    const bonusCheckboxes = screen.queryAllByRole("checkbox", { name: /second half/i });
+    expect(bonusCheckboxes).toHaveLength(1);
+  });
+
+
   it("saves a valid payload with ordered elements and per-element flags", async () => {
     seedSession();
     const user = userEvent.setup();

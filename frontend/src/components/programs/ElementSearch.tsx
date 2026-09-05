@@ -22,8 +22,16 @@ export function ElementSearch({
     : [];
 
   function choose(code: string) {
-    onAdd(code);
+    if (!code.trim()) return;
+    onAdd(code.trim());
     setQuery("");
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter" && query.trim()) {
+      e.preventDefault();
+      choose(query);
+    }
   }
 
   return (
@@ -35,7 +43,8 @@ export function ElementSearch({
         aria-controls="element-options"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search elements (e.g. 3Lz)"
+        onKeyDown={handleKeyDown}
+        placeholder="Search elements or type combo (e.g. 3Lz+3T)"
         className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm
           text-slate-900 focus:border-slate-500 focus:outline-none"
       />

@@ -9,6 +9,7 @@ import type {
   OrchestrateSkaterPayload,
   OrchestrateSkaterResponse,
   ProgramCreatePayload,
+  ProgramElementPayload,
   RegisterCoachPayload,
   RestrictionCreatePayload,
   Skater,
@@ -227,4 +228,60 @@ export function resolveRestriction(
     { method: "DELETE" },
     token
   );
+}
+export interface ProgramDetailResponse {
+  id: string;
+  skater_id: number;
+  program_type: string;
+  title: string;
+  season?: string | null;
+  music_duration_seconds?: number | null;
+  segment_bonus?: number | null;
+  program_elements: {
+    id?: string;
+    segment_order: number;
+    element_code: string;
+    is_second_half_bonus: boolean;
+  }[];
+}
+
+// Retrieve program details including ordered elements: GET /api/programs/{id}.
+export function getProgram(
+  programId: string,
+  token?: string | null
+): Promise<ProgramDetailResponse> {
+  return request<ProgramDetailResponse>(`/api/programs/${programId}`, {}, token);
+}
+
+// Update planned program elements: PUT /api/programs/{id}/elements.
+export function updateProgramElements(
+  programId: string,
+  elements: ProgramElementPayload[],
+  token?: string | null
+): Promise<ProgramDetailResponse> {
+  return request<ProgramDetailResponse>(
+    `/api/programs/${programId}/elements`,
+    {
+      method: "PUT",
+      body: JSON.stringify({ program_elements: elements }),
+    },
+    token
+  );
+}
+
+// Delete a program: DELETE /api/programs/{id}.
+export async function deleteProgram(
+  programId: string,
+  token?: string | null
+): Promise<void> {
+  const headers: Record<string, string> = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const res = await fetch(`${BASE_URL}/api/programs/${programId}`, {
+    method: "DELETE",
+    headers,
+  });
+  if (!res.ok) {
+    const detail = await res.json().catch(() => ({}));
+    throw new ApiError(res.status, detail?.detail ?? "Delete failed");
+  }
 }

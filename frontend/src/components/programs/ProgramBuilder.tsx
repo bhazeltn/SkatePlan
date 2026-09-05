@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { createProgram, listSovElements } from "@/lib/api";
+import {
+  createProgram,
+  listSovElements,
+  updateProgramElements,
+} from "@/lib/api";
 import type { SovElement } from "@/lib/types";
 import { toCatalog, totalBaseValue, type PlannedElement } from "@/lib/sov";
 import { ElementSearch } from "@/components/programs/ElementSearch";
@@ -10,19 +14,32 @@ import { TotalBar } from "@/components/programs/TotalBar";
 type Segment = "SP" | "FS";
 const TITLES: Record<Segment, string> = { SP: "Short Program", FS: "Free Skate" };
 
-/** Deterministic program sandbox: pick a segment, add SOV elements, toggle the
- *  second-half bonus, watch the running base value, and persist the layout. */
+export interface InitialProgramData {
+  id: string;
+  program_type: Segment;
+  title: string;
+  elements: PlannedElement[];
+}
+
 export function ProgramBuilder({
   skaterId,
+  initialProgram,
   onSaved,
+  onCancel,
 }: {
   skaterId: number;
+  initialProgram?: InitialProgramData | null;
   onSaved: () => void;
+  onCancel?: () => void;
 }) {
   const { token } = useAuth();
   const [sov, setSov] = useState<SovElement[]>([]);
-  const [segment, setSegment] = useState<Segment>("SP");
-  const [elements, setElements] = useState<PlannedElement[]>([]);
+  const [segment, setSegment] = useState<Segment>(
+    initialProgram?.program_type ?? "SP"
+  );
+  const [elements, setElements] = useState<PlannedElement[]>(
+    initialProgram?.elements ?? []
+  );
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -34,6 +51,13 @@ export function ProgramBuilder({
       active = false;
     };
   }, [token]);
+
+  useEffect(() => {
+    if (initialProgram) {
+      setSegment(initialProgram.program_type);
+      setElements(initialProgram.elements);
+    }
+  }, [initialProgram]);
 
   const catalog = useMemo(() => toCatalog(sov), [sov]);
   const total = totalBaseValue(elements, catalog);
@@ -55,19 +79,25 @@ export function ProgramBuilder({
   async function save() {
     setSaving(true);
     try {
-      await createProgram(
-        {
-          skater_id: skaterId,
-          program_type: segment,
-          title: TITLES[segment],
-          program_elements: elements.map((el, i) => ({
-            segment_order: i + 1,
-            element_code: el.element_code,
-            is_second_half_bonus: el.is_second_half_bonus,
-          })),
-        },
-        token
-      );
+      const payloadElements = elements.map((el, i) => ({
+        segment_order: i + 1,
+        element_code: el.element_code,
+        is_second_half_bonus: el.is_second_half_bonus,
+      }));
+
+      if (initialProgram?.id) {
+        await updateProgramElements(initialProgram.id, payloadElements, token);
+      } else {
+        await createProgram(
+          {
+            skater_id: skaterId,
+            program_type: segment,
+            title: TITLES[segment],
+            program_elements: payloadElements,
+          },
+          token
+        );
+      }
       onSaved();
     } finally {
       setSaving(false);
@@ -76,7 +106,25 @@ export function ProgramBuilder({
 
   return (
     <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
-      <SegmentSelector segment={segment} onChange={setSegment} />
+      <div className="flex items-center justify-between">
+        <h3 className="text-base font-semibold text-slate-800">
+          {initialProgram ? `Edit ${initialProgram.title}` : "New Program Layout"}
+        </h3>
+        {onCancel && (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="text-xs font-medium text-slate-500 hover:text-slate-700"
+          >
+            Cancel
+          </button>
+        )}
+      </div>
+
+      {!initialProgram && (
+        <SegmentSelector segment={segment} onChange={setSegment} />
+      )}
+
       <ElementSearch elements={sov} onAdd={addElement} />
       <ElementSlots
         elements={elements}
@@ -92,7 +140,7 @@ export function ProgramBuilder({
         className="w-full rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold
           text-white hover:bg-slate-800 disabled:opacity-50"
       >
-        Save Program
+        {saving ? "Saving…" : initialProgram ? "Update Elements" : "Save Program"}
       </button>
     </section>
   );
